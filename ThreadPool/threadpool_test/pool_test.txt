@@ -1,0 +1,39 @@
+##2026.2.7
+    2026-02-07T22:22:08+08:00
+    Running ./threadpool_test2
+    Run on (2 X 2395.5 MHz CPU s)
+    CPU Caches:
+    L1 Data 32 KiB (x2)
+    L1 Instruction 32 KiB (x2)
+    L2 Unified 1024 KiB (x2)
+    L3 Unified 32768 KiB (x2)
+    Load Average: 2.38, 2.49, 2.48
+    ***WARNING*** Library was built as DEBUG. Timings may be affected.
+    -------------------------------------------------------------------------------------------------------------
+    Benchmark                                                   Time             CPU   Iterations UserCounters...
+    -------------------------------------------------------------------------------------------------------------
+    BM_ThreadPool_SimpleTask/1/real_time/threads:1           28.0 ms         25.8 ms           25 items_per_second=14.3038k/s
+    BM_ThreadPool_SimpleTask/2/real_time/threads:1           31.3 ms         26.7 ms           25 items_per_second=12.7838k/s
+    BM_ThreadPool_SimpleTask/4/real_time/threads:1           29.2 ms         26.3 ms           24 items_per_second=14.2677k/s
+    BM_ThreadPool_SimpleTask/8/real_time/threads:1           28.7 ms         26.8 ms           24 items_per_second=14.5193k/s
+    BM_ThreadPool_SimpleTask/16/real_time/threads:1          28.9 ms         26.6 ms           25 items_per_second=13.8311k/s
+    BM_ThreadPool_TaskSize/10/real_time/threads:1            2507 us         2328 us          278 items_per_second=1.4351k/s
+    BM_ThreadPool_TaskSize/100/real_time/threads:1           2993 us         2815 us          232 items_per_second=1.44036k/s
+    BM_ThreadPool_TaskSize/1000/real_time/threads:1          8902 us         8500 us           65 items_per_second=1.72825k/s
+    BM_ThreadPool_TaskSize/10000/real_time/threads:1        79642 us        76712 us            9 items_per_second=1.39513k/s
+    BM_ThreadPool_TaskSize/100000/real_time/threads:1      907431 us       845586 us            1 items_per_second=1.10201k/s
+    BM_ThreadPool_TaskSize/1000000/real_time/threads:1    7721030 us      7227933 us            1 items_per_second=129.516/s
+    BM_ThreadPool_TaskSize/real_time/threads:1_BigO       7734.45 N       7240.13 N    
+    BM_ThreadPool_TaskSize/real_time/threads:1_RMS              4 %             4 %    
+    BM_ThreadPool_SchedulingLatency/1/manual_time           18059 ns        11698 ns        72607 Threads: 1
+    BM_ThreadPool_SchedulingLatency/2/manual_time           22874 ns        15086 ns        28454 Threads: 2
+    BM_ThreadPool_SchedulingLatency/3/manual_time            3554 ns         3163 ns       194881 Threads: 3
+    BM_ThreadPool_SchedulingLatency/4/manual_time           14062 ns         9448 ns       198289 Threads: 4
+    BM_ThreadPool_SchedulingLatency/5/manual_time           24278 ns        15110 ns        30696 Threads: 5
+    BM_ThreadPool_SchedulingLatency/6/manual_time            8278 ns         5748 ns       195052 Threads: 6
+    BM_ThreadPool_SchedulingLatency/7/manual_time           14983 ns        10716 ns       138070 Threads: 7
+    BM_ThreadPool_SchedulingLatency/8/manual_time            5163 ns         3926 ns       194859 Threads: 8
+    BM_ThreadPool_Contention/real_time/threads:1             10.0 ms         9.08 ms          100 items_per_second=0.999679k/s
+    BM_ThreadPool_Contention/real_time/threads:2             13.9 ms         7.38 ms           52 items_per_second=11.0509k/s
+    BM_ThreadPool_Contention/real_time/threads:4              126 ms         41.1 ms            4 items_per_second=126.488k/s
+    BM_ThreadPool_Contention/real_time/threads:8              700 ms          128 ms            8 items_per_second=91.4318k/s
