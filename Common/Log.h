@@ -22,6 +22,7 @@ enum class LogModule {
     CLIENT,
     TIME,
     MEMORY,
+    WARN,
     DEFAULT
 };
 
@@ -35,6 +36,7 @@ inline const char* module_to_str(LogModule module) {
         case LogModule::CLIENT: return "CLIENT";
         case LogModule::TIME: return "TIME";
         case LogModule::MEMORY: return "MEMORY";
+        case LogModule::WARN: return "WARN";
         default: return "DEFAULT";
     }
 }
@@ -87,6 +89,7 @@ private:
             {LogModule::CLIENT, false},
             {LogModule::TIME,false},
             {LogModule::MEMORY, false},
+            {LogModule::WARN, false},
             {LogModule::DEFAULT, false}
         };
         global_level.store(LOG_LEVEL_DEBUG, std::memory_order_relaxed);
@@ -208,6 +211,8 @@ inline void close_log_file() {
     #define LOG_MEMORY_WARN(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_WARN,  "WARN",  msg)
     #define LOG_MEMORY_ERROR(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_ERROR,  "ERROR",  msg)    
 
+
+    #define LOG_NULL_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg) 
 #else
     #define LOG_THREAD_DEBUG(msg) 
     #define LOG_THREAD_INFO(msg)  
@@ -243,6 +248,11 @@ inline void close_log_file() {
     #define LOG_MEMORY_WARN(msg)
     #define LOG_MEMORY_INFO(msg)
     #define LOG_MEMORY_DEBUG(msg)
+
+    #define LOG_NULL_WARN(msg)
+    
+
+    
 #endif
 
 

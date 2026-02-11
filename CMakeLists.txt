@@ -25,6 +25,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(Common)
 add_subdirectory(Memory)
 add_subdirectory(ThreadPool)
+add_subdirectory(Net)
 # @learn 
     #add_subdirectory多目录需要拆开调用
 #
@@ -35,4 +36,5 @@ target_link_libraries(yy
     INTERFACE 
         common 
         memory_pool
+        net
         )

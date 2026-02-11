@@ -6,44 +6,29 @@ namespace yy{
 void BaseTask::add_dependency(std::shared_ptr<BaseTask> task){
     {
         std::lock_guard<std::mutex> lock(task_mutex);
-        dependencies.push_back(task);        
+        unresolved_dependencies++;
     }
     {
         std::lock_guard<std::mutex> lock(task->task_mutex);
         task->dependents.insert(shared_from_this());
     }
 }    
-// PENDING: 任务已提交但还没开始执行，在队列中等待
-// RUNNING: 任务正在被某个工作线程执行
-// COMPLETED: 任务成功执行完成
-// FAILED: 任务执行过程中发生异常
-bool BaseTask::is_ready()const{
-    std::lock_guard<std::mutex> lock(task_mutex);
-    for(const auto& dep:dependencies){
-        if(dep->get_status()!=TaskStatus::COMPLETED){
-            return false;
+
+
+void BaseTask::execute(IThreadPool* pool)
+{
+    function();
+    for(auto& dep:dependents){
+        assert(dep->get_status()==TaskStatus::DEPENDENCY&&"依赖的任务状态必须是DEPENDENCY");
+        dep->unresolved_dependencies--;
+        if(dep->unresolved_dependencies.load()==0){
+            dep->status.store(TaskStatus::PENDING);
+            pool->enqueue_task(dep);
         }
     }
-    return true;
 }
 
-void BaseTask::notify_dependents(IThreadPool* pool) {
-std::vector<std::shared_ptr<BaseTask>> ready_dependents;
 
-    {
-        std::lock_guard<std::mutex> lock(task_mutex);
-        for (auto& dependent : dependents) {
-            if (dependent->is_ready()) {
-                ready_dependents.push_back(dependent);//安全，只提交一次
-            }
-        }
-    }
-    
-    // 将就绪的依赖任务提交回线程池
-    for (auto& task : ready_dependents) {
-        pool->enqueue_task(task);
-    }
-}
 
 #pragma endregion
 
@@ -105,7 +90,7 @@ void WorkerManager::Worker::run(IThreadPool* pool){
                 });
                 continue;
             }
-            tasks_processed++;      
+            last_active_time.flush();
             pool->execute_task(task);
             pool->deregister_task(task->get_id());
         }
@@ -140,25 +125,19 @@ std::shared_ptr<BaseTask> WorkerManager::try_steal_task(size_t thief_id){
     } 
     return nullptr;//窃取失败 
 }
-size_t WorkerManager::find_least_active_worker(){
-    size_t min_tasks=std::numeric_limits<size_t>::max();//将 min_tasks 初始化为 size_t 类型的最大值。
-    size_t worker_id=0;
-    for(size_t i=pool->get_min_threads();i<get_size();++i){
-        size_t tasks=get_tasks_processed(i);
-        if(tasks<min_tasks){
-            min_tasks=tasks;
-            worker_id=i;
-        }
-    }
-    return worker_id;
-}
+// size_t WorkerManager::find_least_active_worker(){
+//     size_t min_tasks=std::numeric_limits<size_t>::max();//将 min_tasks 初始化为 size_t 类型的最大值。
+//     size_t worker_id=0;
+//     for(size_t i=pool->get_min_threads();i<get_size();++i){
+//         size_t tasks=get_tasks_processed(i);
+//         if(tasks<min_tasks){
+//             min_tasks=tasks;
+//             worker_id=i;
+//         }
+//     }
+//     return worker_id;
+// }
 
-size_t WorkerManager::get_tasks_processed(size_t id)const{
-    std::lock_guard<std::mutex> lock(workers_mutex);
-    if(id>workers.size())return 0;
-    return workers[id]->tasks_processed.load();
-    
-}
 bool WorkerManager::try_add_task(std::shared_ptr<BaseTask> task){
     std::lock_guard<std::mutex> lock(workers_mutex);
     for(size_t i=0;i<workers.size();++i){

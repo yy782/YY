@@ -5,13 +5,13 @@ project(memory_pool LANGUAGES CXX)
 
 
 
-file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp)
+file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(memory_pool ${SOURCES})
 
 target_include_directories(memory_pool 
     PUBLIC
-        ${PROJECT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}
 
     )
 # @learn
