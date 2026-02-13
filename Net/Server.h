@@ -19,6 +19,15 @@ namespace net
 {  
 namespace server
 {
+    Socket create_tcpsocket()
+    {
+        auto listenfd=socket(AF_INET,SOCK_STREAM,0);
+        if(listenfd<0)
+        {
+            LOG_PRINT_ERRNO;
+        }
+        return Socket(listenfd);
+    }
     void bind(const Socket& k,const Address& addr)
     {
         if(::bind(k.get_fd(),addr.getSockAddr(),addr.get_len())==-1)

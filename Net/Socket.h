@@ -14,7 +14,7 @@ namespace yy
 {
 namespace net
 {    
-class Socket:public noncopyable
+class Socket:public copyable
 {
 public:
     Socket():

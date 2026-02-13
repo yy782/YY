@@ -33,18 +33,23 @@ template<typename PrecisionTag=LowPrecisionTag>
 class TimeStamp:copyable
 {
 public:    
+    typedef std::chrono::time_point<typename ClockTraits<PrecisionTag>::Clock> TimePoint;
     TimeStamp():
-    time_point_(ClockTraits<PrecisionTag>::Clock::now())
+    time_point_()
+    {}
+    TimeStamp(TimePoint time_point):
+    time_point_(time_point)
     {}
     void flush(){
-        time_point_=ClockTraits<PrecisionTag>::Clock::now();
+        time_point_=now();
     }
     auto get_time_point()const
     {
         return time_point_;
-    } 
+    }
+    static TimePoint now(){return ClockTraits<PrecisionTag>::Clock::now()} 
 private:
-    std::chrono::time_point<typename ClockTraits<PrecisionTag>::Clock> time_point_;
+    TimePoint time_point_;
 };
 template<typename PrecisionTag>
 bool operator==(const TimeStamp<PrecisionTag>& lhs,const TimeStamp<PrecisionTag>& rhs)
