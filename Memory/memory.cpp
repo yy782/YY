@@ -50,11 +50,11 @@ void* MemoryPool::malloc(byte_size size){
 
 void* MemoryPool::malloc(byte_size size,align_size align)
 {
-    if(size==0||align&(align-1)!=0)return nullptr;
+    if(size==0||(align&(align-1))!=0)return nullptr;
     char* ptr=alloc_from_bucket(size,align);
     if(ptr!=NULL){
         return ptr;
-    }else if(bottom-top>=size){
+    }else if(safe_static_cast<byte_size>(bottom-top)>=size){
         ptr=calc_aligned_addr(align,bottom,top-bottom);
         auto aligned_size=ptr-bottom;
         restore_bucket(bottom,aligned_size);
@@ -100,7 +100,7 @@ char* MemoryPool::alloc_form_system(byte_size capacity)
 
 char* MemoryPool::alloc_from_bucket(byte_size size,align_size align)
 {
-    if(size==0||align&(align-1)!=0)return nullptr;
+    if(size==0||(align&(align-1))!=0)return nullptr;
     size_t index=match_bucket_index(size+DEFAULT_ALIGN);
     if(index<BUCKET_SIZE)
     {
@@ -123,7 +123,7 @@ size_t MemoryPool::match_bucket_index(byte_size size)
     if(size==0)return BUCKET_SIZE;
     for(byte_size i=0;i<BUCKET_SIZE;i++)
     {
-        if(buckets_[i].block_size>=size)
+        if(buckets_[i].block_size_>=size)
         {
             return i;
         }
@@ -142,64 +142,64 @@ MemoryPool::~MemoryPool()
 }
  MemoryPool::Bucket& MemoryPool::Bucket::operator=(Bucket&& other)
  {
-        block_size=other.block_size;
-        free_list=other.free_list;
-        pool=other.pool;
+        block_size_=other.block_size_;
+        free_list_=other.free_list_;
+        pool_=other.pool_;
 
-        other.free_list=nullptr;
-        other.pool=nullptr;
+        other.free_list_=nullptr;
+        other.pool_=nullptr;
         return *this;
  }
 
 char* MemoryPool::Bucket::alloc(byte_size size,align_size align)
 { 
     assert(size>0&&((align&(align-1))==0)&&"size必须大于0，并且对齐值必须是2的幂");
-    FreeBlock_Ptr cur=free_list;
+    FreeBlock_Ptr cur=free_list_;
     while(cur)
     {
-        if(cur->size<size)
+        if(cur->size_<size)
         {
-            cur=cur->next;
+            cur=cur->next_;
             continue;
         }
-        auto start_ptr=cur->ptr;
-        char* aligned_ptr=calc_aligned_addr(align,start_ptr,cur->size);
+        auto start_ptr=cur->ptr_;
+        char* aligned_ptr=calc_aligned_addr(align,start_ptr,cur->size_);
         if(aligned_ptr==nullptr)
         {
-            cur=cur->next;
+            cur=cur->next_;
             continue;
         }
         auto aligned_size=aligned_ptr-start_ptr;
-        auto remain_size=cur->size-aligned_size;
+        auto remain_size=cur->size_-aligned_size;
         if(remain_size<size)
         {
-            cur=cur->next;
+            cur=cur->next_;
             continue;
         }//这里确定可以划分内存出去，接下来要更新节点数据
         if(aligned_size>0)
         {
-            assert(pool!=nullptr&&"内存池指针为空");
-            pool->restore_bucket(start_ptr,aligned_size);
+            assert(pool_!=nullptr&&"内存池指针为空");
+            pool_->restore_bucket(start_ptr,aligned_size);
         }
-        auto node_remain_size=cur->size-aligned_size-size;
+        auto node_remain_size=cur->size_-aligned_size-size;
         if(node_remain_size>0)
         {
-            cur->ptr=aligned_ptr+size;
-            cur->size=node_remain_size;
+            cur->ptr_=aligned_ptr+size;
+            cur->size_=node_remain_size;
         }else{
-            auto prev_node=cur->prev.lock();
-            auto next_node=cur->next;
+            auto prev_node=cur->prev_.lock();
+            auto next_node=cur->next_;
             if(prev_node)
             {
-                prev_node->next=next_node;
+                prev_node->next_=next_node;
             }else{
-                free_list=next_node;
+                free_list_=next_node;
             }
             if(next_node)
             {
-                next_node->prev=prev_node;
+                next_node->prev_=prev_node;
             }
-            cur->next=nullptr;
+            cur->next_=nullptr;
         }
         return aligned_ptr;
     }
@@ -209,18 +209,18 @@ char* MemoryPool::Bucket::alloc(byte_size size,align_size align)
 void MemoryPool::Bucket::restore(char* ptr,byte_size size)
 {
     auto node_ptr=std::make_shared<FreeBlock>(ptr,size);
-    if(free_list==nullptr)
+    if(free_list_==nullptr)
     {
-        free_list=node_ptr;
+        free_list_=node_ptr;
         return;
     }
-    node_ptr->next=free_list->next;
-    node_ptr->prev=free_list;
-    free_list=node_ptr;
+    node_ptr->next_=free_list_->next_;
+    node_ptr->prev_=free_list_;
+    free_list_=node_ptr;
 }
 
 MemoryPool::Bucket::~Bucket()
 {
-    free_list.reset();//这里节点管理的内存由内存池统一释放
+    free_list_.reset();//这里节点管理的内存由内存池统一释放
 }     
 }

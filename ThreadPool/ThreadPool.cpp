@@ -17,7 +17,7 @@ void BaseTask::add_dependency(std::shared_ptr<BaseTask> task){
 
 void BaseTask::execute(IThreadPool* pool)
 {
-    function();
+    function_();
     for(auto& dep:dependents){
         assert(dep->get_status()==TaskStatus::DEPENDENCY&&"依赖的任务状态必须是DEPENDENCY");
         dep->unresolved_dependencies--;
@@ -40,12 +40,12 @@ void TaskManager::register_task(std::shared_ptr<BaseTask> task){
     all_tasks[task->get_id()]=task;
 }
 
-void TaskManager::deregister_task(int task_id){
+void TaskManager::deregister_task(size_t task_id){
     std::lock_guard<std::mutex> lock(tasks_mutex);
     all_tasks.erase(task_id);
 }
 
-void TaskManager::add_dependency(int task_id,int dep_task_id){ 
+void TaskManager::add_dependency(size_t task_id,size_t dep_task_id){ 
     std::lock_guard<std::mutex> lock(tasks_mutex);
     auto task=all_tasks[task_id];
     auto dep_task=all_tasks[dep_task_id];
@@ -81,7 +81,7 @@ void WorkerManager::Worker::run(IThreadPool* pool){
                 
             }
             if(!task){
-                task=manager->try_steal_task(worker_id);
+                task=manager_->try_steal_task(worker_id);
             }
             if(!task){
                 std::unique_lock<std::mutex> lock(queue_mutex);
@@ -100,7 +100,7 @@ void WorkerManager::Worker::run(IThreadPool* pool){
     }    
 }
 bool WorkerManager::Worker::try_push_task(std::shared_ptr<BaseTask> task){
-    if(local_queue.size()>=manager->get_queue_size())return false;
+    if(local_queue.size()>=manager_->get_queue_size())return false;
     {
         std::lock_guard<std::mutex> lock(queue_mutex);
         local_queue.emplace_back(std::move(task));        
@@ -171,7 +171,7 @@ void WorkerManager::add_worker()
     worker_ptr->thread=[worker_ptr,this](){
         std::this_thread::sleep_for(std::chrono::milliseconds(10));//////////////////////////////////
         LOG_THREAD_DEBUG("[Worker "<<worker_ptr->worker_id<<"] 启动成功");
-        worker_ptr->run(pool);
+        worker_ptr->run(pool_);
     };
    
 }
@@ -190,7 +190,7 @@ void WorkerManager::remove_worker(size_t worker_id){
     {
         std::lock_guard<std::mutex> lock(worker->queue_mutex);
         for(auto& task:worker->local_queue){
-           pool->enqueue_task(task); 
+           pool_->enqueue_task(task); 
         }
     }
 }
@@ -209,20 +209,20 @@ void WorkerManager::shutdown(){
 #pragma region ThreadPool
 
 
-void IThreadPool::add_dependency(int task_id,int dep_task_id){
+void IThreadPool::add_dependency(size_t task_id,size_t dep_task_id){
     taskmanager.add_dependency(task_id,dep_task_id);
 }
 
-void IThreadPool::deregister_task(int task_id){
+void IThreadPool::deregister_task(size_t task_id){
     taskmanager.deregister_task(task_id);
 }
 
 size_t IThreadPool::get_min_threads()const{
-    return min_threads;
+    return min_threads_;
 }
 
 size_t IThreadPool::get_max_threads()const{
-    return max_threads;
+    return max_threads_;
 }
 
 

@@ -49,8 +49,8 @@ void GlobalTaskManager<Strategy>::notify_all(){
 
 template<typename PoolStrategy>
 IThreadPool::IThreadPool(size_t min_threads,size_t max_threads,ThreadPool<PoolStrategy>* pool):
-min_threads(std::max(min_threads,size_t(1))),
-max_threads(std::max(max_threads,min_threads)),
+min_threads_(std::max(min_threads,size_t(1))),
+max_threads_(std::max(max_threads,min_threads)),
 taskmanager(),
 workermanager(pool)
 {
@@ -93,31 +93,6 @@ void ThreadPool<Strategy>::enqueue_task(std::shared_ptr<BaseTask> task){
     global_tasks.enqueue_task(t);
 }
 
-// template<class Strategy>
-// void ThreadPool<Strategy>::add_worker(){
-//     workermanager.add_worker();     
-// }
-
-// template<class Strategy>
-// void ThreadPool<Strategy>::remove_worker(size_t worker_id){
-//     workermanager.remove_worker(worker_id);
-// }
-// template<class Strategy>
-// size_t ThreadPool<Strategy>::get_worker_count()const{
-//     return workermanager.get_size();
-// }
-// template<class Strategy>
-// size_t ThreadPool<Strategy>::get_global_task_size()const{
-//     return global_tasks.size();
-// }
-// template<class Strategy>
-// size_t ThreadPool<Strategy>::get_tasks_processed(int id)const{
-//     return workermanager.get_tasks_processed(id);
-// }
-// template<class Strategy>
-// size_t ThreadPool<Strategy>::find_least_active_worker(){
-//     return workermanager.find_least_active_worker();
-// }
 
 template<class Strategy>
 template<typename Strategy_Pattern>

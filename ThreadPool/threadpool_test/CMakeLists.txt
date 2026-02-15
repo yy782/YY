@@ -18,5 +18,9 @@ foreach(SOURCE ${SOURCES})
     benchmark::benchmark
     pthread
     )
+    target_compile_options(${TEST_NAME}
+        PRIVATE
+        ${TEST_WARNING_OPTIONS}
+    )
     add_dependencies(${TEST_NAME} threadpool)
 endforeach()

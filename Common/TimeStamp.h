@@ -47,7 +47,7 @@ public:
     {
         return time_point_;
     }
-    static TimePoint now(){return ClockTraits<PrecisionTag>::Clock::now()} 
+    static TimePoint now(){return ClockTraits<PrecisionTag>::Clock::now();} 
 private:
     TimePoint time_point_;
 };

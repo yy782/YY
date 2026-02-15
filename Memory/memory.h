@@ -11,7 +11,7 @@
 #define LOG_FILE
 #define COUT
 #include "../Common/Log.h"
-
+#include "../Common/Types.h"
 
 namespace yy{    
 
@@ -58,22 +58,22 @@ private:
     
     struct FreeBlock{
         
-        char* ptr;
-        byte_size size;
+        char* ptr_;
+        byte_size size_;
         
-        std::shared_ptr<FreeBlock> next;
-        std::weak_ptr<FreeBlock> prev;
+        std::shared_ptr<FreeBlock> next_;
+        std::weak_ptr<FreeBlock> prev_;
         FreeBlock():
-        ptr(nullptr),
-        size(0),
-        next(nullptr),
-        prev()
+        ptr_(nullptr),
+        size_(0),
+        next_(nullptr),
+        prev_()
         {}
         FreeBlock(char* ptr,byte_size size):
-        ptr(ptr),
-        size(size),
-        next(nullptr),
-        prev()
+        ptr_(ptr),
+        size_(size),
+        next_(nullptr),
+        prev_()
         {}
     };
 
@@ -81,18 +81,18 @@ private:
     typedef std::weak_ptr<FreeBlock> FreeBlock_Weak_Ptr;
 
     struct Bucket:noncopyable{
-        size_t block_size;//桶固定块大小
-        FreeBlock_Ptr free_list;
-        MemoryPool* pool;
+        size_t block_size_;//桶固定块大小
+        FreeBlock_Ptr free_list_;
+        MemoryPool* pool_;
         Bucket()
-        :block_size(0),
-        free_list(nullptr),
-        pool(nullptr)
+        :block_size_(0),
+        free_list_(nullptr),
+        pool_(nullptr)
         {}
         Bucket(size_t block_size,MemoryPool* pool)
-        :block_size(block_size),
-        free_list(nullptr),
-        pool(pool)
+        :block_size_(block_size),
+        free_list_(nullptr),
+        pool_(pool)
         {}
         Bucket& operator=(Bucket&& other);
         Bucket(Bucket&& other)=delete;
@@ -123,7 +123,7 @@ private:
 template<typename Function>
 void* MemoryPool::malloc(byte_size size,Function&& f)
 {
-    constexpr align_size align=alignof(f);
+    constexpr align_size align=alignof(Function);
     return malloc(size,align);
 }
 

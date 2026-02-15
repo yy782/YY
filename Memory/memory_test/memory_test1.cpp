@@ -1,4 +1,5 @@
 #include "../memory.h"
+#include "../../Common/Log.h"
 using namespace yy;
 
 struct A

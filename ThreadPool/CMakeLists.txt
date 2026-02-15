@@ -15,7 +15,7 @@ add_subdirectory(threadpool_test)
 
 
 target_link_libraries(threadpool
-    PUBLIC
+    PRIVATE
     common
 )
 add_dependencies(threadpool common)    

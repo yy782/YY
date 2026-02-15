@@ -24,7 +24,7 @@
 #define LOG_FILE
 #include "../Common/Log.h" 
 #include "../Common/noncopyable.h"
-#include "TimeStamp.h"
+#include "../Common/TimeStamp.h"
 #include "locker.h"
 
 namespace yy{
@@ -80,25 +80,25 @@ protected:
     std::atomic<int> unresolved_dependencies{0};//未完成的依赖任务数量
     std::set<std::shared_ptr<BaseTask>> dependents;//依赖此任务的其他任务
     mutable std::mutex task_mutex;//保护依赖关系的互斥锁
-    const int task_id;
+    const size_t task_id;
     
 
-    std::function<void()> function;//任务执行的函数对象
+    std::function<void()> function_;//任务执行的函数对象
 public:
-    inline BaseTask(std::function<void()> func):
-    function(std::move(func)),
-    task_id(generate_id())
+    BaseTask(std::function<void()> func):
+    task_id(generate_id()),
+    function_(std::move(func))    
     {}
     virtual ~BaseTask()=default;
     void execute(IThreadPool* pool);
     void add_dependency(std::shared_ptr<BaseTask> task);// 添加任务依赖：指定此任务必须等待其他任务完成
     bool is_ready()const{return status.load()==TaskStatus::PENDING;}
     TaskStatus get_status()const{return status.load();}
-    int get_id()const{return task_id;}
+    size_t get_id()const{return task_id;}
 
 
 private:
-    static int generate_id(){
+    static size_t generate_id(){
         static std::atomic<size_t> counter{0};
         return  ++counter;
     }
@@ -111,18 +111,18 @@ private:
 
 #pragma region WorkerManager;
 class WorkerManager:public noncopyable{
-private:
+private: 
+    IThreadPool* pool_;
     std::atomic<size_t> queue_capacity;//本地队列容量
-    IThreadPool* pool;
     struct Worker{
-        WorkerManager* manager;
+        WorkerManager* manager_;
         std::deque<std::shared_ptr<BaseTask>> local_queue;
         mutable std::mutex queue_mutex;
         std::condition_variable cv;
         TimeStamp<LowPrecision> last_active_time;
         const size_t worker_id;
         interruptible_thread thread;
-        Worker(WorkerManager* manager,size_t id):manager(manager),worker_id(id){}
+        Worker(WorkerManager* manager,size_t id):manager_(manager),worker_id(id){}
         void run(IThreadPool* pool);
         bool try_push_task(std::shared_ptr<BaseTask> task);
         auto get_last_active_time()const{return last_active_time.get_time_point();}
@@ -147,7 +147,7 @@ private:
     void remove_worker(size_t worker_id);
 public:
     WorkerManager()=delete;
-    WorkerManager(IThreadPool* pool):pool(pool),queue_capacity(2){}
+    WorkerManager(IThreadPool* pool):pool_(pool),queue_capacity(2){}
     ~WorkerManager()=default;
     
     
@@ -179,15 +179,15 @@ public:
 class TaskManager:public noncopyable{
 private:    
     mutable std::mutex tasks_mutex;
-    std::unordered_map<int,std::shared_ptr<BaseTask>> all_tasks;
+    std::unordered_map<size_t,std::shared_ptr<BaseTask>> all_tasks;
     template<typename PoolStrategy>
     friend class MonitorThread;
 public:
     TaskManager()=default;
     ~TaskManager()=default;
     void register_task(std::shared_ptr<BaseTask> task);
-    void deregister_task(int task_id);
-    void add_dependency(int task_id,int dep_task_id);
+    void deregister_task(size_t task_id);
+    void add_dependency(size_t task_id,size_t dep_task_id);
     void shutdown(){}
 };
 
@@ -238,7 +238,7 @@ class ThreadPool;
 template<class PoolStrategy>
 class MonitorThread:noncopyable{
 public:     
-    MonitorThread(ThreadPool<PoolStrategy>* pool):pool(pool){}
+    MonitorThread(ThreadPool<PoolStrategy>* pool):pool_(pool){}
     void start();
     void stop();
     template<class Stategy_Pattern>
@@ -259,7 +259,7 @@ private:
     interruptible_thread thread;
     std::vector<std::function<void()>> strategies;
     std::mutex strategy_mutex;
-    ThreadPool<PoolStrategy>* pool;
+    ThreadPool<PoolStrategy>* pool_;
     std::condition_variable cv;
     size_t target_load_factor{70};//目标CPU负载率，百分比    
 
@@ -283,13 +283,13 @@ public:
     ~IThreadPool()=default;
     virtual void shutdown()=0;
     
-    void add_dependency(int task_id,int dep_task_id);
+    void add_dependency(size_t task_id,size_t dep_task_id);
     size_t get_thread_nums()const{
         return workermanager.get_size();
     }
 protected:
-    const size_t min_threads;
-    const size_t max_threads;
+    const size_t min_threads_;
+    const size_t max_threads_;
     std::atomic<bool> running{true};
 
     TaskManager taskmanager;
@@ -300,7 +300,7 @@ protected:
     virtual void enqueue_task(std::shared_ptr<BaseTask> task)=0;
     virtual void execute_task(std::shared_ptr<BaseTask> task)=0;
 
-    void deregister_task(int task_id);
+    void deregister_task(size_t task_id);
     size_t get_min_threads()const;
     size_t get_max_threads()const;
     
@@ -459,11 +459,9 @@ public:
         if(global_task_size>100&&worker_count<monitor->get_max_threads()){
             monitor->pool->workermanager.add_worker();
             LOG_THREAD_INFO("添加工作线程");
-    }    
-};
+        }    
+    }
 #pragma endregion
-
-
 
 };
 }

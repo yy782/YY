@@ -42,7 +42,6 @@ inline const char* module_to_str(LogModule module) {
 }
 
 // 日志级别定义
-#define DEBUG
 #define LOG_LEVEL_DEBUG 0
 #define LOG_LEVEL_INFO  1
 #define LOG_LEVEL_WARN  2
