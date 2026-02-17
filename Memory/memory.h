@@ -130,9 +130,6 @@ void* MemoryPool::malloc(byte_size size,Function&& f)
 
 
 
-class HeapMemoryManager{//堆内存管理器,线程安全,容器库通过allocate分配内存后要到这里注册，这样容器不用注意堆内存的安全，要求对堆内存的操作通过HeapMemoryManager进行
-
-};
 }
 
 

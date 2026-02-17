@@ -31,7 +31,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         -std=c++17
         -rdynamic
         -march=native
-        -DDEBUG
         -Wall
         -Wextra                 #额外警告
         -Wpedantic              #严格遵守C++标准
@@ -62,6 +61,7 @@ else()
         -O2                     # 生产优化
         -std=c++17
         -march=native
+        -DNDEBUG
         -Wall
         -Wextra
         -Wno-error              # 警告不升级为错误

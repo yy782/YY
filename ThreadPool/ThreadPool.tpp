@@ -236,33 +236,34 @@ MonitorThread<PoolStrategy>::~MonitorThread(){
     
     stop();
 }
-// template<class PoolStrategy>
-// bool MonitorThread<PoolStrategy>::is_valid()const{
-//     return pool!=nullptr;
-// }
 
-
-// template<class PoolStrategy>
-// size_t MonitorThread<PoolStrategy>::get_worker_count()const{
-
-//     return pool->get_worker_count();
-// }
-
-// template<class PoolStrategy>
-// size_t MonitorThread<PoolStrategy>::get_target_load_factor()const{
-//     return target_load_factor;
-// }
-// template<class PoolStrategy>
-// size_t MonitorThread<PoolStrategy>::get_min_threads()const{
-//     return pool->get_min_threads();
-// }
-
-// template<class PoolStrategy>
-// size_t MonitorThread<PoolStrategy>::get_max_threads()const{
-//     return pool->get_max_threads();
-// }
-
-
+struct Adjust_Worker_Strategy{
+public:
+    template<typename MonitorType>
+    void operator()(MonitorType* monitor){
+        assert(monitor->is_valid()&&"监控线程未正确初始化");
+        auto mtx=monitor->pool->workermanager.get_mutex();
+        std::unique_lock<std::mutex> lock(mtx);
+        size_t worker_count=monitor->pool->workermanager.get_worker_count();
+        TimeStamp<LowPrecision> now;
+        for(int i=0;i<worker_count;++i){
+            auto worker=monitor->pool->workermanager.get_worker(i);
+            if(worker){
+                auto idle_time=now-worker->get_last_active_time();
+                if(idle_time>10&&worker_count>monitor->get_min_threads()){
+                    monitor->pool->workermanager.remove_worker(i);
+                    LOG_THREAD_INFO("移除空闲工作线程:"<<"["<<i<<"]");
+                }
+            }
+        }
+        lock.unlock();
+        size_t global_task_size=monitor->pool->global_tasks.size();
+        if(global_task_size>100&&worker_count<monitor->get_max_threads()){
+            monitor->pool->workermanager.add_worker();
+            LOG_THREAD_INFO("添加工作线程");
+        }    
+    }
+};
 
 
 

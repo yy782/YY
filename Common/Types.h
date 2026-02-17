@@ -1,3 +1,5 @@
+#ifndef _YY_TYPES_H_
+#define _YY_TYPES_H_
 
 #include <cstring>
 #include <type_traits>
@@ -19,3 +21,4 @@ inline void memZero(void* p, size_t n)
 typedef size_t byte_size;
 
 }
+#endif

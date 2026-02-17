@@ -25,7 +25,7 @@
 #include "../Common/Log.h" 
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
-#include "locker.h"
+#include "../Common/locker.h"
 
 namespace yy{
 
@@ -246,13 +246,6 @@ public:
     void notify_one();
     ~MonitorThread();
 private:    
-    // bool is_valid()const;
-    // size_t get_worker_count()const;
-    // void add_worker()const;
-    // void remove_worker(size_t worker_id)const;
-    // size_t get_target_load_factor()const;
-    // size_t get_min_threads()const;
-    // size_t get_max_threads()const;
 
     friend struct Adjust_Worker_Strategy;
 
@@ -346,48 +339,12 @@ private:
     void enqueue_task(std::shared_ptr<BaseTask> task)override;//有依赖的任务提交回线程池
     void dequeue_task(std::shared_ptr<BaseTask>& task)override;
 
-    // //监控线程需要的接口
-    // void add_worker();
-    // void remove_worker(size_t worker_id);
-    // size_t get_worker_count()const;
-    // size_t get_global_task_size()const;
-    // size_t get_tasks_processed(int id)const;
-
-    // size_t find_least_active_worker();
 
 
 };
 
 #pragma endregion
-
-
-// inline void deregister_pool(){
-//     IThreadPool::shutdown();
-// }
-
-
-// #pragma region Task.tpp
-
- 
-// #pragma endregion
-
-
-
-// #pragma region ThreadPool.tpp;
-
-
-
-   
-
-
-// #pragma endregion
-
-// #pragma region BaseTask.cpp;
-
-
-
-
-// #pragma endregion    
+  
 
 
 #pragma region Strategy
@@ -435,35 +392,9 @@ struct Priority
     }
 };
 
-struct Adjust_Worker_Strategy{
-public:
-    template<typename MonitorType>
-    void operator()(MonitorType* monitor){
-        assert(monitor->is_valid()&&"监控线程未正确初始化");
-        auto mtx=monitor->pool->workermanager.get_mutex();
-        std::unique_lock<std::mutex> lock(mtx);
-        size_t worker_count=monitor->pool->workermanager.get_worker_count();
-        TimeStamp<LowPrecision> now;
-        for(int i=0;i<worker_count;++i){
-            auto worker=monitor->pool->workermanager.get_worker(i);
-            if(worker){
-                auto idle_time=now-worker->get_last_active_time();
-                if(idle_time>10&&worker_count>monitor->get_min_threads()){
-                    monitor->pool->workermanager.remove_worker(i);
-                    LOG_THREAD_INFO("移除空闲工作线程:"<<"["<<i<<"]");
-                }
-            }
-        }
-        lock.unlock();
-        size_t global_task_size=monitor->pool->global_tasks.size();
-        if(global_task_size>100&&worker_count<monitor->get_max_threads()){
-            monitor->pool->workermanager.add_worker();
-            LOG_THREAD_INFO("添加工作线程");
-        }    
-    }
-#pragma endregion
+struct Adjust_Worker_Strategy;
 
-};
+#pragma endregion
 }
 
 #include "ThreadPool.tpp"

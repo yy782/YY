@@ -7,8 +7,8 @@
 namespace yy
 {
    
-struct LowPrecisionTag{};
-struct HighPrecisionTag{};
+struct LowPrecisionTag;
+struct HighPrecisionTag;
 
 typedef LowPrecisionTag LowPrecision;
 typedef HighPrecisionTag HighPrecision;

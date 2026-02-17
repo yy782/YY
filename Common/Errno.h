@@ -1,9 +1,11 @@
+#ifndef _YY_ERRNO_H_
+#define _YY_ERRNO_H_
 #include <errno.h>
 
 #include "Log.h"
-
-
-#define LOG_PRINT_ERRNO int save_errno=errno;\
+namespace yy
+{
+#define LOG_PRINT_ERRNO(save_errno) \
                         switch(save_errno){\
                         case EBADF:\
                             LOG_NULL_WARN("非法的文件描述符");\
@@ -30,3 +32,5 @@
                             LOG_NULL_WARN("[errno] "<<errno);\
                             break;\
                         }
+}
+#endif
