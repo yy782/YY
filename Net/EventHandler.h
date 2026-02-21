@@ -4,7 +4,6 @@
 #include <functional>
 
 #include "Event.h"
-#include "EventLoop.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 namespace yy
@@ -12,10 +11,13 @@ namespace yy
 namespace net
 {
 
+class EventLoop;
+
 class EventHandler:public noncopyable
 {
 public:
-    typedef std::function<void(TimeStamp<LowPrecision>)> TimeStampEventCallBack;
+    typedef TimeStamp<LowPrecision> Time_Stamp;
+    typedef std::function<void(Time_Stamp)> TimeStampEventCallBack;
     typedef std::function<void()> EventCallBack;
 
     typedef TimeStampEventCallBack ReadCallBack;
@@ -30,6 +32,7 @@ public:
         assert(loop_!=nullptr);
     }
     int get_fd()const{return fd_;}
+    EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}
     int get_status()const{return status_;}
     bool has_ignore()const{return events_==EventType::NoneEvent;}
@@ -50,7 +53,7 @@ public:
     void setReadCallBack(TimeStampEventCallBack cb){readCallback_=std::move(cb);}
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
 
-    void handler_revent(){};
+    void handler_revent(Time_Stamp receiveTime);
 private:
     void update();
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
@@ -62,9 +65,9 @@ private:
 
     ReadCallBack readCallback_;
     EventCallBack writeCallback_;
-    EventCallBack exceptCallback_;
-    EventCallBack hupCallback_;
     EventCallBack errorCallback_;
+    
+    EventCallBack closeCallback_;
 };
 }    
 }

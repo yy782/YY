@@ -10,6 +10,9 @@
 #include <sys/epoll.h>
 #include <type_traits>
 
+#define EPOLLNVAL 0x020
+                        // @FIMXE 这可能不太好，但是EPOLLNVAL不向外面暴露?
+
 namespace yy
 {
 namespace net
@@ -39,14 +42,25 @@ struct EventType
                     :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLERR)
                     :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLERR)
                     :INVAID_EVENT;
-    static constexpr int HupEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(POLLHUP)
+    static constexpr int HupEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLHUP)
                     :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLHUP)
                     :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLHUP)
-                    :INVAID_EVENT; 
+                    :INVAID_EVENT;
+    static constexpr int NvalEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLNVAL)
+                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLNVAL)
+                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLNVAL)
+                    :INVAID_EVENT;
+    static constexpr int RdHupEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLRDHUP)
+                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLRDHUP)
+                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLRDHUP)
+                    :INVAID_EVENT;
+
+
+
     static constexpr int OnlyEvent=EPOLLONESHOT;      
                         // @brief OnlyEvent是epoll才有的类型 
     static constexpr int kAllValidEvents=
-        NoneEvent|ReadEvent|WriteEvent|ExceptEvent|ErrorEvent|HupEvent;                         
+        NoneEvent|ReadEvent|WriteEvent|ExceptEvent|ErrorEvent|HupEvent|NvalEvent|RdHupEvent;                         
     EventType(int event):
     event_(event)
     {}
@@ -54,9 +68,6 @@ struct EventType
 private:         
     int event_;                    
 };
-
-
-   
 class Event:public copyable
 {
 public:

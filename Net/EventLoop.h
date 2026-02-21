@@ -27,7 +27,7 @@ private:
 
     void doPendingFunctions();
 
-    bool CheckeEventLoopStatus();
+    static bool CheckeEventLoopStatus();
     
     PollerType poller_;
     HandlerList activeHandlers_;

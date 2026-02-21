@@ -28,14 +28,14 @@ activeHandlers_(),
 status_(EventLoopStatus::Init),
 wakeupHandler_(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
-    auto eventCallBack=[this](EventHandler::ReadCallBack)->void
+    auto eventCallBack=[this](EventHandler::Time_Stamp)->void
     {
         uint64_t one=1;
         ssize_t n=sockets::YYread(wakeupHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         return;
     };
-    wakeupHandler_.setReadCallBack(std::bind(eventCallBack));
+    wakeupHandler_.setReadCallBack(eventCallBack);
     wakeupHandler_.setReading();
     poller_.add_listen(wakeupHandler_);
 }
@@ -53,16 +53,18 @@ void EventLoop::loop()
         for(auto& handler:activeHandlers_)
         {
             assert(handler!=nullptr);
-            handler->handler_revent();
+            handler->handler_revent(pollReturnTime_);
         }
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
         doPendingFunctions();
     }
+    status_|=EventLoopStatus::Quit;
+    assert(CheckeEventLoopStatus());
 } 
 void EventLoop::quit()
 {
-    status_|=EventLoopStatus::Quit;
+    status_&=~EventLoopStatus::Looping;
     assert(CheckeEventLoopStatus());
     wakeup();
 }

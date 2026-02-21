@@ -361,7 +361,7 @@ typedef union epoll_data {
 */
 Epoll::Epoll():
 events_(1024),
-epollfd_(sockets::YYcreate_epollfd(EPOLL_CLOEXEC))
+epollfd_(sockets::create_epollfd(EPOLL_CLOEXEC))
 {
     assert(epollfd_>0);
 }
