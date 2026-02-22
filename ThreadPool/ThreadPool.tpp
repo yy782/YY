@@ -189,10 +189,8 @@ void ThreadPool<Strategy>::shutdown(){
 
 template<class PoolStrategy>
 void MonitorThread<PoolStrategy>::start(){
-    thread=([this]()mutable{
-        try{
-            while(true){
-                thread.interruption_point();
+    thread.run([this]()mutable{
+            while(running){
                 if(strategies.empty()){
                     std::unique_lock<std::mutex> lock(strategy_mutex);
                     cv.wait_for(lock,std::chrono::microseconds(100),[this](){return !strategies.empty();});//这里会虚假唤醒
@@ -200,20 +198,16 @@ void MonitorThread<PoolStrategy>::start(){
                 }
                 std::lock_guard<std::mutex> lock(strategy_mutex);
                 for(auto& strategy:strategies){
-                    thread.interruption_point();
                     strategy();
                 }
             }            
-        }catch(thread_interrupted&){
-            LOG_THREAD_DEBUG("线程池监控线程中断");
-        }
     });
 }
 
 template<class PoolStrategy>
 void MonitorThread<PoolStrategy>::stop(){
     if(thread.joinable()){
-        thread.interrupt();
+        running=false;
         thread.join(); 
     }
 }

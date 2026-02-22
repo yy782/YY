@@ -59,14 +59,8 @@ void TaskManager::add_dependency(size_t task_id,size_t dep_task_id){
 void WorkerManager::Worker::run(IThreadPool* pool){
     LOG_THREAD_INFO("[线程:"<<worker_id<<"]"<<"开始执行任务");
 
-    // auto ptr=dynamic_cast<ThreadPool<FSFC>*>(pool);
-    // assert(ptr!=nullptr&&"pool指针未成功转换FSFC对象");
-
-
-    try{
-       
         while(true){
-            thread.interruption_point();
+            if(status_==Status::Stoping)break;
             std::shared_ptr<BaseTask> task=nullptr;
             {
                 std::unique_lock<std::mutex> lock(queue_mutex);
@@ -93,11 +87,11 @@ void WorkerManager::Worker::run(IThreadPool* pool){
             last_active_time.flush();
             pool->execute_task(task);
             pool->deregister_task(task->get_id());
-        }
-             
-    }catch(const thread_interrupted&){
-        LOG_THREAD_INFO("[worker "<<worker_id<<"] 收到中断信号");
-    }    
+        }   
+}
+void WorkerManager::Worker::stop()
+{
+    status_=Status::Stoping;
 }
 bool WorkerManager::Worker::try_push_task(std::shared_ptr<BaseTask> task){
     if(local_queue.size()>=manager_->get_queue_size())return false;
@@ -125,18 +119,6 @@ std::shared_ptr<BaseTask> WorkerManager::try_steal_task(size_t thief_id){
     } 
     return nullptr;//窃取失败 
 }
-// size_t WorkerManager::find_least_active_worker(){
-//     size_t min_tasks=std::numeric_limits<size_t>::max();//将 min_tasks 初始化为 size_t 类型的最大值。
-//     size_t worker_id=0;
-//     for(size_t i=pool->get_min_threads();i<get_size();++i){
-//         size_t tasks=get_tasks_processed(i);
-//         if(tasks<min_tasks){
-//             min_tasks=tasks;
-//             worker_id=i;
-//         }
-//     }
-//     return worker_id;
-// }
 
 bool WorkerManager::try_add_task(std::shared_ptr<BaseTask> task){
     std::lock_guard<std::mutex> lock(workers_mutex);
@@ -168,11 +150,11 @@ void WorkerManager::add_worker()
         }     
     }
     if(worker_ptr==nullptr)return;
-    worker_ptr->thread=[worker_ptr,this](){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));//////////////////////////////////
+    worker_ptr->thread.run([worker_ptr,this](){
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         LOG_THREAD_DEBUG("[Worker "<<worker_ptr->worker_id<<"] 启动成功");
         worker_ptr->run(pool_);
-    };
+    });
    
 }
 
@@ -180,7 +162,7 @@ void WorkerManager::remove_worker(size_t worker_id){
     if(worker_id>=workers.size())return;
     std::unique_ptr<Worker> worker=std::move(workers[worker_id]);
     {
-        worker->thread.interrupt();
+        worker->stop();
         worker->cv.notify_all();
 
     }
@@ -197,7 +179,7 @@ void WorkerManager::remove_worker(size_t worker_id){
 
 void WorkerManager::shutdown(){
     for(auto& worker:workers){
-        worker->thread.interrupt();
+        worker->stop();
     }
     for(auto& worker:workers){
         if(worker->thread.joinable())worker->thread.join();

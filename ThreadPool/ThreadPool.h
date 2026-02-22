@@ -115,15 +115,27 @@ private:
     IThreadPool* pool_;
     std::atomic<size_t> queue_capacity;//本地队列容量
     struct Worker{
+        enum class Status
+        {
+            Init=1<<0,
+            Running=2<<0,
+            Stoping=3<<0
+        };
         WorkerManager* manager_;
         std::deque<std::shared_ptr<BaseTask>> local_queue;
         mutable std::mutex queue_mutex;
         std::condition_variable cv;
         TimeStamp<LowPrecision> last_active_time;
         const size_t worker_id;
-        interruptible_thread thread;
-        Worker(WorkerManager* manager,size_t id):manager_(manager),worker_id(id){}
+        Thread thread;
+        Status status_;
+        Worker(WorkerManager* manager,size_t id):
+        manager_(manager),
+        worker_id(id),
+        status_(Status::Init)
+        {}
         void run(IThreadPool* pool);
+        void stop();
         bool try_push_task(std::shared_ptr<BaseTask> task);
         auto get_last_active_time()const{return last_active_time.get_time_point();}
     }; 
@@ -248,8 +260,8 @@ public:
 private:    
 
     friend struct Adjust_Worker_Strategy;
-
-    interruptible_thread thread;
+    std::atomic<bool> running{true};
+    Thread thread;
     std::vector<std::function<void()>> strategies;
     std::mutex strategy_mutex;
     ThreadPool<PoolStrategy>* pool_;

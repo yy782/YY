@@ -1,6 +1,8 @@
 #include "sockets.h"
 #include "../Common/Types.h"
 #include "InetAddress.h"
+
+#include <sys/signalfd.h>
 namespace yy
 {
 namespace net
@@ -8,9 +10,9 @@ namespace net
 namespace sockets
 {
 
-int create_tcpsocket()
+int create_tcpsocket(sa_family_t family)
 {
-    auto listenfd=socket(AF_INET,SOCK_STREAM,0);
+    auto listenfd=socket(family,SOCK_STREAM,0);
     if(listenfd<0)
     {
         LOG_PRINT_ERRNO(errno);
@@ -44,6 +46,17 @@ int create_timerfd(clockid_t clock_id,int flags)
     }
     return fd;
 }
+int set_signalfd(int fd,sigset_t* sigset,int flags)
+{
+
+    int signfd=::signalfd(fd,sigset,flags);
+    if(signfd<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return signfd;
+}
+
 
 void timerfd_settime(int fd,int flags,const struct timespec* interval,const struct timespec* value)
 {
@@ -75,7 +88,7 @@ void timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
     }    
 }
 
-void YYbind(int fd,const Address& addr)
+void bind(int fd,const Address& addr)
 {
     if(::bind(fd,addr.getSockAddr(),addr.get_len())==-1)
     {
@@ -84,7 +97,7 @@ void YYbind(int fd,const Address& addr)
 // @brief 这里bind传入的长度是sockaddr_in6的长度，也就是最大的长度，兼容ipv4和ipv6,因为bind的第三个参数要求接收多少字节数据，但是解释多少数据
 //          由传入addr的family属性决定
 }
-void YYlisten(int fd,int queue_size)
+void listen(int fd,int queue_size)
 {
     auto ret=::listen(fd,queue_size);
     if(ret<0)
@@ -92,7 +105,7 @@ void YYlisten(int fd,int queue_size)
         LOG_PRINT_ERRNO(errno);
     }
 }
-void YYconnect(int fd,const Address& addr)
+void connect(int fd,const Address& addr)
 {
     auto ret=::connect(fd,addr.getSockAddr(),addr.get_len());
     if(ret==-1)
@@ -100,13 +113,26 @@ void YYconnect(int fd,const Address& addr)
         LOG_PRINT_ERRNO(errno);
     }
 }
-int YYaccept(int fd,Address& address)
+int accept(int fd,Address& address,bool is_ipv6)
 {
-    struct sockaddr_in6 addr6_;
-    memZero(&addr6_,sizeof addr6_);
-    address.set_ipv6_addr(addr6_);
-    socklen_t addrlen = static_cast<socklen_t>(sizeof(addr6_));
-    int connfd=::accept(fd,address.getSockAddr(),&addrlen);
+    int connfd=-1;
+    if(is_ipv6)
+    {
+        struct sockaddr_in6 addr6_;
+        memZero(&addr6_,sizeof addr6_);
+        address.set_ipv6_addr(addr6_);
+        socklen_t addrlen = static_cast<socklen_t>(sizeof(addr6_));
+        connfd=::accept(fd,address.getSockAddr(),&addrlen);        
+    }
+    else
+    {
+        struct sockaddr_in addr4_;
+        memZero(&addr4_,sizeof addr4_);
+        address.set_ipv4_addr(addr4_);
+        socklen_t addrlen = static_cast<socklen_t>(sizeof(addr4_));
+        connfd=::accept(fd,address.getSockAddr(),&addrlen);
+    }
+
     
     // @brief muduo库选择accept4或accept来实现更好的兼容，我这里选择accept来向下兼容
     if(connfd==-1)
@@ -140,6 +166,98 @@ int YYaccept(int fd,Address& address)
     //      muduo库没有选择在信号中断时重新accept，有一部分原因是选择了epoll的水平触发模式
     //      accept的errno处理如此谨慎，一部分原因是accept是直接关联服务端的，与连接的所有客户有关    
     return connfd;
+}
+void reuse_addr(int fd,bool on)
+{
+    int optval=on?1:0;
+    auto ret=::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+            &optval, static_cast<socklen_t>(sizeof optval));
+    if(ret<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
+void reuse_port(int fd,bool on)
+{
+    int optval = on ? 1 : 0;
+    int ret = ::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
+                            &optval, static_cast<socklen_t>(sizeof optval)); 
+    if(ret<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }                               
+}
+void set_nonblock(int fd){
+    int flags=fcntl(fd,F_GETFL,0);
+    if(flags==-1){
+        LOG_PRINT_ERRNO(errno);
+    }
+    if(fcntl(fd,F_SETFL,flags|O_NONBLOCK)==-1){
+        LOG_PRINT_ERRNO(errno);
+    }
+}
+void set_CloseOnExec(int fd)
+{
+    int flags=fcntl(fd,F_GETFL,0);
+    if(flags==-1){
+        LOG_PRINT_ERRNO(errno);
+    }
+    if(fcntl(fd,F_SETFL,flags|FD_CLOEXEC)==-1){
+        LOG_PRINT_ERRNO(errno);
+    }
+    // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
+}
+ssize_t read(int fd,void* buf,size_t len)
+{
+    auto n=::read(fd,buf,len);
+    if(n<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return n;
+}
+ssize_t write(int fd,const void* buf,size_t len)
+{
+    ssize_t n=::write(fd,buf,len);
+    if(n<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return n;
+}
+ssize_t recv(int fd,void* buf,size_t len,int flags)
+{
+    auto n=::recv(fd,buf,len,flags);
+    if(n<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return n;
+}
+int sockfd_has_error(int fd)
+{
+    int error;
+    socklen_t len=sizeof(error);
+    // @note 由于error是小整数，所以从size_t到socklen_t转换是安全的，不会溢出
+    auto ret=::getsockopt(fd,SOL_SOCKET,SO_ERROR,&error,&len);
+    if(ret==0)
+    {
+        if(error!=0)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }            
+    }
+    else
+    {
+        LOG_PRINT_ERRNO(errno);
+        return -1;
+    }
+    assert(false&&"不可能执行到这");
+    return -2;
 }
 }    
 }    

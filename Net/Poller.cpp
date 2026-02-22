@@ -76,7 +76,7 @@ TimeStamp<LowPrecision> Select::poll(int timeout,HandlerList& event_handlers)
             if(check_fd(fd,read_fds_))
             {
                 char buf[1];
-                auto n=sockets::YYrecv(handler->get_fd(),buf,1,MSG_PEEK|MSG_DONTWAIT);
+                auto n=sockets::recv(handler->get_fd(),buf,1,MSG_PEEK|MSG_DONTWAIT);
                 int save_errno1=errno;
                 if(n==0)
                 {

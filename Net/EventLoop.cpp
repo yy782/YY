@@ -31,7 +31,7 @@ wakeupHandler_(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
     auto eventCallBack=[this](EventHandler::Time_Stamp)->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::YYread(wakeupHandler_.get_fd(),&one,sizeof one);
+        ssize_t n=sockets::read(wakeupHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         return;
     };
@@ -68,10 +68,14 @@ void EventLoop::quit()
     assert(CheckeEventLoopStatus());
     wakeup();
 }
+void EventLoop::submit(Functor cb)
+{
+    FunctionList_.push_back(std::move(cb));
+}
 void EventLoop::wakeup()
 {
     uint64_t one =1;
-    ssize_t n=sockets::YYwrite(wakeupHandler_.get_fd(), &one, sizeof one);
+    ssize_t n=sockets::write(wakeupHandler_.get_fd(), &one, sizeof one);
     assert(n==sizeof one);
 }
 void EventLoop::doPendingFunctions()

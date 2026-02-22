@@ -21,6 +21,9 @@ public:
     typedef std::function<void()> EventCallBack;
 
     typedef TimeStampEventCallBack ReadCallBack;
+    typedef EventCallBack WriteCallBack;
+    typedef EventCallBack CloseCallBack;
+
     EventHandler()=delete;
     explicit EventHandler(int fd,EventLoop* loop):
     status_(-1),
@@ -41,6 +44,9 @@ public:
         assert(events_!=EventType::NoneEvent);
         events_=EventType::NoneEvent;
     }
+    void set_fd(int fd){fd_=fd;}
+    void set_event(Event event){events_.add_event(event);}
+    void set_loop(EventLoop* loop){loop_=loop;}
     void set_revent(Event event){revents_.add_event(event);}
     void set_status(int status){status_=status;}
     bool isWriting()const{return events_&EventType::WriteEvent;}
@@ -52,7 +58,7 @@ public:
 
     void setReadCallBack(TimeStampEventCallBack cb){readCallback_=std::move(cb);}
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
-
+    void setCloseCallBack(EventCallBack cb){closeCallback_=std::move(cb);}
     void handler_revent(Time_Stamp receiveTime);
 private:
     void update();
@@ -64,10 +70,10 @@ private:
     // @brief events_是要监听的事件，revents_是触发的事件
 
     ReadCallBack readCallback_;
-    EventCallBack writeCallback_;
+    WriteCallBack writeCallback_;
     EventCallBack errorCallback_;
     
-    EventCallBack closeCallback_;
+    CloseCallBack closeCallback_;
 };
 }    
 }

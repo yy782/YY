@@ -1,4 +1,5 @@
-
+#ifndef _YY_NET_EVENTLOOP_H_
+#define _YY_NET_EVENTLOOP_H_
 #include <vector>
 #include "Poller.h"
 #include "EventHandler.h"
@@ -22,6 +23,25 @@ public:
     ~EventLoop()=default;
     void loop();
     void quit();
+
+    void submit(Functor cb);
+
+    // @note 保证线程安全，这些操作Poller的接口只能在固定线程使用，其他线程必须用submit进行提交
+    void addListen(EventHandler* handler)
+    {
+        assert(handler);
+        poller_.add_listen(*handler);
+    }
+    void update_listen(EventHandler* handler)
+    { 
+        assert(handler);    
+        poller_.update_listen(*handler);
+    }
+    void remove_listen(EventHandler* handler)
+    {
+        assert(handler);
+        poller_.remove_listen(*handler);
+    }    
 private:
     void wakeup();
 
@@ -39,3 +59,4 @@ private:
 };
 }    
 }
+#endif // _YY_NET_EVENTLOOP_H_
