@@ -25,6 +25,9 @@ namespace yy
                         case EFAULT:\
                             LOG_NULL_WARN("地址非法");\
                             break;\
+                        case EINTR:\
+                            LOG_NULL_WARN("系统调用被信号中断");\
+                            break;\
                         case EADDRINUSE:\
                             LOG_NULL_WARN("地址已被占用");\
                             break;\

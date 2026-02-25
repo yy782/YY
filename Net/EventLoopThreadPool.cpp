@@ -6,23 +6,23 @@ namespace net
 void EventLoopThreadPool::addThread()
 {
 #ifdef NDEBUG        
-    threads_.emplace_back();   
+    threads_.emplace_back(std::make_unique<EventLoopThread>());   
     threads_[threads_.size()-1]->run();
 #else
     size_t n=threads_.size();
-    threads_.emplace_back();
+    threads_.emplace_back(std::make_unique<EventLoopThread>());
     assert(n+1==threads_.size());  
     threads_[threads_.size()-1]->run();
 #endif
 }
-void EventLoopThreadPool::submit(Functor cb)
+void EventLoopThreadPool::addHandler(EventHandlerPtr handler)
 {
-    static size_t id=0;
-    assert(id<threads_.size());
-    auto loop=threads_[id]->getEventLoop();
-    assert(loop);
-    loop->submit(std::move(cb));
-    id=(id+1)%threads_.size();
+    static size_t nextId=0;
+    assert(nextId<threads_.size());
+    auto loop=threads_[nextId]->getEventLoop();
+    handler->set_loop(loop);
+    threads_[nextId]->sumbit(std::bind(&EventLoop::addListen,loop,handler));
+    nextId=(nextId+1)%threads_.size();
 }
    
 }   

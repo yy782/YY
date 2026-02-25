@@ -9,7 +9,7 @@ target_include_directories(net
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
-
+add_subdirectory(net_test)
 target_link_libraries(net
     PUBLIC
     common

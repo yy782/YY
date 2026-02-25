@@ -234,6 +234,15 @@ ssize_t recv(int fd,void* buf,size_t len,int flags)
     }
     return n;
 }
+ssize_t send(int fd,const void* buf,size_t len,int flags)
+{
+    auto n=::send(fd,buf,len,flags);
+    if(n<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return n;
+}
 int sockfd_has_error(int fd)
 {
     int error;
@@ -259,6 +268,16 @@ int sockfd_has_error(int fd)
     assert(false&&"不可能执行到这");
     return -2;
 }
-}    
+void OnlyIpv6(int fd,bool ipv6_only)
+{
+    int optval=ipv6_only?1:0;
+    auto ret=::setsockopt(fd,SOL_IPV6,IPV6_V6ONLY,&optval,sizeof(optval));
+    if(ret<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+} 
+
+}   
 }    
 }

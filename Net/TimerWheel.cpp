@@ -3,14 +3,15 @@
 #include "EventHandler.h"
 #include "../Common/Types.h"
 #include "sockets.h"
+#include <memory>
 namespace yy
 {
 namespace net
 {
 struct TimerWheel::Node
 {
-    WeakNodePtr prev;
-    NodePtr next;
+    NodePtr prev;
+    WeakNodePtr next;
 
     LTimerPtr data;
     int rotation;//记录定时器在时间轮转多少圈后生效
@@ -18,7 +19,7 @@ struct TimerWheel::Node
 };    
 TimerWheel::TimerWheel(EventLoop* loop):
 cur_slot_(0),
-handler_(new EventHandler(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop))
+handler_(std::make_shared<EventHandler>(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop))
 {
     for(int i=0;i<MAX_SLOTS;++i)
     {
@@ -38,13 +39,8 @@ TimerWheel::~TimerWheel()
 {
     for(int i=0;i<MAX_SLOTS;++i)
     {
-        auto tmp=slots_[i];
-        while(tmp)
-        {
-            tmp=tmp->next;
-        }
+        slots_[i].reset();
     }
-    delete handler_;
 }
 void TimerWheel::add_timer(LTimerPtr timer)
 {
@@ -69,7 +65,7 @@ void TimerWheel::add_timer(LTimerPtr timer)
 
     if(!slots_[ts]){
         slots_[ts]=node;
-        node->prev.lock()=nullptr;
+        node->prev=nullptr;
     }else{
         node->next=slots_[ts];
         slots_[ts]->prev=node;
@@ -82,24 +78,24 @@ void TimerWheel::tick()
     while(tmp){
         if(tmp->rotation>0){
             tmp->rotation--;
-            tmp=tmp->next;
+            tmp=tmp->next.lock();
         }else{
             auto timer=tmp->data;
             assert(timer);
             timer->execute();
             if(timer->remain_count())add_timer(timer);
             
-            auto next=tmp->next;//可能是nullptr,但是在接下来的操作不可能被释放，因为还保持引用
-            auto prev=tmp->prev.lock();
+            auto next=tmp->next.lock();//可能是nullptr,但是在接下来的操作不可能被释放，因为还保持引用
+            auto prev=tmp->prev;
             
             if(tmp==slots_[cur_slot_]){
                 slots_[cur_slot_]=next;
                 if(next){
-                    next->prev.lock()=nullptr;
+                    next->prev=nullptr;
                 }
             }else{
                 prev->next=tmp->next;
-                if(tmp->next){
+                if(tmp->next.lock()){
                     next->prev=tmp->prev;
                 }                        
             }

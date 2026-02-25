@@ -8,27 +8,34 @@ namespace yy
 {
 namespace net
 {
-thread_local EventLoop* safe_loop;
+//thread_local EventLoop safe_loop;
 class EventLoopThread:public  noncopyable
 {
 public:
+    typedef EventLoop::Functor Functor;
     EventLoopThread():
-    loop_(safe_loop)
+    loop_()
     {}
     void run()
     {
-        assert(loop_);
-        thread_.run(std::bind(&EventLoop::loop,loop_));
+        //assert(loop_);
+        thread_.run(std::bind(&EventLoop::loop,&loop_));
     }
     void stop()
     {
-        assert(loop_);
-        loop_->quit();
+        //assert(loop_);
+        loop_.quit();
     }
-    EventLoop* getEventLoop()const{return loop_;}
+    void sumbit(Functor cb)
+    {
+        //assert(loop_);
+        loop_.submit(std::move(cb));
+    }
+    EventLoop* getEventLoop(){return &loop_;}
+    //EventLoop* getEventLoop()const{return loop_;}
 private:
     Thread thread_;
-    EventLoop* loop_;
+    EventLoop loop_;
 };
 }    
 }

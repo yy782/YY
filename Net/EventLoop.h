@@ -6,6 +6,8 @@
 #include "sockets.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
+#include "../Common/locker.h"
+#include <queue>
 namespace yy
 {
 namespace net
@@ -18,7 +20,7 @@ class EventLoop:public noncopyable
 public:
     typedef PollerType::HandlerList HandlerList;
     typedef std::function<void()> Functor;
-    typedef std::vector<Functor> FunctionList;
+    typedef std::queue<Functor> FunctionList;
     EventLoop();
     ~EventLoop()=default;
     void loop();
@@ -27,33 +29,35 @@ public:
     void submit(Functor cb);
 
     // @note 保证线程安全，这些操作Poller的接口只能在固定线程使用，其他线程必须用submit进行提交
-    void addListen(EventHandler* handler)
+    void addListen(EventHandlerPtr handler)
     {
         assert(handler);
-        poller_.add_listen(*handler);
+        poller_.add_listen(handler);
     }
-    void update_listen(EventHandler* handler)
+    void update_listen(EventHandlerPtr handler)
     { 
         assert(handler);    
-        poller_.update_listen(*handler);
+        poller_.update_listen(handler);
     }
-    void remove_listen(EventHandler* handler)
+    void remove_listen(EventHandlerPtr handler)
     {
         assert(handler);
-        poller_.remove_listen(*handler);
+        poller_.remove_listen(handler);
     }    
 private:
     void wakeup();
 
     void doPendingFunctions();
 
-    static bool CheckeEventLoopStatus();
+    bool CheckeEventLoopStatus();
     
     PollerType poller_;
     HandlerList activeHandlers_;
     FunctionList FunctionList_;
+    locker lock_;
+
     int status_;
-    EventHandler wakeupHandler_;
+    EventHandlerPtr wakeupHandler_;
     TimeStamp<LowPrecision> pollReturnTime_;
     int64_t iteration_;//记录事件循环的迭代次数
 };

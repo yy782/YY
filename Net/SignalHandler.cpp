@@ -3,18 +3,26 @@
 #include "sockets.h"
 #include "../Common/Errno.h"
 #include <signal.h>
+#include "EventLoop.h"
 namespace yy
 {
 namespace net
 {
 SignalHandler::SignalHandler(EventLoop* loop):
 sigset_(),
-handler_(new EventHandler(sockets::set_signalfd(-1,NULL,SFD_NONBLOCK|SFD_CLOEXEC),loop))
+handler_()
 {
     ::sigemptyset(&sigset_);
+    handler_=std::make_shared<EventHandler>(sockets::set_signalfd(-1,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC),loop);
     assert(handler_);
     handler_->setReadCallBack(std::bind(&SignalHandler::handle,this));
     handler_->setReading();
+
+    handler_->set_name("SignalHandler");
+
+
+    assert(loop);
+    loop->submit(std::bind(&EventLoop::addListen,loop,handler_));
 }  
 void SignalHandler::addSign(int sig,SigCallBack cb)
 {
@@ -29,6 +37,7 @@ void SignalHandler::addSign(int sig,SigCallBack cb)
 }
 void SignalHandler::handle()
 {
+    LOG_SIGNAL_DEBUG("SignalHandler::handle()");
     struct signalfd_siginfo sig_info;
     assert(handler_);
     int fd=handler_->get_fd();

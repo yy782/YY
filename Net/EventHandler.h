@@ -6,14 +6,19 @@
 #include "Event.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
+#include <memory>
+#include <string>
 namespace yy
 {
 namespace net
 {
 
 class EventLoop;
+class EventHandler;
+typedef std::shared_ptr<EventHandler> EventHandlerPtr;
 
-class EventHandler:public noncopyable
+class EventHandler:public noncopyable,
+                    public std::enable_shared_from_this<EventHandler>
 {
 public:
     typedef TimeStamp<LowPrecision> Time_Stamp;
@@ -25,14 +30,10 @@ public:
     typedef EventCallBack CloseCallBack;
 
     EventHandler()=delete;
-    explicit EventHandler(int fd,EventLoop* loop):
-    status_(-1),
-    fd_(fd),
-    events_(EventType::NoneEvent),
-    revents_(EventType::NoneEvent),
-    loop_(loop)
+    EventHandler(int fd,EventLoop* loop);
+    static EventHandlerPtr create(int fd,EventLoop* loop)
     {
-        assert(loop_!=nullptr);
+        return std::make_shared<EventHandler>(fd,loop);
     }
     int get_fd()const{return fd_;}
     EventLoop* get_loop()const{return loop_;}
@@ -54,19 +55,35 @@ public:
     bool isExcept()const{return events_&EventType::ExceptEvent;}
     void setReading(){events_.add_event(EventType::ReadEvent);}
     void setWriting(){events_.add_event(EventType::WriteEvent);}
+    void canecllWriting(){events_.remove_event(EventType::WriteEvent);}
     void setExcept(){events_.add_event(EventType::ExceptEvent);}
 
     void setReadCallBack(TimeStampEventCallBack cb){readCallback_=std::move(cb);}
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
     void setCloseCallBack(EventCallBack cb){closeCallback_=std::move(cb);}
+    void setErrorCallBack(EventCallBack cb){errorCallback_=std::move(cb);}
+
+    void set_name(const std::string& name){name_=name;}
+    const std::string& printName()
+    {
+        if(name_.empty())
+        {
+            static const std::string NoName="NoName";
+            return NoName;
+        }
+        return name_;
+    }
+
     void handler_revent(Time_Stamp receiveTime);
+
 private:
-    void update();
+    
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
     int fd_;
     Event events_;
     Event revents_;
     EventLoop* loop_;
+    std::string name_;
     // @brief events_是要监听的事件，revents_是触发的事件
 
     ReadCallBack readCallback_;

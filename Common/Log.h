@@ -12,10 +12,16 @@
 #include <atomic>
 #include <cstdio>
 
+#define LOG_FILE
+#define LOG_FILE_PATH  "../../build/Log.log"
+#define COUT
+#define EPOLL
+
+
 
 enum class LogModule {
     THREAD, 
-    TASK, 
+    SIGNAL, 
     LOCK, 
     CONFIG, 
     SYSTEM, 
@@ -29,7 +35,7 @@ enum class LogModule {
 inline const char* module_to_str(LogModule module) {
     switch (module) {
         case LogModule::THREAD: return "THREAD";
-        case LogModule::TASK: return "TASK";
+        case LogModule::SIGNAL: return "SIGNAL";
         case LogModule::LOCK: return "LOCK";
         case LogModule::CONFIG: return "CONFIG";
         case LogModule::SYSTEM: return "SYSTEM";
@@ -50,7 +56,9 @@ inline const char* module_to_str(LogModule module) {
 #define LOG_THREAD_SAFE
 
 // 日志文件路径
-#define LOG_FILE_PATH "../LOG.log"
+#ifndef LOG_FILE_PATH
+    #define LOG_FILE_PATH "../Tmp/Log.log"
+#endif
 
 // 日志过滤器类声明
 class LogFilter {
@@ -81,7 +89,7 @@ private:
     LogFilter(){
         module_enabled = {
             {LogModule::THREAD, false},
-            {LogModule::TASK, false},
+            {LogModule::SIGNAL, false},
             {LogModule::LOCK, false}, 
             {LogModule::CONFIG, false},
             {LogModule::SYSTEM, false},
@@ -149,7 +157,7 @@ inline void close_log_file() {
     #define LOG_BASE(module, level, level_str, msg) do { \
         LogFilter& filter = LogFilter::get_instance(); \
         if(filter.is_module_enabled(module) && (level >= filter.get_global_level())) { \
-            std::lock_guard<std::mutex> lock(filter.get_log_mutex()); \
+            std::lock_guard<std::mutex> log_lock(filter.get_log_mutex()); \
             auto& g_log_file = filter.get_log_file();\
             if(!g_log_file.is_open()){ \
                 std::cerr<<"文件打开错误"<<std::endl; \
@@ -165,7 +173,7 @@ inline void close_log_file() {
     #define LOG_BASE(module, level, level_str, msg) do { \
         LogFilter& filter = LogFilter::get_instance(); \
         if (filter.is_module_enabled(module) && (level >= filter.get_global_level())) { \
-            std::lock_guard<std::mutex> lock(filter.get_log_mutex()); \
+            std::lock_guard<std::mutex> log_lock(filter.get_log_mutex()); \
             std::cout << "[" << level_str << "] " \
                     << "[" << module_to_str(module) << "] " \
                     << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
@@ -185,10 +193,10 @@ inline void close_log_file() {
     #define LOG_LOCK_WARN(msg)  LOG_BASE(LogModule::LOCK, LOG_LEVEL_WARN,  "WARN",  msg) 
     #define LOG_LOCK_ERROR(msg)  LOG_BASE(LogModule::LOCK, LOG_LEVEL_ERROR,  "ERROR",  msg)
 
-    #define LOG_TASK_DEBUG(msg) LOG_BASE(LogModule::TASK, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_TASK_INFO(msg)  LOG_BASE(LogModule::TASK, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_TASK_WARN(msg)  LOG_BASE(LogModule::TASK, LOG_LEVEL_WARN,  "WARN",  msg)  
-    #define LOG_TASK_ERROR(msg)  LOG_BASE(LogModule::TASK, LOG_LEVEL_ERROR,  "ERROR",  msg)
+    #define LOG_SIGNAL_DEBUG(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_DEBUG, "DEBUG", msg)
+    #define LOG_SIGNAL_INFO(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_INFO,  "INFO",  msg)
+    #define LOG_SIGNAL_WARN(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_WARN,  "WARN",  msg)  
+    #define LOG_SIGNAL_ERROR(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_ERROR,  "ERROR",  msg)
 
     #define LOG_SYSTEM_DEBUG(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_DEBUG, "DEBUG", msg)
     #define LOG_SYSTEM_INFO(msg)  LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_INFO,  "INFO",  msg)
@@ -223,10 +231,10 @@ inline void close_log_file() {
     #define LOG_LOCK_WARN(msg)  
     #define LOG_LOCK_ERROR(msg)  
 
-    #define LOG_TASK_DEBUG(msg) 
-    #define LOG_TASK_INFO(msg)  
-    #define LOG_TASK_WARN(msg)  
-    #define LOG_TASK_ERROR(msg)  
+    #define LOG_SIGNAL_DEBUG(msg) 
+    #define LOG_SIGNAL_INFO(msg)  
+    #define LOG_SIGNAL_WARN(msg)  
+    #define LOG_SIGNAL_ERROR(msg)  
 
     #define LOG_SYSTEM_DEBUG(msg) 
     #define LOG_SYSTEM_INFO(msg) 

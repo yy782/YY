@@ -41,8 +41,9 @@ void set_CloseOnExec(int fd);
 ssize_t read(int fd,void* buf,size_t len);
 ssize_t write(int fd,const void* buf,size_t len);
 ssize_t recv(int fd,void* buf,size_t len,int flags);
+ssize_t send(int fd,const void* buf,size_t len,int flags);
 int sockfd_has_error(int fd);
- 
+void OnlyIpv6(int fd,bool ipv6_only=true);
 }
 }    
 }

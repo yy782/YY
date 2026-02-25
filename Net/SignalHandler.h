@@ -5,6 +5,8 @@
 #include <functional>
 #include <sys/signalfd.h>
 #include <map>
+#include <memory>
+#include <signal.h>
 namespace yy
 {
 namespace net
@@ -21,7 +23,7 @@ public:
 private:
     void handle();
     sigset_t sigset_;
-    EventHandler* const handler_;
+    std::shared_ptr<EventHandler> handler_;
     std::map<int,SigCallBack> callbacks_;
 };
 

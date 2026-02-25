@@ -5,10 +5,12 @@
 #include <atomic>
 #include <semaphore.h>
 #include <stdexcept>
+#include <exception>
 #include <thread>
 #include <condition_variable>
 #include <future>
 #include <functional>
+#include "Log.h"
 namespace yy{
 class sem{
 public:
@@ -109,21 +111,21 @@ public:
         }
     }
     void run(Functor cb){
-        try{
+        thread=std::thread([cb](){try{
             cb();
         }
-        catch(...)
+        catch(const std::exception& e)
         {
-
-        }
+            LOG_THREAD_WARN(e.what());
+        }});
     }   
     bool joinable()const noexcept{
-        return internal_thread.joinable();
+        return thread.joinable();
     }
-    void join(){internal_thread.join();}
-    void detach(){internal_thread.detach();}
+    void join(){thread.join();}
+    void detach(){thread.detach();}
 private:
-    std::thread internal_thread;
+    std::thread thread;
 };
 }
 

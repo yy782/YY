@@ -4,36 +4,42 @@ namespace yy
 {
 namespace net
 {
-TcpServer::TcpServer(const Address& addr,int threadnum):
+TcpServer::TcpServer(const Address& addr,int threadnum,int listenFdnum):
 loop_(),
-acceptor_(addr,&loop_),
-handler_(acceptor_.get_fd(),&loop_),
-threadpool_(threadnum)
+acceptors_(listenFdnum),
+threadpool_(threadnum),
+signalHandler_(&loop_)
 {
-    auto addConnect=[this](int fd,Address addr_in)
+    LOG_SYSTEM_INFO(addr.sockaddrToString());
+    for(auto& acceptor:acceptors_)
     {
-        auto newconnect=std::make_unique<TcpConnect>(fd,addr_in,&loop_);
-        
-        threadpool_.submit([this,Newconnect=newconnect.get()]()mutable
-        {
-            auto handler=Newconnect->getHandler();
-            assert(handler);
-            handler->setReadCallBack(messageCallback_);
-            handler->setCloseCallBack(closeCallback_);
-            connectCallback_(Newconnect->get_fd(),Newconnect->getAddr());
-            threadpool_.submit(std::bind(&EventLoop::addListen, &loop_,handler));
-        });
-        connects_.insert(std::move(newconnect));
-    };
-    acceptor_.setNewConnectCallBack(addConnect);
+        acceptor=std::make_unique<Acceptor>(addr,&loop_);
+        acceptor->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1));
+        acceptor->listen();
+    }
 }   
 void TcpServer::loop()
 {
+    threadpool_.run();
     loop_.loop();
 } 
 void TcpServer::stop()
 {
     loop_.quit();
+    threadpool_.stop();
+}
+void TcpServer::newConnection(TcpConnectionPtr conn)
+{
+
+    SconnectCallback_(conn);
+    connects_.insert(conn);
+    conn->setMessageCallBack(SmessageCallback_);
+    conn->setCloseCallBack(ScloseCallback_);
+    conn->setErrorCallBack(SerrorCallback_);
+    conn->setRMessageBorder(SRmessageBorder_);
+    conn->setWMessageBorder(SWmessageBorder_);
+    conn->setName(conn->getAddr().sockaddrToString().c_str());
+    threadpool_.addHandler(conn->getHandler());
 }
 }    
 }

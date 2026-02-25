@@ -36,7 +36,7 @@ private:
     static const int SI=10;
     int cur_slot_;
     NodePtr slots_[MAX_SLOTS];
-    EventHandler* const handler_;
+    std::shared_ptr<EventHandler> handler_;
 };
    
 }    

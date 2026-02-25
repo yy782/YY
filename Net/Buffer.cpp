@@ -16,7 +16,42 @@ void Buffer::swap(Buffer& other)
     std::swap(read_index_,other.read_index_);
     std::swap(write_index_,other.write_index_);
 }
+void Buffer::append(const char* data,byte_size size)
+{
+    ensure_appendable(size);
+    std::copy(data,data+size,begin_write());
+    move_write_index(size);
+    move_read_index(size);
+}
 
+void Buffer::append(const void* data,byte_size size)
+{
+    append(safe_static_cast<const char*>(data),size);
+}
+char* Buffer::append()// FIXMETH 不移动指针，可读可写指针向外暴露?
+{
+    return begin_write();
+}
+void Buffer::retrieve(size_t size)
+{
+    if(size<=get_readable_size())
+    {
+        move_read_index(size);
+    }
+}
+std::vector<char> Buffer::retrieve()
+{
+    assert(find_complete_message_func_);
+    std::vector<char> s(begin_read(),begin_read()+get_readable_size());
+    std::vector<char> message=find_complete_message_func_(s);
+    retrieve(message.size());
+    return message;
+}
+void Buffer::shrink(byte_size reserve)
+{
+    buffer_.resize(get_readable_size()+reserve+prepend_size_);
+    buffer_.shrink_to_fit();
+}
 void Buffer::check_index_validity(const char* file, int line)const
 {
 #ifndef NDEBUG        
@@ -55,6 +90,11 @@ void Buffer::move_read_index(byte_size size)
         write_index_=prepend_size_;
         check_index_validity(__FILE__, __LINE__);
     }
+}
+void Buffer::move_write_index(byte_size size)
+{
+    assert(size<=get_writable_size()&&"可写尺寸不够");
+    write_index_+=size;
 }
 void Buffer::expend(byte_size size)
 {
