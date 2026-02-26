@@ -31,10 +31,14 @@ fp_(::fopen(filename,"ae")) // e是当进程执行FD_CLOEXEC时关闭
         assert(fp_);
     }
     ::setbuffer(fp_,buffer_,BUFFER_SIZE);
+    char p []="==================================== 日志启动 ==================================== \n";
+    append(p,strlen(p));
     // @brief 替换掉标准库的默认缓冲区，默认缓冲区太小了
 }  
 BaseLogAppender::~BaseLogAppender()
 {
+    char p[]="==================================== 日志结束 ==================================== \n";
+    append(p,strlen(p));
     ::fclose(fp_);
 }
 void BaseLogAppender::append(const char* logline,size_t len)
@@ -100,7 +104,7 @@ void LogAppender::Timeflush()
     auto& interval=*flushInterval_.get();
 
     static Time_Stamp NextFlushTime=time+interval;
-    
+
     if(time>NextFlushTime)
     {
         baseLogFile_->flush();

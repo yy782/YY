@@ -39,8 +39,7 @@ wakeupHandler_(EventHandler::create(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_C
         uint64_t one=1;
         ssize_t n=sockets::read(wakeupHandler_->get_fd(),&one,sizeof one);
         assert(n==sizeof one);
-        status_&=~EventLoopStatus::Looping;
-        status_|=EventLoopStatus::Quit;
+        status_=EventLoopStatus::Quit;
         
         return;
     };
@@ -66,6 +65,7 @@ void EventLoop::loop()
             assert(handler!=nullptr);
             handler->handler_revent(pollReturnTime_);
         }
+        if(status_==EventLoopStatus::Quit)break;
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
         doPendingFunctions();

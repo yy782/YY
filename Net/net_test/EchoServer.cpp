@@ -92,6 +92,6 @@ int main(int argc,char* argv[])
 
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
 
-    EchoServer server(addr,1);
+    EchoServer server(addr,0);
     server.start();
 }

@@ -25,7 +25,7 @@ void TcpServer::loop()
 } 
 void TcpServer::stop()
 {
-    
+    // @TODO close all connection
     threadpool_.stop();
     loop_.quit();
 }
