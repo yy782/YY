@@ -3,7 +3,7 @@
 #include <vector>
 #include <assert.h>
 #include "../Common/Errno.h"                
-#include "../Common/Log.h"
+#include "../Common/SyncLog.h"
 #include "../Common/Types.h"
 namespace yy
 {

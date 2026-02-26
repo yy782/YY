@@ -1,7 +1,5 @@
 #include "../Common/noncopyable.h"
 
-#include "config.h"
-
 #include "sockets.h"
 #include "EventHandler.h"
 #include "InetAddress.h"

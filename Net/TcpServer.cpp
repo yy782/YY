@@ -25,8 +25,9 @@ void TcpServer::loop()
 } 
 void TcpServer::stop()
 {
-    loop_.quit();
+    
     threadpool_.stop();
+    loop_.quit();
 }
 void TcpServer::newConnection(TcpConnectionPtr conn)
 {

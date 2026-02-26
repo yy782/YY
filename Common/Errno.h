@@ -2,7 +2,7 @@
 #define _YY_ERRNO_H_
 #include <errno.h>
 
-#include "Log.h"
+#include "SyncLog.h"
 namespace yy
 {
 #define LOG_PRINT_ERRNO(save_errno) \

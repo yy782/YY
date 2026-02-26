@@ -48,7 +48,6 @@ public:
     void stop()
     {
         server_.stop();
-        close_log_file();
     }
     ~EchoServer()
     {
@@ -86,12 +85,11 @@ int main(int argc,char* argv[])
        addr=Address(std::stoi(argv[1]),true); 
     }
     
-    init_log_file();
-    set_log_global_level(LOG_LEVEL_DEBUG);
-    enable_log_module(LogModule::SYSTEM); 
-    enable_log_module(LogModule::WARN);
-    enable_log_module(LogModule::CLIENT);
-    //daemonize();
+    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
+    instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
+    instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
+    instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
+
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
 
     EchoServer server(addr,1);

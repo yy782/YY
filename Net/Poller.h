@@ -1,6 +1,5 @@
 #ifndef _YY_NET_POLLER_ 
 #define _YY_NET_POLLER_
-#include "config.h"
 #include <vector>
 #include <type_traits>
 #include <map>

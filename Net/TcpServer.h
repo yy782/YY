@@ -1,10 +1,8 @@
 #ifndef _YY_NET_TCPSERVER_H_
 #define _YY_NET_TCPSERVER_H_
 
-#include "config.h"
-
 #include "../Common/noncopyable.h"
-#include "../Common/Log.h"
+#include "../Common/SyncLog.h"
 #include "Acceptor.h"
 #include "EventHandler.h"
 #include "EventLoop.h"

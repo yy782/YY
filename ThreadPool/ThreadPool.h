@@ -22,7 +22,7 @@
 #include <any>
 #include <assert.h>
 #define LOG_FILE
-#include "../Common/Log.h" 
+#include "../Common/SyncLog.h" 
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"

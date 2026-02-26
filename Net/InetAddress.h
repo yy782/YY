@@ -1,11 +1,10 @@
 #ifndef _YY_NET_INETADDRESS_
 #define _YY_NET_INETADDRESS_
-#include "config.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
 #include "../Common/copyable.h"
-#include "../Common/Log.h"
+#include "../Common/SyncLog.h"
 #include "../Common/Types.h"
 namespace yy
 {

@@ -9,5 +9,5 @@
 #include "Poller.h"
 #include "TcpServer.h"
 #include "daemon.h"
-
+#include "SyncLog.h"
 #endif

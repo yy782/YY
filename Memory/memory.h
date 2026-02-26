@@ -10,7 +10,7 @@
 #include "../Common/noncopyable.h"
 #define LOG_FILE
 #define COUT
-#include "../Common/Log.h"
+#include "../Common/LogFilter.h"
 #include "../Common/Types.h"
 
 namespace yy{    

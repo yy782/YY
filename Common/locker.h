@@ -10,7 +10,7 @@
 #include <condition_variable>
 #include <future>
 #include <functional>
-#include "Log.h"
+#include "SyncLog.h"
 namespace yy{
 class sem{
 public:

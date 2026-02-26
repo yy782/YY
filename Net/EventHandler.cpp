@@ -1,5 +1,5 @@
 #include "EventHandler.h"
-#include "../Common/Log.h"
+#include "../Common/SyncLog.h"
 namespace yy
 {
 namespace net

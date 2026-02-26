@@ -89,7 +89,7 @@ add_subdirectory(Net)
 #
 
 target_compile_options(common
-    INTERFACE
+    PRIVATE
     ${COMMON_WARNING_OPTIONS}
 )
 target_compile_options(memorypool

@@ -4,6 +4,8 @@
 #include <sys/timerfd.h>
 #include "copyable.h"
 #include "Types.h"
+#include <string>
+#include <iomanip>
 namespace yy
 {
    
@@ -50,6 +52,14 @@ public:
         return time_point_;
     }
     static TimePoint now(){return ClockTraits<PrecisionTag>::Clock::now();} 
+    static std::string nowToString()
+    {
+        auto nowTime=now();
+        auto time=std::chrono::system_clock::to_time_t(nowTime);
+        char buf[64];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&time));
+        return std::string(buf);
+    }
 private:
     TimePoint time_point_;
 };
@@ -61,11 +71,21 @@ public:
     TimeInterval(TimePeriod timePeriod):
     timePeriod_(timePeriod)
     {}
+    TimeInterval(long times):
+    TimeInterval(TimePeriod(times))
+    {}
     TimePeriod getTimePeriod()const{return timePeriod_;}
     long getTimes()const{return timePeriod_.count();}
 private:
     TimePeriod timePeriod_;    
 };
+
+template<typename PrecisionTag1,typename PrecisionTag2>
+TimeStamp<PrecisionTag1>& operator+(TimeStamp<PrecisionTag1>& lhs,const TimeInterval<PrecisionTag2>& rhs)
+{
+    lhs.get_time_point()+=rhs.getTimePeriod();
+    return lhs;
+}
 
 
 template<typename PrecisionTag>

@@ -1,5 +1,5 @@
 #include "../memory.h"
-#include "../../Common/Log.h"
+#include "../../Common/LogFilter.h"
 using namespace yy;
 
 struct A
@@ -13,9 +13,6 @@ struct A
 };
 int main()
 {
-    init_log_file();
-    set_log_global_level(LOG_LEVEL_DEBUG);
-    enable_log_module(LogModule::MEMORY);
     auto& memory_pool =MemoryPool::get_instance(1200);
     void* ptr = memory_pool.malloc(sizeof(A));
     A* obj=new (ptr) A(1,2,'c',nullptr);
@@ -44,6 +41,5 @@ int main()
     memory_pool.free(ptr3,500);
     memory_pool.free(ptr4,600);
     memory_pool.free(obj,sizeof(A));
-    close_log_file();
     return 0;
 }
