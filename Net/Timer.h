@@ -12,20 +12,23 @@ namespace net
 {
 
 #define FOREVER -1
+
+typedef std::function<void()> TimerCallBack; 
+
 template<typename PrecisionTag>  
 class Timer:public noncopyable
 {
 public:
-    typedef std::function<void()> TimerCallBack;
+    
     typedef TimeStamp<PrecisionTag> Time_Stamp;
     typedef TimeInterval<PrecisionTag> Time_Interval;
-
+    
     
     Timer(TimerCallBack cb,int interval,int execute_count):
     callback_(std::move(cb)),
     interval_(interval),
     execute_count_(execute_count),
-    expiration_(Time_Stamp::now()+interval)
+    expiration_(Time_Stamp::now()+Time_Interval(interval))
     {
         assert(execute_count_!=FOREVER&&execute_count_<=0);
 
@@ -42,7 +45,7 @@ public:
         {
             --execute_count_;
         }
-        expiration_=Time_Stamp::now()+interval_.getTimePeriod();
+        expiration_=Time_Stamp::now()+interval_;
     }
 
 private:

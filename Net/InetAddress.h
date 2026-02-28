@@ -55,7 +55,7 @@ public:
     static void fromIpPort(const char* ip, uint16_t port,
         struct sockaddr_in6* addr);        
 
-    static void fromIpPort(in6_addr ip,uint16_t port,
+    static void fromIpPort(const struct in6_addr& ip,uint16_t port,
         struct sockaddr_in6* addr);                                             
 private:
     union 

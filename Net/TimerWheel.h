@@ -5,19 +5,19 @@
 #include "../Common/TimeStamp.h"
 #include <memory>
 #include <assert.h>
+#include "Timer.h"
 namespace yy
 {
 namespace net
 {
 
 class EventHandler;
-template<class PrecisionTag>
-class Timer;
 class EventLoop;
 
 class TimerWheel:public noncopyable
 {
 public:
+    
     typedef Timer<LowPrecision> LTimer;
     typedef std::shared_ptr<LTimer> LTimerPtr;
 
@@ -27,6 +27,11 @@ public:
     TimerWheel()=delete;
     TimerWheel(EventLoop* loop);  
     ~TimerWheel();
+    void add_timer(TimerCallBack cb,int interval,int execute_count)
+    {
+        auto timer=std::make_shared<LTimer>(std::move(cb),interval,execute_count);
+        add_timer(timer);
+    }
     void add_timer(LTimerPtr timer);
     void tick();
     

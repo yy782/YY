@@ -45,16 +45,19 @@ public:
     time_point_(time_point)
     {}
     void flush(){
-        time_point_=now();
+        time_point_=now().get_time_point();
     }
     auto get_time_point()const
     {
         return time_point_;
     }
-    static TimePoint now(){return ClockTraits<PrecisionTag>::Clock::now();} 
+    static TimeStamp now()
+    {
+        return TimeStamp(ClockTraits<PrecisionTag>::Clock::now());
+    } 
     static std::string nowToString()
     {
-        auto nowTime=now();
+        auto nowTime=now().get_time_point();
         auto time=std::chrono::system_clock::to_time_t(nowTime);
         char buf[64];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&time));
@@ -80,11 +83,13 @@ private:
     TimePeriod timePeriod_;    
 };
 
+
 template<typename PrecisionTag1,typename PrecisionTag2>
-TimeStamp<PrecisionTag1>& operator+(TimeStamp<PrecisionTag1>& lhs,const TimeInterval<PrecisionTag2>& rhs)
+TimeStamp<PrecisionTag1> operator+(const TimeStamp<PrecisionTag1>& lhs,const TimeInterval<PrecisionTag2>& rhs)
 {
-    lhs.get_time_point()+=rhs.getTimePeriod();
-    return lhs;
+    TimeStamp<PrecisionTag1> tmp(lhs);
+    tmp.get_time_point()+=rhs.getTimePeriod();
+    return tmp;
 }
 
 

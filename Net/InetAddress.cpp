@@ -16,7 +16,8 @@ is_ipv6_(ipv6)
     else
     {
         in_addr_t ipv4_addr= loopbackOnly ? INADDR_LOOPBACK:INADDR_ANY;
-        Address::fromIpPort(ipv4_addr,port,&addr_);
+        // 对于 INADDR_LOOPBACK 和 INADDR_ANY，需要转换为网络字节序
+        Address::fromIpPort(::htonl(ipv4_addr),port,&addr_);
     }
 }
 Address::Address(const char* ip,uint16_t port,bool ipv6):
@@ -46,6 +47,7 @@ if(r==INADDR_NONE)
     return;
 }
 // @learn inet_addr的返回值>=0;=0时地址是0,0,0,0,传入空指针会奔溃
+// inet_addr返回的已经是网络字节序，不需要再转换
 return fromIpPort(r,port,addr);
 }
 void Address::fromIpPort(in_addr_t ip,uint16_t port,
@@ -59,7 +61,7 @@ void Address::fromIpPort(in_addr_t ip,uint16_t port,
     memZero(addr,sizeof *addr);
     addr->sin_family=AF_INET;
     addr->sin_port=::htons(port);
-    addr->sin_addr.s_addr=ip;
+    addr->sin_addr.s_addr=ip;  // ip 已经是网络字节序
 } 
 void Address::fromIpPort(const char* ip, uint16_t port,
     struct sockaddr_in6* addr)
@@ -81,7 +83,7 @@ if(r<=0)
 }
 return fromIpPort(ipv6_addr,port,addr);
 }
-void Address::fromIpPort(in6_addr ip,uint16_t port,
+void Address::fromIpPort(const struct in6_addr& ip, uint16_t port,
     struct sockaddr_in6* addr)
 {
     if(addr==nullptr)
@@ -92,8 +94,9 @@ void Address::fromIpPort(in6_addr ip,uint16_t port,
     memZero(addr,sizeof *addr);
     addr->sin6_family=AF_INET6;
     addr->sin6_port=::htons(port);
-    addr->sin6_addr=ip;                           
-}   
+    addr->sin6_addr=ip;
+}
+
 const std::string Address::get_ip()const
 {
     char ip[INET6_ADDRSTRLEN];

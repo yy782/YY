@@ -3,8 +3,7 @@
 #include <sys/stat.h>
 namespace yy
 {
-namespace net
-{
+
 void daemonize(){
     pid_t pid=fork();
     if(pid==-1){
@@ -45,5 +44,5 @@ void daemonize(){
     
 }    
 }    
-}
+
 #endif

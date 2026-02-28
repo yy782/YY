@@ -8,7 +8,6 @@
 #include <sys/epoll.h>
 #include <assert.h>
 #include <sys/timerfd.h>
-#include "../Common/Errno.h"
 #include "../Common/Types.h"
 namespace yy
 {
@@ -30,7 +29,8 @@ void bind(int fd,const Address& addr);
 void listen(int fd,int queue_size=SOMAXCONN);
 void connect(int fd,const Address& addr);
 int accept(int fd,Address& address,bool is_ipv6);
-
+void setKeepAlive(int fd,bool on,int idleSeconds=7200, 
+                  int intervalSeconds=75,int maxProbes=9);
 // @brief 设置端口重用
 void reuse_addr(int fd,bool on=true);
 
@@ -44,6 +44,7 @@ ssize_t recv(int fd,void* buf,size_t len,int flags);
 ssize_t send(int fd,const void* buf,size_t len,int flags);
 int sockfd_has_error(int fd);
 void OnlyIpv6(int fd,bool ipv6_only=true);
+void close(int fd);
 }
 }    
 }

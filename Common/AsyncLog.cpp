@@ -1,0 +1,82 @@
+#include "Buffer.h"
+#include "AsyncLog.h"
+#include "Types.h"
+namespace yy
+{
+constexpr size_t BufferSize=100;
+
+AsyncLog::AsyncLog(const char* fileName,size_t flush_interval):
+Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
+SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
+BackstageBuffers_(),
+appender_(fileName,flush_interval)
+{
+    g_log_filter=&filter_;
+    filter_.set_log_file_callback(std::bind(&AsyncLog::append,this,_1,_2));
+    thread_.run(std::bind(&AsyncLog::loop,this));
+}  
+AsyncLog::~AsyncLog()
+{
+    isRunning_=false;
+    if(thread_.joinable())
+    {
+        thread_.join();
+    }
+}
+void AsyncLog::append(const char* msg,size_t len)
+{
+    assert(len);
+    Receptionlock_.lock();
+    if(Receptionbuffer_->get_writable_size()<len)
+    {
+        BackstageLock_.lock();
+        BackstageBuffers_.push_back(std::move(Receptionbuffer_));
+        BackstageLock_.unlock();
+
+        if(SpareBuffer_)
+        {
+            Receptionbuffer_=std::move(SpareBuffer_);
+        }
+        else
+        {
+            Receptionbuffer_=std::make_unique<Buffer>(BufferSize);
+        }
+    }
+    assert(Receptionbuffer_);
+    assert(Receptionbuffer_->get_writable_size()>=len);
+    Receptionbuffer_->append(msg,len);
+    Receptionlock_.unlock();
+}
+void AsyncLog::loop()
+{
+    isRunning_=true;
+    BufferContainer WriteBuffer;
+    while(isRunning_)
+    {
+        BackstageLock_.lock();
+        if(!BackstageBuffers_.empty())
+        {
+
+            WriteBuffer.swap(BackstageBuffers_);
+        }
+        BackstageLock_.unlock();
+        Receptionlock_.lock();
+        if(!SpareBuffer_)
+        {
+            SpareBuffer_=std::make_unique<Buffer>(BufferSize);
+        }
+
+        if(!Receptionbuffer_)
+        {
+            Receptionbuffer_=std::make_unique<Buffer>(BufferSize);
+        }
+        Receptionlock_.unlock();
+        for(auto& buffer:WriteBuffer)
+        {
+            char* msg=buffer->retrieveAll();
+            appender_.append(msg,strlen(msg));
+        }
+        WriteBuffer.clear();
+    }
+}   
+}

@@ -16,24 +16,32 @@
 #include <sstream>
 #include "noncopyable.h"
 
-
+#include "Buffer.h"
+#include <string>
 namespace yy
 {
 
 class LogStream 
 {
 public:
-  template <typename T>
-  LogStream& operator<<(const T& val) {
-    oss_ << val;
-    return *this;
-  }
-  std::string str()const{return oss_.str();}
-  size_t size()const{
-    return oss_.str().size(); 
-  }
+    template <typename T>
+    LogStream& operator<<(const T& val) {
+        if constexpr(std::is_same_v<T,Buffer::CharContainer>)
+        {
+            oss_<<std::string(val.data(), val.size());
+        } 
+        else 
+        {
+            oss_ << val;  
+        }
+        return *this;
+    }
+    std::string str()const{return oss_.str();}
+    size_t size()const{
+        return oss_.str().size(); 
+    }
 private:
-  std::ostringstream oss_;
+    std::ostringstream oss_;
 };
 
 
@@ -120,15 +128,16 @@ extern LogFilter* g_log_filter;
 
 
 #define LOG_BASE(module, level, level_str, msg) do { \
-    assert(g_log_filter); \
-    if(g_log_filter->is_module_enabled(module) && (level >= g_log_filter->get_global_level())) { \
-        LogStream stream; \
-        stream << "[" << level_str << "] " \
-               << "[" << module_to_str(module) << "] " \
-               << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
-               << msg << "\n"; \
-        g_log_filter->printLog(stream.str().c_str(), stream.size()); \
-    } \
+    if(g_log_filter){ \
+        if(g_log_filter->is_module_enabled(module) && (level >= g_log_filter->get_global_level())) { \
+            LogStream stream; \
+            stream << "[" << level_str << "] " \
+                << "[" << module_to_str(module) << "] " \
+                << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
+                << msg << "\n"; \
+            g_log_filter->printLog(stream.str().c_str(), stream.size()); \
+        } \
+    }\
 } while(0)
 
 
@@ -172,6 +181,39 @@ extern LogFilter* g_log_filter;
 
 
     #define LOG_NULL_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg) 
+
+#define LOG_PRINT_ERRNO(save_errno) \
+                        switch(save_errno){\
+                        case EBADF:\
+                            LOG_NULL_WARN("非法的文件描述符");\
+                            break;\
+                         case ENOTSOCK:\
+                            LOG_NULL_WARN("FD不是套接字");\
+                            break;\
+                        case EINVAL:\
+                            LOG_NULL_WARN("参数无效");\
+                            break;\
+                        case ENOPROTOOPT:\
+                            LOG_NULL_WARN("协议不支持该选项");\
+                            break;\
+                        case EPERM:\
+                            LOG_NULL_WARN("权限不足");\
+                            break;\
+                        case EFAULT:\
+                            LOG_NULL_WARN("地址非法");\
+                            break;\
+                        case EINTR:\
+                            LOG_NULL_WARN("系统调用被信号中断");\
+                            break;\
+                        case EADDRINUSE:\
+                            LOG_NULL_WARN("地址已被占用");\
+                            break;\
+                        default:\
+                            LOG_NULL_WARN("[errno] "<<errno);\
+                            break;\
+                        }
+
+
 // #else
 //     #define LOG_THREAD_DEBUG(msg) 
 //     #define LOG_THREAD_INFO(msg)  

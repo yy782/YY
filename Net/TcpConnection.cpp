@@ -16,9 +16,6 @@ handler_(EventHandler::create(fd,loop))
     handler_->setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
     handler_->setErrorCallBack(std::bind(&TcpConnection::handleError,this));
 
-    handler_->setReading();
-    handler_->setExcept();
-
     
 }    
 
@@ -100,12 +97,12 @@ void TcpConnection::handleClose()
 }
 void TcpConnection::handleError()   //FIXME 错误处理的不好
 {
-    assert(SerrorCallBack_);
+    //assert(SerrorCallBack_);
     auto loop=handler_->get_loop();
     assert(loop);
     loop->submit(std::bind(&EventLoop::remove_listen,loop,handler_));
-    SerrorCallBack_(shared_from_this());
-    ScloseCallBack_(shared_from_this());
+    if(SerrorCallBack_)SerrorCallBack_(shared_from_this());
+    if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
 }
 
 }

@@ -40,6 +40,8 @@ public:
                 return TcpServer::CharContainer();
             }
         });
+
+        
     }
     void start()
     {
@@ -58,12 +60,13 @@ private:
     {
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
+        conn->setReading();// @note 对方连接是否决定监听由业务层决定
     }
     void onMessage(TcpConnectionPtr conn)
     {
         auto msg=conn->recv();
         conn->send(msg.data(),msg.size());
-        LOG_SYSTEM_INFO("recv msg: "<<msg.data());
+        LOG_SYSTEM_INFO("recv msg: "<<msg);
     }
     void onClose(TcpConnectionPtr conn)
     {
@@ -85,13 +88,13 @@ int main(int argc,char* argv[])
        addr=Address(std::stoi(argv[1]),true); 
     }
     
-    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
+    auto& instance=AsyncLog::getInstance("../../build/Log.log",10);
     instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
     instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
     instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
 
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
 
-    EchoServer server(addr,0);
+    EchoServer server(addr,1);
     server.start();
 }

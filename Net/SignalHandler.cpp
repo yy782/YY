@@ -1,7 +1,7 @@
 #include "SignalHandler.h"
 #include "EventHandler.h"
 #include "sockets.h"
-#include "../Common/Errno.h"
+#include "../Common/LogFilter.h"
 #include <signal.h>
 #include "EventLoop.h"
 namespace yy

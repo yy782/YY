@@ -8,6 +8,7 @@
 #include "../Common/TimeStamp.h"
 #include <memory>
 #include <string>
+#include "sockets.h"
 namespace yy
 {
 namespace net
@@ -30,6 +31,10 @@ public:
     typedef EventCallBack CloseCallBack;
 
     EventHandler()=delete;
+    ~EventHandler()
+    {
+        sockets::close(fd_);
+    }
     EventHandler(int fd,EventLoop* loop);
     static EventHandlerPtr create(int fd,EventLoop* loop)
     {
@@ -75,6 +80,11 @@ public:
     }
 
     void handler_revent(Time_Stamp receiveTime);
+    void disableAll()
+    {
+        events_=EventType::NoneEvent;
+    }
+    void removeListen();
 
 private:
     

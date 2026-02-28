@@ -1,9 +1,8 @@
 #include "Buffer.h"
-
+#include <string>
 namespace yy
 {
-namespace net
-{
+
 Buffer::Buffer(byte_size initial_size,byte_size prepend_size):
 buffer_(prepend_size+initial_size),
 prepend_size_(prepend_size),
@@ -21,7 +20,6 @@ void Buffer::append(const char* data,byte_size size)
     ensure_appendable(size);
     std::copy(data,data+size,begin_write());
     move_write_index(size);
-    move_read_index(size);
 }
 
 void Buffer::append(const void* data,byte_size size)
@@ -32,12 +30,20 @@ char* Buffer::append()// FIXMETH 不移动指针，可读可写指针向外暴�
 {
     return begin_write();
 }
-void Buffer::retrieve(size_t size)
+char* Buffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())
     {
+        char* r=begin_read();
         move_read_index(size);
+        return r;
     }
+    return nullptr;
+}
+char* Buffer::retrieveAll()
+{
+    auto size=get_readable_size();
+    return retrieve(size);
 }
 std::vector<char> Buffer::retrieve()
 {
@@ -47,6 +53,7 @@ std::vector<char> Buffer::retrieve()
     retrieve(message.size());
     return message;
 }
+
 void Buffer::shrink(byte_size reserve)
 {
     buffer_.resize(get_readable_size()+reserve+prepend_size_);
@@ -122,5 +129,5 @@ void Buffer::reuse_prependable_space()
     write_index_=read_index_+readable;
     check_index_validity(__FILE__, __LINE__);        
 }    
-}    
+
 }

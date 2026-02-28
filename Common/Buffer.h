@@ -1,16 +1,10 @@
-#ifndef _YY_NET_BUFFER_
-#define _YY_NET_BUFFER_
+#ifndef _YY_BUFFER_
+#define _YY_BUFFER_
 #include <vector>
-#include <assert.h>
-#include "../Common/Errno.h"                
-#include "../Common/SyncLog.h"
-#include "../Common/Types.h"
+#include <assert.h>          
+#include "Types.h"
 namespace yy
 {
-namespace net
-{
-
- 
 
 // @brief 缓冲区只管存，不管该存多大,存多大由业务判断
 class Buffer
@@ -26,7 +20,8 @@ public: // @note 为了减少拷贝，但是又要保证指针安全，所以尽
     void append(const char* data,byte_size size);
     void append(const void* data,byte_size size);
     char* append();
-    void retrieve(size_t size);
+    char* retrieve(size_t size);
+    char* retrieveAll();
     std::vector<char> retrieve();
     const char* peek(){return begin()+read_index_;}
     void shrink(byte_size reserve);
@@ -57,6 +52,6 @@ private:
 
     FindCompleteMessageFunc find_complete_message_func_;
 };    
-}    
+
 }
 #endif

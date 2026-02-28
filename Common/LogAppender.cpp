@@ -48,7 +48,7 @@ void BaseLogAppender::append(const char* logline,size_t len)
     while (written != len)
     {
         size_t remain =len-written;
-        size_t n=fwrite_unlocked(logline + written,1,remain,fp_);// @param 第二个参数是单个数据项的字节数
+        size_t n=fwrite(logline + written,1,remain,fp_);// @param 第二个参数是单个数据项的字节数  ,默认是线程安全的
         if (n!=remain)
         {
             int err=ferror(fp_);

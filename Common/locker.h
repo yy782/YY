@@ -105,7 +105,7 @@ public:
     typedef std::function<void()> Functor;
     Thread()=default;
     //void setFunctor(Functor cb){functor_=std::move(cb);}
-    ~Thread(){
+    ~Thread(){ // @note 这是最后的保证，但是尽量在类的构析函数调用join()接口，而不是等他自然构析
         if(joinable()){
             join();
         }

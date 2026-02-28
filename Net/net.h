@@ -9,5 +9,7 @@
 #include "Poller.h"
 #include "TcpServer.h"
 #include "daemon.h"
-#include "SyncLog.h"
+#include "../Common/SyncLog.h"
+#include "../Common/AsyncLog.h"
+#include "TcpClient.h"
 #endif

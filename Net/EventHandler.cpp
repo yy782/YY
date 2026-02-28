@@ -1,5 +1,6 @@
 #include "EventHandler.h"
 #include "../Common/SyncLog.h"
+#include "EventLoop.h"
 namespace yy
 {
 namespace net
@@ -37,7 +38,10 @@ if(revents_&EventType::ErrorEvent)
 if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent||revents_&EventType::ExceptEvent)
 {
      LOG_CLIENT_DEBUG(printName()<<" handler_revent ReadEvent");
-    if(readCallback_)readCallback_(receiveTime);
+    if(readCallback_)
+    {
+        readCallback_(receiveTime);
+    }
 }
 if(revents_&EventType::WriteEvent)
 {
@@ -45,6 +49,10 @@ if(revents_&EventType::WriteEvent)
     if(writeCallback_)writeCallback_();
 }
 }
-
+void EventHandler::removeListen()
+{
+    assert(loop_);
+    loop_->submit(std::bind(&EventLoop::remove_listen,loop_,shared_from_this()));
+}
 }
 }    

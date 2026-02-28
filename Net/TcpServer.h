@@ -9,6 +9,8 @@
 #include "EventLoopThreadPool.h"
 #include "TcpConnection.h"
 #include "SignalHandler.h"
+#include "TimerQueue.h"
+#include "TimerWheel.h"
 #include <set>
 #include <memory>
 #include <vector>
@@ -33,6 +35,7 @@ public:
     typedef TcpConnection::CharContainer CharContainer;
 
     TcpServer(const Address& addr,int threadnum,int listenFdnum=1);
+    ~TcpServer()=default;
     void setConnectCallBack(ServicesConnectCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallback_=std::move(cb);}
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallback_=std::move(cb);}
@@ -40,7 +43,8 @@ public:
 
     void setRMessageBorder(FindCompleteMessageFunc cb){SRmessageBorder_=std::move(cb);}
     void setWMessageBorder(FindCompleteMessageFunc cb){SWmessageBorder_=std::move(cb);}
-    
+    void addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isHighPrecision=false);
+
     SignalHandler& getSignalHandler(){return signalHandler_;}
     
     void loop();
@@ -52,6 +56,11 @@ private:
     EventLoopThreadPool threadpool_;
     ConnectMap connects_;
     SignalHandler signalHandler_;
+
+    TimerQueue<LowPrecision> LTimerQueue_;
+    TimerQueue<HighPrecision> HTimerQueue_;
+    TimerWheel TimerWheel_;
+
 
     ServicesConnectCallBack SconnectCallback_;
     ServicesMessageCallBack SmessageCallback_;

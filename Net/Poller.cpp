@@ -2,6 +2,7 @@
 #include "sockets.h"
 #include "Event.h"
 #include "EventHandler.h"
+#include "../Common/LogFilter.h"
 namespace yy
 {
 namespace net

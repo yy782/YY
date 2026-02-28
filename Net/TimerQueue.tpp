@@ -1,29 +1,33 @@
 #include <assert.h>
 #include <vector>
-#include "TimerQueue.h"
 #include "Timer.h"
 #include "sockets.h"
 #include "EventHandler.h"
+#include "TimerQueue.h"
 namespace yy
 {
 namespace net
 {
-TimerQueue::TimerQueue(EventLoop* loop):
-handler_(new EventHandler(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop))
+template<typename PrecisionTag>
+TimerQueue<PrecisionTag>::TimerQueue(EventLoop* loop):
+handler_(EventHandler::create(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop))
 {
     assert(handler_);
     handler_->setReadCallBack(std::bind(&TimerQueue::handlerRead,this));
     handler_->setReading();
 }
-TimerQueue::~TimerQueue()
+template<typename PrecisionTag>
+TimerQueue<PrecisionTag>::~TimerQueue()
 {
-    delete handler_;
+    
 }    
-void TimerQueue::insert(HTimer* timer)
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,int interval,int execute_count)
 {
+    auto timer=std::make_shared<PTimer>(std::move(cb),interval,execute_count);
     assert(timer==nullptr);
     auto when=timer->getTimerStamp();
-    assert(when.get_time_point()<Time_Stamp::now());
+    assert(when<Time_Stamp::now());
     auto it=timers_.begin();
     
     if(it==timers_.end()||when<it->first)
@@ -37,7 +41,8 @@ void TimerQueue::insert(HTimer* timer)
    assert(result.second);
 #endif    
 }
-void TimerQueue::cancelTimer(HTimer* timer)
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::cancelTimer(PTimer* timer)
 {
     assert(timer);
 #ifdef NDEBUG
@@ -47,8 +52,8 @@ void TimerQueue::cancelTimer(HTimer* timer)
     assert(n1==1);
 #endif
 }  
-
-void TimerQueue::handlerRead()
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::handlerRead()
 {
     std::vector<Entry> expired=getDueTasks(Time_Stamp::now());
     std::vector<Entry> NewTasks;
@@ -63,7 +68,8 @@ void TimerQueue::handlerRead()
 
     modifyTimerfd(timers_.begin()->first);
 }
-void TimerQueue::modifyTimerfd(Time_Stamp timestamp)
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::modifyTimerfd(Time_Stamp timestamp)
 {
 /*
     struct timespec {
@@ -76,18 +82,19 @@ void TimerQueue::modifyTimerfd(Time_Stamp timestamp)
         struct timespec it_value;    // 首次超时时间（一次性/周期性定时器都需要）
     };        
 */    
-    assert(timestamp.get_time_point()<Time_Stamp::now());
+    assert(timestamp<Time_Stamp::now());
     int fd=handler_->get_fd();
     struct timespec value=convert(timestamp); 
     sockets::timerfd_settime(fd,0,NULL,&value);
 }
-std::vector<TimerQueue::Entry> TimerQueue::getDueTasks(Time_Stamp now)
+template<typename PrecisionTag>
+std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::getDueTasks(Time_Stamp now)
 {
     std::vector<Entry> expired;
-    Entry sentry(now,reinterpret_cast<HTimer*>(UINTPTR_MAX));
-    TimerList::iterator end=timers_.lower_bound(sentry);
+    Entry sentry(now,TimerPtr());
+    typename TimerList::iterator end=timers_.upper_bound(sentry);
     assert(end==timers_.end()||now<end->first);
-    std::copy(timers_.begin(),end,back_inserter(expired));
+    std::move(timers_.begin(),end,back_inserter(expired));
 #ifdef NDEBUG  
     timers_.erase(timers_.begin(),end);
 #else

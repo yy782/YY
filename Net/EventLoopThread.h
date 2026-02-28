@@ -25,6 +25,7 @@ public:
     {
         //assert(loop_);
         loop_.quit();
+        thread_.join();
     }
     void sumbit(Functor cb)
     {

@@ -1,8 +1,10 @@
 #include "sockets.h"
 #include "../Common/Types.h"
 #include "InetAddress.h"
-
+#include <netinet/tcp.h>
 #include <sys/signalfd.h>
+#include <iostream>
+#include "../Common/LogFilter.h"
 namespace yy
 {
 namespace net
@@ -111,6 +113,8 @@ void connect(int fd,const Address& addr)
     if(ret==-1)
     {
         LOG_PRINT_ERRNO(errno);
+        std::cout<<"连接失败 "<<errno<<std::endl;
+        exit(1);
     }
 }
 int accept(int fd,Address& address,bool is_ipv6)
@@ -167,8 +171,38 @@ int accept(int fd,Address& address,bool is_ipv6)
     //      accept的errno处理如此谨慎，一部分原因是accept是直接关联服务端的，与连接的所有客户有关    
     return connfd;
 }
+void setKeepAlive(int fd,bool on,int idleSeconds, 
+                  int intervalSeconds,int maxProbes)
+{
+    // 1. 开启保活功能（必须）
+    int optval=on?1:0;
+    int ret=::setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,
+                         &optval,sizeof(optval));
+    if(ret<0) 
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    if(!on)return;
+    
+    ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPIDLE,&idleSeconds,sizeof(idleSeconds));// @prief 探测开始前的等待时间
+    if(ret<0) 
+    {
+        LOG_PRINT_ERRNO(errno);
+    }    
+    ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPINTVL,&intervalSeconds,sizeof(intervalSeconds));// @prief 探测间隔时间
+    if(ret<0) 
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPCNT,&maxProbes,sizeof(maxProbes));// @prief 探测次数
+    if(ret<0) 
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
 void reuse_addr(int fd,bool on)
 {
+    // 根据on参数设置optval的值，1表示启用，0表示禁用
     int optval=on?1:0;
     auto ret=::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
             &optval, static_cast<socklen_t>(sizeof optval));
@@ -277,7 +311,13 @@ void OnlyIpv6(int fd,bool ipv6_only)
         LOG_PRINT_ERRNO(errno);
     }
 } 
-
+void close(int fd)
+{
+    if(::close(fd)<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
 }   
 }    
 }
