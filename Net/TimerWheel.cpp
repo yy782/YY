@@ -4,6 +4,7 @@
 #include "../Common/Types.h"
 #include "sockets.h"
 #include <memory>
+#include "EventLoop.h"
 namespace yy
 {
 namespace net
@@ -34,6 +35,11 @@ handler_(EventHandler::create(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXE
     sockets::timerfd_settime(fd,0,new_ts);
 
     handler_->setReadCallBack(std::bind(&TimerWheel::tick,this));
+    handler_->setReading();
+
+    handler_->set_name("TimerWheel");
+
+    loop->addListen(handler_);
 }
 TimerWheel::~TimerWheel()
 {
@@ -42,7 +48,7 @@ TimerWheel::~TimerWheel()
         slots_[i].reset();
     }
 }
-void TimerWheel::add_timer(LTimerPtr timer)
+void TimerWheel::insert(LTimerPtr timer)
 {
     assert(timer!=nullptr);
     
@@ -74,6 +80,7 @@ void TimerWheel::add_timer(LTimerPtr timer)
 }
 void TimerWheel::tick()
 {
+    LOG_TIME_DEBUG("tick!");
     auto tmp=slots_[cur_slot_];
     while(tmp){
         if(tmp->rotation>0){
@@ -83,8 +90,10 @@ void TimerWheel::tick()
             auto timer=tmp->data;
             assert(timer);
             timer->execute();
-            if(timer->remain_count())add_timer(timer);
-            
+            if(timer->remain_count()>0)
+            {
+                insert(timer);
+            }
             auto next=tmp->next.lock();//可能是nullptr,但是在接下来的操作不可能被释放，因为还保持引用
             auto prev=tmp->prev;
             
