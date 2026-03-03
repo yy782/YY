@@ -10,6 +10,7 @@
 #include <vector>
 #include <memory>
 #include "Timer.h"
+#include "EventHandler.h"
 namespace yy
 {
 namespace net
@@ -18,7 +19,7 @@ namespace net
 
 
 class EventLoop;
-class EventHandler;
+
 
 
 template<class PrecisionTag>
@@ -38,15 +39,17 @@ public:
     TimerQueue(EventLoop* loop);
     ~TimerQueue();
     void insert(TimerCallBack cb,int interval,int execute_count);
+    void insert(TimerPtr timer);
     void cancelTimer(PTimer* timer);
     void handlerRead();
 
 
 private:
-    void modifyTimerfd(Time_Stamp timestamp);
-    std::vector<Entry> getDueTasks(Time_Stamp now); 
+    void ReadTimerfd();
+    void modifyTimerfd(const TimerPtr& timer);
+    std::vector<Entry> getDueTasks(const Time_Stamp& now); 
 
-    EventHandlerPtr handler_;
+    EventHandler handler_;
     TimerList timers_;
     //QuerySet querySet_;
 };

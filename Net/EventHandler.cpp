@@ -52,7 +52,7 @@ if(revents_&EventType::WriteEvent)
 void EventHandler::removeListen()
 {
     assert(loop_);
-    loop_->submit(std::bind(&EventLoop::remove_listen,loop_,shared_from_this()));
+    loop_->remove_listen(this);
 }
 }
 }    

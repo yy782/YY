@@ -1,6 +1,6 @@
 #include "TimerWheel.h"
 #include "Timer.h"
-#include "EventHandler.h"
+
 #include "../Common/Types.h"
 #include "sockets.h"
 #include <memory>
@@ -20,26 +20,26 @@ struct TimerWheel::Node
 };    
 TimerWheel::TimerWheel(EventLoop* loop):
 cur_slot_(0),
-handler_(EventHandler::create(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop))
+handler_(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
 {
     for(int i=0;i<MAX_SLOTS;++i)
     {
         slots_[i]=nullptr;
     }
-    assert(handler_);
-    int fd=handler_->get_fd();
+    
+    int fd=handler_.get_fd();
     struct itimerspec new_ts;
     memZero(&new_ts,sizeof new_ts);
     new_ts.it_value.tv_sec=SI;
     new_ts.it_interval.tv_sec=SI;
     sockets::timerfd_settime(fd,0,new_ts);
 
-    handler_->setReadCallBack(std::bind(&TimerWheel::tick,this));
-    handler_->setReading();
+    handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
+    handler_.setReading();
 
-    handler_->set_name("TimerWheel");
+    handler_.set_name("TimerWheel");
 
-    loop->addListen(handler_);
+    loop->addListen(&handler_);
 }
 TimerWheel::~TimerWheel()
 {
@@ -78,8 +78,15 @@ void TimerWheel::insert(LTimerPtr timer)
         slots_[ts]=node;
     }    
 }
+
+
+
+
 void TimerWheel::tick()
 {
+
+    ReadTimerfd();
+
     LOG_TIME_DEBUG("tick!");
     auto tmp=slots_[cur_slot_];
     while(tmp){
@@ -114,6 +121,13 @@ void TimerWheel::tick()
     ++cur_slot_;
     cur_slot_%=MAX_SLOTS;     
 }  
-   
+void TimerWheel::ReadTimerfd()
+{
+    uint64_t howmany;
+    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
+    if(n!=sizeof howmany){
+        LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
+    }
+}     
 }    
 }

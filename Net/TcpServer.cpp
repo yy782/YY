@@ -36,6 +36,8 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
 {
 
     SconnectCallback_(conn);
+
+    assert(connects_.find(conn)==connects_.end());
     connects_.insert(conn);
     conn->setMessageCallBack(SmessageCallback_);
     conn->setCloseCallBack(ScloseCallback_);
@@ -53,8 +55,13 @@ void TcpServer::addTime(TimerCallBack cb,int interval,int execute_count,bool is_
         else
             LTimerQueue_.insert(std::move(cb),interval,execute_count);
     else
-        TimerWheel_.add_timer(std::move(cb),interval,execute_count);
+        TimerWheel_.insert(std::move(cb),interval,execute_count);
 }
-
+void TcpServer::removeConnection(TcpConnectionPtr conn)
+{
+    assert(connects_.find(conn)!=connects_.end());
+    connects_.erase(conn);
+    conn->disconnect();
+}
 }    
 }

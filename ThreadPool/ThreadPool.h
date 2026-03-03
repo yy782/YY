@@ -26,6 +26,7 @@
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"
+#include "../Common/copyable.h"
 
 namespace yy{
 

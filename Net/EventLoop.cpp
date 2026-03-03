@@ -32,21 +32,21 @@ EventLoop::EventLoop():
 poller_(),
 activeHandlers_(),
 status_(EventLoopStatus::Init),
-wakeupHandler_(EventHandler::create(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this))
+wakeupHandler_(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
     auto eventCallBack=[this](EventHandler::Time_Stamp)->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::read(wakeupHandler_->get_fd(),&one,sizeof one);
+        ssize_t n=sockets::read(wakeupHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         status_=EventLoopStatus::Quit;
         
         return;
     };
-    wakeupHandler_->setReadCallBack(eventCallBack);
-    wakeupHandler_->setReading();
-    wakeupHandler_->set_name("wakeupHandler");
-    poller_.add_listen(wakeupHandler_);
+    wakeupHandler_.setReadCallBack(eventCallBack);
+    wakeupHandler_.setReading();
+    wakeupHandler_.set_name("wakeupHandler");
+    poller_.add_listen(&wakeupHandler_);
 }
 void EventLoop::loop()
 {
@@ -73,6 +73,10 @@ void EventLoop::loop()
 
     assert(CheckeEventLoopStatus());
 } 
+bool EventLoop::isInLoopThread()
+{
+    return Thread::isSelf(threadId_);
+}
 void EventLoop::quit()
 {
 
@@ -88,7 +92,7 @@ void EventLoop::submit(Functor cb)
 void EventLoop::wakeup()
 {
     uint64_t one =1;
-    ssize_t n=sockets::write(wakeupHandler_->get_fd(), &one, sizeof one);
+    ssize_t n=sockets::write(wakeupHandler_.get_fd(), &one, sizeof one);
     assert(n==sizeof one);
 }
 void EventLoop::doPendingFunctions()

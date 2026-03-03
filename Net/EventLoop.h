@@ -7,6 +7,7 @@
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"
+
 #include <queue>
 namespace yy
 {
@@ -18,6 +19,7 @@ namespace net
 class EventLoop:public noncopyable
 {
 public:
+    typedef Thread::Pid_t Pid_t;
     typedef PollerType::HandlerList HandlerList;
     typedef std::function<void()> Functor;
     typedef std::queue<Functor> FunctionList;
@@ -26,38 +28,55 @@ public:
     void loop();
     void quit();
 
-    void submit(Functor cb);
+    
 
-    // @note 保证线程安全，这些操作Poller的接口只能在固定线程使用，其他线程必须用submit进行提交
-    void addListen(EventHandlerPtr handler)
+    
+    void addListen(EventHandler* handler)
     {
         assert(handler);
-        poller_.add_listen(handler);
+        if(isInLoopThread())
+            poller_.add_listen(handler);
+        else
+            submit(std::bind(&PollerType::add_listen,&poller_,handler));
     }
-    void update_listen(EventHandlerPtr handler)
+    void update_listen(EventHandler* handler)
     { 
         assert(handler);    
-        poller_.update_listen(handler);
+        if(isInLoopThread())
+            poller_.update_listen(handler);
+        else
+            submit(std::bind(&PollerType::update_listen,&poller_,handler));
     }
-    void remove_listen(EventHandlerPtr handler)
+    void remove_listen(EventHandler* handler)
     {
         assert(handler);
-        poller_.remove_listen(handler);
+        if(isInLoopThread())
+            poller_.remove_listen(handler);
+        else
+            submit(std::bind(&PollerType::remove_listen,&poller_,handler));
     }    
+
+    void setPid_t(const Pid_t& pid)
+    {
+        threadId_=pid;
+    }
+    bool isInLoopThread();
+    void submit(Functor cb);
 private:
     void wakeup();
-
+    
     void doPendingFunctions();
-
+    
     bool CheckeEventLoopStatus();
     
     PollerType poller_;
     HandlerList activeHandlers_;
     FunctionList FunctionList_;
     locker lock_;
+    Pid_t threadId_;
 
     int status_;
-    EventHandlerPtr wakeupHandler_;
+    EventHandler wakeupHandler_;
     TimeStamp<LowPrecision> pollReturnTime_;
     int64_t iteration_;//记录事件循环的迭代次数
 };

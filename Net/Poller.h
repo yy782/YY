@@ -19,13 +19,12 @@ namespace net
 {
 
 class EventHandler;
-typedef std::shared_ptr<EventHandler> EventHandlerPtr;
 
 template<class PollerTag>
 class Poller:noncopyable
 {
 public:
-    typedef std::vector<EventHandlerPtr> HandlerList;
+    typedef std::vector<EventHandler*> HandlerList;
     
     
     TimeStamp<LowPrecision> poll(int timeout,HandlerList& handler)// @param timeout是毫秒为单位
@@ -35,17 +34,17 @@ public:
         // @note 这里不能值转换，会创建新的对象
     }
     ~Poller()=default;
-    void add_listen(EventHandlerPtr handler)
+    void add_listen(EventHandler* handler)
     {
         static_assert(has_add_listen_v<PollerTag>,"成员不存在");
         return static_cast<PollerTag*>(this).add_listen(handler);
     }
-    void update_listen(EventHandlerPtr handler)
+    void update_listen(EventHandler* handler)
     {
         static_assert(has_update_listen_v<PollerTag>,"成员不存在");
         return static_cast<PollerTag*>(this).update_listen(handler);
     }
-    void remove_listen(EventHandlerPtr handler)
+    void remove_listen(EventHandler* handler)
     {
         static_assert(has_remove_listen_v<PollerTag>,"成员不存在");
         return static_cast<PollerTag*>(this).remove_listen(handler);
@@ -53,7 +52,7 @@ public:
 
   
 protected:    
-    std::map<int,EventHandlerPtr> handlers_;
+    std::map<int,EventHandler*> handlers_;
     // @brief 选择指针存储，1.避免拷贝开销，2.EventHandler拒绝拷贝
     Poller()=default; // @note CRTP模型下不能创建Poller对象，只能创建子类对象，因为无法解释子类多出的内存布局
 
@@ -244,11 +243,11 @@ public:
     Epoll();
     ~Epoll();
     TimeStamp<LowPrecision> poll(int timeout,HandlerList& event_handlers);
-    void add_listen(EventHandlerPtr handler);
-    void update_listen(EventHandlerPtr handler);
-    void remove_listen(EventHandlerPtr handler);
+    void add_listen(EventHandler* handler);
+    void update_listen(EventHandler* handler);
+    void remove_listen(EventHandler* handler);
 private:
-    void operator_epoll(int operation,EventHandlerPtr handler);
+    void operator_epoll(int operation,EventHandler* handler);
 
     typedef std::vector<struct ::epoll_event> EventList;
     EventList events_;

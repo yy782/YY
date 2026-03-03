@@ -7,12 +7,13 @@
 #include <map>
 #include <memory>
 #include <signal.h>
+#include "EventHandler.h"
 namespace yy
 {
 namespace net
 {
 
-class EventHandler;    
+
 class EventLoop;
 class SignalHandler:public noncopyable
 {
@@ -23,7 +24,7 @@ public:
 private:
     void handle();
     sigset_t sigset_;
-    std::shared_ptr<EventHandler> handler_;
+    EventHandler handler_;
     std::map<int,SigCallBack> callbacks_;
 };
 

@@ -14,7 +14,7 @@ using namespace std;
 //./EchoClient
 using namespace yy;
 using namespace yy::net;
-class EchoClient
+class EchoClient// stdout是线程不安全的
 {
 public:
     EchoClient(const Address& serverAddr):
@@ -59,14 +59,16 @@ public:
     {
         client_.disconnect();
     }
-    void handleMessage(TcpConnectionPtr conn)
+    void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
         cout<<"recv:"<<conn->recv().data()<<endl;
     }
-    void handleClose(TcpConnectionPtr conn)
+    void handleClose(TcpConnectionPtr conn) // 对端关闭时的回调
     {
         conn->send("bye\n",4);
+        exit(0);
     }
+    bool isConnected(){return client_.isConnected();}
 private:
     TcpClient client_;
 };

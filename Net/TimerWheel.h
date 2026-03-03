@@ -6,12 +6,13 @@
 #include <memory>
 #include <assert.h>
 #include "Timer.h"
+#include "EventHandler.h"
 namespace yy
 {
 namespace net
 {
 
-class EventHandler;
+
 class EventLoop;
 
 class TimerWheel:public noncopyable
@@ -27,21 +28,21 @@ public:
     TimerWheel()=delete;
     TimerWheel(EventLoop* loop);  
     ~TimerWheel();
-    void add_timer(TimerCallBack cb,int interval,int execute_count)
+    void insert(TimerCallBack cb,int interval,int execute_count)
     {
         auto timer=std::make_shared<LTimer>(std::move(cb),interval,execute_count);
-        add_timer(timer);
+        insert(timer);
     }
-    void add_timer(LTimerPtr timer);
+    void insert(LTimerPtr timer);
     void tick();
     
 private:
-
+    void ReadTimerfd();
     static const int MAX_SLOTS=4;
     static const int SI=10;
     int cur_slot_;
     NodePtr slots_[MAX_SLOTS];
-    std::shared_ptr<EventHandler> handler_;
+    EventHandler handler_;
 };
    
 }    

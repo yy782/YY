@@ -44,8 +44,30 @@ public:
     void setRMessageBorder(FindCompleteMessageFunc cb){SRmessageBorder_=std::move(cb);}
     void setWMessageBorder(FindCompleteMessageFunc cb){SWmessageBorder_=std::move(cb);}
     void addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isHighPrecision=false);
+    template<class PrecisionTag>
+    void addTime(std::shared_ptr<Timer<PrecisionTag>> timer,bool is_persice)
+    {
+        if constexpr (std::is_same_v<PrecisionTag,HighPrecisionTag>)
+        {
+            HTimerQueue_.insert(timer);
+        }
+        else 
+        {
+            if(is_persice)
+            {
+                LTimerQueue_.insert(timer);
+            }
+            else
+            {
+                TimerWheel_.insert(timer);
+            }
+        }
+    }
 
     SignalHandler& getSignalHandler(){return signalHandler_;}
+
+    void removeConnection(TcpConnectionPtr conn);
+    
     
     void loop();
     void stop();

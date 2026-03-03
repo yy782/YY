@@ -28,11 +28,11 @@ public:
     LogStream& operator<<(const T& val) {
         if constexpr(std::is_same_v<T,Buffer::CharContainer>)
         {
-            oss_<<std::string(val.data(), val.size());
+            oss_<<std::string(val.data(),val.size());
         } 
         else 
         {
-            oss_ << val;  
+            oss_<<val;  
         }
         return *this;
     }
@@ -207,6 +207,9 @@ extern LogFilter* g_log_filter;
                             break;\
                         case EADDRINUSE:\
                             LOG_NULL_WARN("地址已被占用");\
+                            break;\
+                        case EPIPE:\
+                            LOG_NULL_WARN("管道破裂");\
                             break;\
                         default:\
                             LOG_NULL_WARN("[errno] "<<errno);\

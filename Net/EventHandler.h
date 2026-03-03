@@ -16,10 +16,8 @@ namespace net
 
 class EventLoop;
 class EventHandler;
-typedef std::shared_ptr<EventHandler> EventHandlerPtr;
 
-class EventHandler:public noncopyable,
-                    public std::enable_shared_from_this<EventHandler>
+class EventHandler:public noncopyable
 {
 public:
     typedef TimeStamp<LowPrecision> Time_Stamp;
@@ -30,16 +28,14 @@ public:
     typedef EventCallBack WriteCallBack;
     typedef EventCallBack CloseCallBack;
 
-    EventHandler()=delete;
+    EventHandler():
+    status_(-1)
+    {}
     ~EventHandler()
     {
         sockets::close(fd_);
     }
     EventHandler(int fd,EventLoop* loop);
-    static EventHandlerPtr create(int fd,EventLoop* loop)
-    {
-        return std::make_shared<EventHandler>(fd,loop);
-    }
     int get_fd()const{return fd_;}
     EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}

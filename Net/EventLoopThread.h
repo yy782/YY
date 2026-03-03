@@ -19,7 +19,11 @@ public:
     void run()
     {
         //assert(loop_);
-        thread_.run(std::bind(&EventLoop::loop,&loop_));
+        thread_.run([this]()mutable
+        {
+            loop_.setPid_t(thread_.getId());
+            loop_.loop();
+        });
     }
     void stop()
     {
@@ -27,13 +31,7 @@ public:
         loop_.quit();
         thread_.join();
     }
-    void sumbit(Functor cb)
-    {
-        //assert(loop_);
-        loop_.submit(std::move(cb));
-    }
     EventLoop* getEventLoop(){return &loop_;}
-    //EventLoop* getEventLoop()const{return loop_;}
 private:
     Thread thread_;
     EventLoop loop_;

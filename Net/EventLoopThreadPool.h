@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <assert.h>
 #include <memory>
+#include <unordered_map>
 namespace yy
 {
 namespace net
@@ -13,7 +14,7 @@ namespace net
 class EventLoopThreadPool:public noncopyable
 {
 public:
-    typedef EventLoopThread::Functor Functor;
+    //typedef std::unordered_map<EventHandlerPtr,EventLoop*> EventHandlerMap;
     EventLoopThreadPool(int num)
     {
         threads_.reserve(num);
@@ -36,12 +37,12 @@ public:
             (*it)->stop();
         } 
     }
-    void addThread();
-    //void caneclThread(); FIXME:取消线程比较麻烦
-    void addHandler(EventHandlerPtr handler);
-
+    void addHandler(EventHandler* handler);
+    // void removeHandler(EventHandlerPtr handler);
+    // void updateHandler(EventHandlerPtr handler);
 private:
-    std::vector<std::unique_ptr<EventLoopThread>> threads_;
+    std::vector<std::unique_ptr<EventLoopThread>> threads_; //vector要求移动构造，用指针存储，避免填写移动构造的麻烦
+    //EventHandlerMap handlers_;
 };    
 }    
 }

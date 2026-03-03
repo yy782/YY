@@ -22,7 +22,8 @@ static std::string getSuffix(const char* filename)
 BaseLogAppender::BaseLogAppender(const char* filename):
 name_(getFileName(filename).c_str()),
 type_(getSuffix(filename).c_str()),
-fp_(::fopen(filename,"ae")) // e是当进程执行FD_CLOEXEC时关闭
+fp_(::fopen(filename,"ae")), // e是当进程执行FD_CLOEXEC时关闭
+writtenBytes_(0)
 {
     if(fp_==nullptr)
     {
@@ -30,15 +31,11 @@ fp_(::fopen(filename,"ae")) // e是当进程执行FD_CLOEXEC时关闭
         filename, errno, strerror(errno));
         assert(fp_);
     }
-    ::setbuffer(fp_,buffer_,BUFFER_SIZE);
-    char p []="==================================== 日志启动 ==================================== \n";
-    append(p,strlen(p));
     // @brief 替换掉标准库的默认缓冲区，默认缓冲区太小了
 }  
 BaseLogAppender::~BaseLogAppender()
 {
-    char p[]="==================================== 日志结束 ==================================== \n";
-    append(p,strlen(p));
+
     ::fclose(fp_);
 }
 void BaseLogAppender::append(const char* logline,size_t len)
@@ -69,7 +66,7 @@ void BaseLogAppender::flush()
 LogAppender::LogAppender(const char* filename,size_t Flushinterval):
 baseLogFile_(std::make_unique<BaseLogAppender>(filename)),
 logFileName_(getFileName(filename)),
-flushInterval_(std::make_unique<FlushInterval>(Flushinterval))
+flushInterval_(std::make_unique<FlushInterval>(static_cast<long>(Flushinterval)))
 {
     assert(filename);
 }

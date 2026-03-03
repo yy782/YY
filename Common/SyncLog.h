@@ -17,6 +17,7 @@ public:
         static SyncLog instance(filename,flush_interval);
         return instance;
     }
+    ~SyncLog();
 private:
     SyncLog(const char* filename,size_t flush_interval);
     LogAppender appender_;

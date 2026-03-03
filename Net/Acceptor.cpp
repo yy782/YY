@@ -7,10 +7,10 @@ namespace net
 Acceptor::Acceptor(const Address& addr,EventLoop* loop):
 addr_(addr),
 loop_(loop),
-handler_(EventHandler::create(sockets::create_tcpsocket(addr.get_family()),loop_))
+handler_(sockets::create_tcpsocket(addr.get_family()),loop_)
 {
 
-    int fd=handler_->get_fd();
+    int fd=handler_.get_fd();
     sockets::set_CloseOnExec(fd);
     sockets::reuse_addr(fd);
     sockets::reuse_port(fd); 
@@ -19,11 +19,15 @@ handler_(EventHandler::create(sockets::create_tcpsocket(addr.get_family()),loop_
         sockets::OnlyIpv6(fd,true);
     }
     sockets::bind(fd,addr_);
-    handler_->setReadCallBack(std::bind(&Acceptor::accept,this));
-    handler_->setReading();
-    handler_->set_name("Acceptor");
+    handler_.setReadCallBack(std::bind(&Acceptor::accept,this));
+    handler_.setReading();
+    handler_.set_name("Acceptor");
 
-    loop_->addListen(handler_);///////////////////////////////////////////////
+    loop_->addListen(&handler_);
+}
+Acceptor::~Acceptor()
+{
+    
 }
 void Acceptor::accept()
 {
@@ -31,13 +35,13 @@ void Acceptor::accept()
     int fd;
     if(addr_.get_family()==AF_INET6)
     {
-        fd=sockets::accept(handler_->get_fd(),addr,true);
+        fd=sockets::accept(handler_.get_fd(),addr,true);
     }
     else
     {
-        fd=sockets::accept(handler_->get_fd(),addr,false);
+        fd=sockets::accept(handler_.get_fd(),addr,false);
     }
-    auto conn=std::make_shared<TcpConnection>(fd,addr,loop_);
+    auto conn=TcpConnection::accept(fd,addr,loop_);
 
     conn->getHandler()->set_name(addr.sockaddrToString());
     

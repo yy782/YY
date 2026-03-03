@@ -392,9 +392,9 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
     }
     return timer;
 }
-void Epoll::add_listen(EventHandlerPtr handler)
+void Epoll::add_listen(EventHandler* handler)
 {
-    
+    assert(handler);
     LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
 
     operator_epoll(EPOLL_CTL_ADD,handler);
@@ -412,8 +412,9 @@ void Epoll::add_listen(EventHandlerPtr handler)
 
     handler->set_status(Added);
 }
-void Epoll::update_listen(EventHandlerPtr handler)
+void Epoll::update_listen(EventHandler* handler)
 {
+    assert(handler);
     assert(handler->get_status()==Added);
     
 #ifndef NDEBUG
@@ -423,8 +424,9 @@ void Epoll::update_listen(EventHandlerPtr handler)
 
     operator_epoll(EPOLL_CTL_MOD,handler);
 }
-void Epoll::remove_listen(EventHandlerPtr handler)
+void Epoll::remove_listen(EventHandler* handler)
 {
+    assert(handler);
     assert(handler->get_status()==Added);
 
 #ifndef NDEBUG
@@ -444,19 +446,20 @@ void Epoll::remove_listen(EventHandlerPtr handler)
 
     handler->set_status(Delete);
 }
-void Epoll::operator_epoll(int operation,EventHandlerPtr handler)
+void Epoll::operator_epoll(int operation,EventHandler* handler)
 {
-   struct epoll_event ev;
-   memZero(&ev,sizeof ev);
-   ev.events=handler->get_event().get_event();
-   ev.data.fd=handler->get_fd();
-   if(::epoll_ctl(epollfd_,operation,handler->get_fd(),&ev)==-1)
-   {
-        if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK))
-        {
-            LOG_PRINT_ERRNO(errno);
-        }
-   }    
+    assert(handler);
+    struct epoll_event ev;
+    memZero(&ev,sizeof ev);
+    ev.events=handler->get_event().get_event();
+    ev.data.fd=handler->get_fd();
+    if(::epoll_ctl(epollfd_,operation,handler->get_fd(),&ev)==-1)
+    {
+            if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK))
+            {
+                LOG_PRINT_ERRNO(errno);
+            }
+    }    
 }
 }    
 }

@@ -9,6 +9,8 @@ using namespace yy::net;
 class EchoServer
 {
 public:
+
+    typedef TcpConnection::CharContainer CharContainer;
     EchoServer(const Address& addr,int thread_num):
     server_(addr,thread_num)
     {
@@ -61,10 +63,64 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
+        auto& data=conn->getData();
+        data.push_back(LTimeStamp::now());
+
+        std::weak_ptr<TcpConnection> weakConn=conn;
+        auto timer=std::make_shared<LTimer>(
+        [this,weakConn]()
+        {
+            if(auto c=weakConn.lock()) 
+            {   
+                checkAlive(c);                
+            }
+        },
+        10000,
+        FOREVER
+        );
+        server_.addTime(timer,false);
+        auto Htimer=std::make_shared<HTimer>(
+        [this,weakConn]()
+        {
+            if(auto c=weakConn.lock())
+            {
+                c->send("You had connected one min",26);
+                LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
+            }
+        },
+        30*(1e6),
+        1    
+        );
+        server_.addTime(Htimer,true);
+        data.push_back(timer);
+    }
+    void checkAlive(TcpConnectionPtr conn)
+    {
+        
+        auto& data=conn->getData();
+        auto lastFulsh=std::any_cast<LTimeStamp>(data[0]);
+        if(LTimeStamp::now()-lastFulsh>10000)
+        {
+            conn->send("Close!",7);
+            conn->disconnect();
+            auto timer=std::any_cast<LTimerPtr>(data[1]);
+            timer->cancel();
+        }            
+        
+
     }
     void onMessage(TcpConnectionPtr conn)
     {
+        auto& data=conn->getData();
+        data[0]=LTimeStamp::now();
+
         auto msg=conn->recv();
+
+        if(std::string_view(msg.data(),msg.size())=="bye\n") // @note 
+        {
+            return;
+        }
+
         conn->send(msg.data(),msg.size());
         LOG_SYSTEM_INFO("recv msg: "<<msg);
     }
@@ -72,8 +128,12 @@ private:
     {
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
+        auto& data=conn->getData();
+        auto timer=std::any_cast<LTimerPtr>(data[1]);
+        timer->cancel();
     }
     TcpServer server_;
+
 };
 
 int main(int argc,char* argv[])
@@ -88,10 +148,12 @@ int main(int argc,char* argv[])
        addr=Address(std::stoi(argv[1]),true); 
     }
     
-    auto& instance=AsyncLog::getInstance("../../build/Log.log",10);
+    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
     instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
     instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
     instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
+    instance.getFilter()->set_module_enabled(LogModule::TIME,true);
+    instance.getFilter()->set_module_enabled(LogModule::CLIENT,true);
 
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
 

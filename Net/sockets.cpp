@@ -318,6 +318,13 @@ void close(int fd)
         LOG_PRINT_ERRNO(errno);
     }
 }
+void shutdown(int fd,int how)
+{
+    if(::shutdown(fd,how)<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
 }   
 }    
 }

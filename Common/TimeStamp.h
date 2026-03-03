@@ -47,7 +47,11 @@ public:
     void flush(){
         time_point_=now().get_time_point();
     }
-    auto get_time_point()const
+    const TimePoint& get_time_point()const
+    {
+        return time_point_;
+    }
+    TimePoint& get_time_point()
     {
         return time_point_;
     }
@@ -66,6 +70,10 @@ public:
 private:
     TimePoint time_point_;
 };
+
+typedef TimeStamp<LowPrecision> LTimeStamp;
+typedef TimeStamp<HighPrecision> HTimeStamp;
+
 template<typename PrecisionTag=LowPrecisionTag>
 class TimeInterval:copyable
 {
@@ -77,7 +85,8 @@ public:
     TimeInterval(long times):
     TimeInterval(TimePeriod(times))
     {}
-    TimePeriod getTimePeriod()const{return timePeriod_;}
+    const TimePeriod& getTimePeriod()const{return timePeriod_;}
+    TimePeriod& getTimePeriod(){return timePeriod_;}
     long getTimes()const{return timePeriod_.count();}
 private:
     TimePeriod timePeriod_;    
@@ -134,20 +143,20 @@ size_t operator-(const TimeStamp<PrecisionTag>& lhs,const TimeStamp<PrecisionTag
 
 
 
-template<class PrecisionTag>
-struct timespec convert(TimeStamp<PrecisionTag> timer)
-{
-    using namespace std::chrono;
-    auto duration=timer.get_time_point().time_since_epoch();
-    auto sec=duration_cast<seconds>(duration);
-    auto nsec=duration_cast<nanoseconds>(duration-sec);
+// template<class PrecisionTag>
+// struct timespec convert(const TimeStamp<PrecisionTag>& timer)
+// {
+//     using namespace std::chrono;
+//     auto duration=timer.get_time_point().time_since_epoch();
+//     auto sec=duration_cast<seconds>(duration);
+//     auto nsec=duration_cast<nanoseconds>(duration-sec);
 
-    timespec ts;
-    memZero(&ts,sizeof ts);
-    ts.tv_sec=sec.count();
-    ts.tv_nsec=nsec.count();
-    return ts;
-}
+//     timespec ts;
+//     memZero(&ts,sizeof ts);
+//     ts.tv_sec=sec.count();
+//     ts.tv_nsec=nsec.count();
+//     return ts;
+// }
 
 }
 #endif

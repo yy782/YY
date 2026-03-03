@@ -3,27 +3,30 @@ namespace yy
 {
 namespace net
 {
-void EventLoopThreadPool::addThread()
-{
-#ifdef NDEBUG        
-    threads_.emplace_back(std::make_unique<EventLoopThread>());   
-    threads_[threads_.size()-1]->run();
-#else
-    size_t n=threads_.size();
-    threads_.emplace_back(std::make_unique<EventLoopThread>());
-    assert(n+1==threads_.size());  
-    threads_[threads_.size()-1]->run();
-#endif
-}
-void EventLoopThreadPool::addHandler(EventHandlerPtr handler)
+void EventLoopThreadPool::addHandler(EventHandler* handler)
 {
     static size_t nextId=0;
     assert(nextId<threads_.size());
     auto loop=threads_[nextId]->getEventLoop();
     handler->set_loop(loop);
-    threads_[nextId]->sumbit(std::bind(&EventLoop::addListen,loop,handler));
+    threads_[nextId]->getEventLoop()->addListen(handler);
+
+    // assert(handlers_.find(handler)==handlers_.end());
+    // handlers_[handler]=loop;
+
     nextId=(nextId+1)%threads_.size();
 }
-   
+// void EventLoopThreadPool::updateHandler(EventHandlerPtr handler)
+// {
+//     auto loop=handlers_[handler];
+//     assert(loop);
+//     loop->addListen(handler);
+// }
+// void EventLoopThreadPool::removeHandler(EventHandlerPtr handler)
+// {
+//     auto loop=handlers_[handler];
+//     assert(loop);
+//     loop->remove_listen(handler);
+// }
 }   
 }

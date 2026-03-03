@@ -5,6 +5,8 @@
 #include "EventHandler.h"
 #include "../Common/Buffer.h"
 #include <memory>
+#include <any>
+#include "../Common/locker.h"
 namespace yy
 {
 namespace net
@@ -22,26 +24,37 @@ public:
     typedef std::function<void(TcpConnectionPtr)> ServicesCloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
     typedef Buffer::FindCompleteMessageFunc FindCompleteMessageFunc;
+    typedef std::vector<std::any> ServicesData;
 
-    TcpConnection(int fd,Address addr,EventLoop* loop);
-    ~TcpConnection(){}// 构析函数不能触发回调了，TcpConnectionPtr不允许
+    enum class Status
+    {
+        Connected=1,
+        DisConnected
+    };
+
+    TcpConnection(int fd,const Address& addr,EventLoop* loop);
+    ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     //TcpConnect(TcpConnect&& other);
     void connect()
     {
-        sockets::connect(handler_->get_fd(),addr_);
+        sockets::connect(handler_.get_fd(),addr_);
+        assert(status_==Status::DisConnected);
+        status_=Status::Connected;
     }
-    void disconnect()
+    static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop)// @note 服务端用这个接口
     {
-        if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
-        handler_->removeListen();
+        auto conn=std::make_shared<TcpConnection>(fd,addr,loop);
+        conn->status_=Status::Connected;
+        return conn;
     }
-    EventHandlerPtr getHandler(){return handler_;}    
-    int get_fd()const{return handler_->get_fd();}
+
+    EventHandler* getHandler(){return &handler_;}    
+    int get_fd()const{return handler_.get_fd();}
     Address getAddr()const{return addr_;}
     void setReading()
     {
-        handler_->setReading();
-        handler_->setExcept();
+        handler_.setReading();
+        handler_.setExcept();
     }
 /**
  * 设置服务消息回调函数
@@ -57,27 +70,35 @@ public:
     void setTcpAlive(bool on,int idleSeconds=7200, 
                   int intervalSeconds=75,int maxProbes=9)
     {
-        sockets::setKeepAlive(handler_->get_fd(),on,idleSeconds,intervalSeconds,maxProbes);
+        sockets::setKeepAlive(handler_.get_fd(),on,idleSeconds,intervalSeconds,maxProbes);
     }
-    void setName(const char* name){handler_->set_name(name);}
+    void setName(const char* name){handler_.set_name(name);}
 
+    // @brief 这些是有多线程安全问题的
+    void disconnect(); // @brief 这是我端主动关闭连接时的回调,关闭我方的写端    
     void send(const char* message,size_t len);
     CharContainer recv();
+    ServicesData& getData(){return data_;}
+    bool isConnected(){return status_==Status::Connected;}
 private:
     void handleRead();
     void handleWrite();
     void handleClose();
     void handleError();
     Address addr_; // @prief 对端的地址
-    EventHandlerPtr handler_;
+    EventHandler handler_;
     Buffer readBuffer_;
     Buffer writeBuffer_;
 
     ServicesMessageCallBack SmessageCallBack_;
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
-    ServicesCloseCallBack ScloseCallBack_;
+    ServicesCloseCallBack ScloseCallBack_; // @brief 这是对端选择断开连接时的回调
     ServicesErrorCallBack SerrorCallBack_;
-    
+    ServicesData data_;
+
+    std::atomic<Status> status_;
+
+    locker Recvlocker_;
 };
 }    
 }

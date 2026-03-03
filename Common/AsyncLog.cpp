@@ -12,6 +12,10 @@ BackstageBuffers_(),
 appender_(fileName,flush_interval)
 {
     g_log_filter=&filter_;
+
+    char p []="==================================== 日志启动 ==================================== \n";
+    appender_.append(p,strlen(p));
+
     filter_.set_log_file_callback(std::bind(&AsyncLog::append,this,_1,_2));
     thread_.run(std::bind(&AsyncLog::loop,this));
 }  
@@ -22,6 +26,9 @@ AsyncLog::~AsyncLog()
     {
         thread_.join();
     }
+    char p []="==================================== 日志结束 ==================================== \n";
+    appender_.append(p,strlen(p));
+    appender_.flush(); 
 }
 void AsyncLog::append(const char* msg,size_t len)
 {

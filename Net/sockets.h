@@ -45,6 +45,7 @@ ssize_t send(int fd,const void* buf,size_t len,int flags);
 int sockfd_has_error(int fd);
 void OnlyIpv6(int fd,bool ipv6_only=true);
 void close(int fd);
+void shutdown(int fd,int how);
 }
 }    
 }

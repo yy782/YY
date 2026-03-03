@@ -11,6 +11,7 @@
 #include <future>
 #include <functional>
 #include "SyncLog.h"
+#include "noncopyable.h"
 namespace yy{
 class sem{
 public:
@@ -98,10 +99,10 @@ private:
 
 
 
-class Thread {
-
-    
+class Thread:noncopyable 
+{    
 public:
+    typedef std::thread::id Pid_t;
     typedef std::function<void()> Functor;
     Thread()=default;
     //void setFunctor(Functor cb){functor_=std::move(cb);}
@@ -111,8 +112,8 @@ public:
         }
     }
     void run(Functor cb){
-        thread=std::thread([cb](){try{
-            cb();
+        thread_=std::thread([func=std::move(cb)](){try{
+            func();
         }
         catch(const std::exception& e)
         {
@@ -120,12 +121,16 @@ public:
         }});
     }   
     bool joinable()const noexcept{
-        return thread.joinable();
+        return thread_.joinable();
     }
-    void join(){thread.join();}
-    void detach(){thread.detach();}
+    void join(){thread_.join();}
+    void detach(){thread_.detach();}
+    Pid_t getId(){return thread_.get_id();}
+    static bool isSelf(const Pid_t& pid){
+        return pid==std::this_thread::get_id();
+    }
 private:
-    std::thread thread;
+    std::thread thread_;
 };
 }
 

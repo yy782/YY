@@ -24,37 +24,45 @@ public:
     typedef TimeInterval<PrecisionTag> Time_Interval;
     
     
-    Timer(TimerCallBack cb,int interval,int execute_count):
+    Timer(TimerCallBack cb,long interval,int execute_count):
     callback_(std::move(cb)),
     interval_(interval),
     execute_count_(execute_count),
     expiration_(Time_Stamp::now()+Time_Interval(interval))
     {
-        assert(execute_count_!=FOREVER&&execute_count_<=0);
-
+        assert((execute_count_<0&&execute_count_==FOREVER)||execute_count_>=0);
     }
     int remain_count()const{return execute_count_;}
     void modifyExecuteCount(int count){execute_count_=count;}
-    Time_Stamp getTimerStamp()const{return expiration_;}
-    Time_Interval getTimeInterval()const{return interval_;}
+    Time_Stamp& getTimerStamp(){return expiration_;}
+    const Time_Stamp& getTimerStamp()const {return expiration_;}
+    Time_Interval& getTimeInterval(){return interval_;}
+    const Time_Interval& getTimeInterval()const{return interval_;}
     void execute()
     {
         assert(execute_count_!=0);
-        callback_();
+        
         if(execute_count_!=FOREVER)
         {
             --execute_count_;
+            
         }
+        callback_();
         expiration_=Time_Stamp::now()+interval_;
     }
-
+    void setRemainCount(int c){execute_count_=c;}
+    void cancel(){execute_count_=0;}
 private:
     const TimerCallBack callback_;
-    const Time_Interval interval_;
+    Time_Interval interval_;
     int execute_count_;
     Time_Stamp expiration_;
 };
 
+typedef Timer<LowPrecision> LTimer;
+typedef Timer<HighPrecision> HTimer;
+typedef std::shared_ptr<LTimer> LTimerPtr;
+typedef std::shared_ptr<HTimer> HTimerPtr;
 }    
 }
 
