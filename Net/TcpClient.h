@@ -10,7 +10,7 @@ namespace net
 class TcpClient:noncopyable
 {
 public:
-    typedef TcpConnection::ServicesCloseCallBack ServicesMessageCallBack;
+    typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::FindCompleteMessageFunc FindCompleteMessageFunc;
@@ -54,7 +54,7 @@ public:
     void setCloseCallBack(ServicesCloseCallBack callback){ connection_->setCloseCallBack(std::move(callback));}
     void setErrorCallBack(ServicesErrorCallBack callback){ connection_->setErrorCallBack(std::move(callback));}
     void setRMessageBorder(FindCompleteMessageFunc cb){connection_->setRMessageBorder(std::move(cb));}
-    void setWMessageBorder(FindCompleteMessageFunc cb){connection_->setWMessageBorder(std::move(cb));}
+    
 
     Address getPeerAddr(){return serverAddr_;}
 private:

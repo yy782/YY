@@ -386,7 +386,7 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
             event_handlers.push_back(handler);
         }
     }
-    if(safe_static_cast<size_t>(ready_fds)==events_.size())
+    if(static_cast<size_t>(ready_fds)==events_.size())
     {
         events_.resize(events_.size()*2);
     }
@@ -427,6 +427,10 @@ void Epoll::update_listen(EventHandler* handler)
 void Epoll::remove_listen(EventHandler* handler)
 {
     assert(handler);
+
+
+
+
     assert(handler->get_status()==Added);
 
 #ifndef NDEBUG

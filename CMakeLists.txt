@@ -81,7 +81,7 @@ else()
 endif()    
 
 add_subdirectory(Common)
-add_subdirectory(Memory)
+add_subdirectory(MemoryPool)
 add_subdirectory(ThreadPool)
 add_subdirectory(Net)
 # @learn 

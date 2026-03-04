@@ -80,8 +80,8 @@ void AsyncLog::loop()
         Receptionlock_.unlock();
         for(auto& buffer:WriteBuffer)
         {
-            char* msg=buffer->retrieveAll();
-            appender_.append(msg,strlen(msg));
+            std::string msg=buffer->retrieveAll();
+            appender_.append(msg.c_str(),msg.size());
         }
         WriteBuffer.clear();
     }

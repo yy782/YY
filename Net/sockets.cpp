@@ -32,7 +32,7 @@ int create_epollfd(int flags)
 }
 int create_eventfd(size_t count,int flags)
 {
-    int fd=::eventfd(safe_static_cast<unsigned int>(count),flags);
+    int fd=::eventfd(static_cast<unsigned int>(count),flags);
     if(fd<0)
     {
         LOG_PRINT_ERRNO(errno);

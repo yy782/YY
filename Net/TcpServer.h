@@ -28,7 +28,7 @@ public:
     typedef std::set<TcpConnectionPtr> ConnectMap;
     typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
     typedef Acceptor::NewConnectCallBack ServicesConnectCallBack;
-    typedef TcpConnection::ServicesCloseCallBack ServicesMessageCallBack;
+    typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::FindCompleteMessageFunc FindCompleteMessageFunc;
@@ -42,7 +42,7 @@ public:
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallback_=std::move(cb);}
 
     void setRMessageBorder(FindCompleteMessageFunc cb){SRmessageBorder_=std::move(cb);}
-    void setWMessageBorder(FindCompleteMessageFunc cb){SWmessageBorder_=std::move(cb);}
+
     void addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isHighPrecision=false);
     template<class PrecisionTag>
     void addTime(std::shared_ptr<Timer<PrecisionTag>> timer,bool is_persice)

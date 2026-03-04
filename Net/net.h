@@ -11,5 +11,6 @@
 #include "daemon.h"
 #include "../Common/SyncLog.h"
 #include "../Common/AsyncLog.h"
+#include "../Common/daemon.h"
 #include "TcpClient.h"
 #endif

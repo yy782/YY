@@ -160,27 +160,27 @@ const struct sockaddr* Address::getSockAddr()const
     const void* tmp=nullptr;
     if(is_ipv6_)
     {
-        tmp=safe_static_cast<const void*>(&addr6_);
+        tmp=static_cast<const void*>(&addr6_);
     }
     else
     {
-        tmp=safe_static_cast<const void*>(&addr_);
-        return safe_static_cast<const struct sockaddr*>(tmp);
+        tmp=static_cast<const void*>(&addr_);
+        return static_cast<const struct sockaddr*>(tmp);
     }
-    return safe_static_cast<const struct sockaddr*>(tmp);
+    return static_cast<const struct sockaddr*>(tmp);
 }
 struct sockaddr* Address::getSockAddr()
 {
     void* tmp=nullptr;
     if(is_ipv6_)
     {
-        tmp=safe_static_cast<void*>(&addr6_);
+        tmp=static_cast<void*>(&addr6_);
     }
     else
     {
-        tmp=safe_static_cast<void*>(&addr_);
+        tmp=static_cast<void*>(&addr_);
     }
-    return safe_static_cast<struct sockaddr*>(tmp);
+    return static_cast<struct sockaddr*>(tmp);
 }
 }    
 }

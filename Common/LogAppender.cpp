@@ -94,7 +94,7 @@ void LogAppender::rollFile()
 void LogAppender::Timeflush()
 {
     static size_t count=0;
-    static size_t checkInterval=2;
+    static size_t checkInterval=5;
     ++count;
     if(count<checkInterval)return;// @brief 为了减少系统调用，减少性能开销
     auto time=Time_Stamp(Time_Stamp::now());

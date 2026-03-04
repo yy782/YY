@@ -28,7 +28,7 @@ public:
     LogStream& operator<<(const T& val) {
         if constexpr(std::is_same_v<T,Buffer::CharContainer>)
         {
-            oss_<<std::string(val.data(),val.size());
+            oss_.write(val.data(), val.size());
         } 
         else 
         {

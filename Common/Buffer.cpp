@@ -1,9 +1,10 @@
 #include "Buffer.h"
 #include <string>
+
 namespace yy
 {
 
-Buffer::Buffer(byte_size initial_size,byte_size prepend_size):
+Buffer::Buffer(size_t initial_size,size_t prepend_size):
 buffer_(prepend_size+initial_size),
 prepend_size_(prepend_size),
 read_index_(prepend_size),
@@ -15,50 +16,51 @@ void Buffer::swap(Buffer& other)
     std::swap(read_index_,other.read_index_);
     std::swap(write_index_,other.write_index_);
 }
-void Buffer::append(const char* data,byte_size size)
+void Buffer::append(const char* data,size_t size)
 {
     ensure_appendable(size);
     std::copy(data,data+size,begin_write());
     move_write_index(size);
 }
 
-void Buffer::append(const void* data,byte_size size)
+void Buffer::append(const void* data,size_t size)
 {
-    append(safe_static_cast<const char*>(data),size);
+    append(static_cast<const char*>(data),size);
 }
 char* Buffer::append()// FIXMETH 不移动指针，可读可写指针向外暴露?
 {
     return begin_write();
 }
-char* Buffer::retrieve(size_t size)
+std::string Buffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())
     {
         char* r=begin_read();
         move_read_index(size);
-        return r;
+        return std::string(r);
     }
     return nullptr;
 }
-char* Buffer::retrieveAll()
+std::string Buffer::retrieveAll()
 {
     auto size=get_readable_size();
-    return retrieve(size);
+    return std::string(retrieve(size));
 }
-std::vector<char> Buffer::retrieve()
+std::string Buffer::retrieve()
 {
     assert(find_complete_message_func_);
-    std::vector<char> s(begin_read(),begin_read()+get_readable_size());
-    std::vector<char> message=find_complete_message_func_(s);
-    retrieve(message.size());
-    return message;
+    size_t n=find_complete_message_func_(buffer_);
+    if(n==0)return 0;
+    auto it=buffer_.begin()+read_index_;
+    return std::string(it,it+n-read_index_);
 }
 
-void Buffer::shrink(byte_size reserve)
+void Buffer::shrink(size_t reserve)
 {
     buffer_.resize(get_readable_size()+reserve+prepend_size_);
     buffer_.shrink_to_fit();
 }
+
 void Buffer::check_index_validity(const char* file, int line)const
 {
 #ifndef NDEBUG        
@@ -73,7 +75,7 @@ void Buffer::check_index_validity(const char* file, int line)const
         assert(write_index_>=read_index_&&check_write_ptr.c_str());
 #endif    
 }
-void Buffer::ensure_appendable(byte_size size)
+void Buffer::ensure_appendable(size_t size)
 {
     if(get_writable_size()<size)
     {
@@ -82,7 +84,7 @@ void Buffer::ensure_appendable(byte_size size)
     assert(get_writable_size()>=size&&"可写尺寸小于需写尺寸");
     check_index_validity(__FILE__,__LINE__);
 }
-void Buffer::move_read_index(byte_size size)
+void Buffer::move_read_index(size_t size)
 {
     assert(size<=get_readable_size());
     if(size<get_readable_size())
@@ -98,12 +100,12 @@ void Buffer::move_read_index(byte_size size)
         check_index_validity(__FILE__, __LINE__);
     }
 }
-void Buffer::move_write_index(byte_size size)
+void Buffer::move_write_index(size_t size)
 {
     assert(size<=get_writable_size()&&"可写尺寸不够");
     write_index_+=size;
 }
-void Buffer::expend(byte_size size)
+void Buffer::expend(size_t size)
 {
     check_index_validity(__FILE__, __LINE__);
     if(get_writable_size()+get_prependable_size()>size+prepend_size_)
@@ -121,7 +123,7 @@ void Buffer::expend(byte_size size)
 }
 void Buffer::reuse_prependable_space()
 {
-    byte_size readable=get_readable_size();
+    size_t readable=get_readable_size();
     std::copy(begin()+read_index_,
                 begin()+write_index_,
                 begin()+prepend_size_);

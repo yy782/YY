@@ -15,33 +15,22 @@ public:
     server_(addr,thread_num)
     {
         server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
-        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
+        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1,_2));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
         server_.getSignalHandler().addSign(SIGTERM,std::bind(&EchoServer::stop,this));
-        server_.setRMessageBorder([](TcpServer::CharContainer msg)->TcpServer::CharContainer
+        server_.setRMessageBorder([](const TcpServer::CharContainer& msg)->size_t
         {
             auto it=std::find(msg.begin(),msg.end(),'\n');
             if(it!=msg.end())
             {
-                return TcpServer::CharContainer(msg.begin(),it+1);
+                return it-msg.begin();
             }
             else 
             {
-                return TcpServer::CharContainer();
+                return 0;
             }
         });
-        server_.setWMessageBorder([](TcpServer::CharContainer msg)->TcpServer::CharContainer
-        {
-            auto it=std::find(msg.begin(),msg.end(),'\n');
-            if(it!=msg.end())
-            {
-                return TcpServer::CharContainer(msg.begin(),it+1);
-            }
-            else 
-            {
-                return TcpServer::CharContainer();
-            }
-        });
+
 
         
     }
@@ -75,7 +64,7 @@ private:
                 checkAlive(c);                
             }
         },
-        10000,
+        60*5,
         FOREVER
         );
         server_.addTime(timer,false);
@@ -84,11 +73,11 @@ private:
         {
             if(auto c=weakConn.lock())
             {
-                c->send("You had connected one min",26);
+                c->send("You had connected two min",26);
                 LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
             }
         },
-        30*(1e6),
+        120*(1e6),
         1    
         );
         server_.addTime(Htimer,true);
@@ -109,14 +98,12 @@ private:
         
 
     }
-    void onMessage(TcpConnectionPtr conn)
+    void onMessage(TcpConnectionPtr conn,std::string msg)
     {
         auto& data=conn->getData();
         data[0]=LTimeStamp::now();
 
-        auto msg=conn->recv();
-
-        if(std::string_view(msg.data(),msg.size())=="bye\n") // @note 
+        if(msg=="bye\n") // @note 
         {
             return;
         }
@@ -138,6 +125,7 @@ private:
 
 int main(int argc,char* argv[])
 {
+    //daemonize();
     Address addr;
     if(argc<2)
     {
@@ -148,7 +136,7 @@ int main(int argc,char* argv[])
        addr=Address(std::stoi(argv[1]),true); 
     }
     
-    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
+    auto& instance=AsyncLog::getInstance("../../build/Log.log",10);
     instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
     instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
     instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
