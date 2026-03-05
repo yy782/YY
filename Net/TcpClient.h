@@ -13,7 +13,6 @@ public:
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
-    typedef TcpConnection::FindCompleteMessageFunc FindCompleteMessageFunc;
     typedef TcpConnection::Status Status;
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectCallBack;
 
@@ -53,7 +52,6 @@ public:
     void setMessageCallBack(ServicesMessageCallBack callback){ connection_->setMessageCallBack(std::move(callback));}
     void setCloseCallBack(ServicesCloseCallBack callback){ connection_->setCloseCallBack(std::move(callback));}
     void setErrorCallBack(ServicesErrorCallBack callback){ connection_->setErrorCallBack(std::move(callback));}
-    void setRMessageBorder(FindCompleteMessageFunc cb){connection_->setRMessageBorder(std::move(cb));}
     
 
     Address getPeerAddr(){return serverAddr_;}

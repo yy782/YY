@@ -42,7 +42,7 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
     conn->setMessageCallBack(SmessageCallback_);
     conn->setCloseCallBack(ScloseCallback_);
     conn->setErrorCallBack(SerrorCallback_);
-    conn->setRMessageBorder(SRmessageBorder_);
+  
 
     conn->setName(conn->getAddr().sockaddrToString().c_str());
     threadpool_.addHandler(conn->getHandler());

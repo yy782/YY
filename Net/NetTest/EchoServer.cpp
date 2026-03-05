@@ -18,18 +18,6 @@ public:
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1,_2));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
         server_.getSignalHandler().addSign(SIGTERM,std::bind(&EchoServer::stop,this));
-        server_.setRMessageBorder([](const TcpServer::CharContainer& msg)->size_t
-        {
-            auto it=std::find(msg.begin(),msg.end(),'\n');
-            if(it!=msg.end())
-            {
-                return it-msg.begin();
-            }
-            else 
-            {
-                return 0;
-            }
-        });
 
 
         
@@ -98,11 +86,14 @@ private:
         
 
     }
-    void onMessage(TcpConnectionPtr conn,std::string msg)
+    void onMessage(TcpConnectionPtr conn,Buffer* buffer)
     {
+        assert(buffer);
         auto& data=conn->getData();
         data[0]=LTimeStamp::now();
 
+        char* last=buffer->findBorder("\n");
+        std::string msg(buffer->peek(),last);
         if(msg=="bye\n") // @note 
         {
             return;

@@ -31,7 +31,6 @@ public:
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
-    typedef TcpConnection::FindCompleteMessageFunc FindCompleteMessageFunc;
     typedef TcpConnection::CharContainer CharContainer;
 
     TcpServer(const Address& addr,int threadnum,int listenFdnum=1);
@@ -41,7 +40,6 @@ public:
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallback_=std::move(cb);}
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallback_=std::move(cb);}
 
-    void setRMessageBorder(FindCompleteMessageFunc cb){SRmessageBorder_=std::move(cb);}
 
     void addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isHighPrecision=false);
     template<class PrecisionTag>
@@ -88,8 +86,6 @@ private:
     ServicesMessageCallBack SmessageCallback_;
     ServicesCloseCallBack ScloseCallback_;
     ServicesErrorCallBack SerrorCallback_;
-    FindCompleteMessageFunc SRmessageBorder_;
-    FindCompleteMessageFunc SWmessageBorder_;
 }; 
 
 }    

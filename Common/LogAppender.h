@@ -55,7 +55,7 @@ private:
     std::string getLogFileName();
     BaseLogFilePtr baseLogFile_;
     const std::string logFileName_;
-    const off_t rollSize_={2000}; // @param 回滚大小
+    const off_t rollSize_={2*1024*1024}; // @param 回滚大小
 
     Time_StampPtr lastFlushTime_;
     const FlushIntervalPtr flushInterval_;

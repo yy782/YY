@@ -10,10 +10,9 @@ namespace yy
 // @brief 缓冲区只管存，不管该存多大,存多大由业务判断
 class Buffer
 {
-public: // @note 为了减少拷贝，但是又要保证指针安全，所以尽量直接调用Buffer接口进行读写，防止Buffer扩容导致原始指针变野指针
+public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎意外的无效，但是将数据交给计算密集型线程池，需要拷贝数据
 
     typedef std::vector<char> CharContainer;
-    typedef std::function<size_t(const CharContainer&)> FindCompleteMessageFunc;
 
     explicit Buffer(size_t initial_size=1024,size_t prepend_size=8);
     void swap(Buffer& other);
@@ -21,23 +20,39 @@ public: // @note 为了减少拷贝，但是又要保证指针安全，所以尽
     void append(const char* data,size_t size);
     void append(const void* data,size_t size);
     char* append();
+    void append(size_t size);
     char* retrieve(size_t size);
     char* retrieveAll();
-    char* retrieve();
+    
     std::string retrieveAllToString();
-    const char* peek(){return begin()+read_index_;}
+    const char* peek()const {return begin()+read_index_;}
+    char* peek(){return begin()+read_index_;}
     void shrink(size_t reserve);
     size_t get_readable_size()const{return write_index_-read_index_;}
     size_t get_writable_size()const{return buffer_.size()-write_index_;}
     size_t get_prependable_size()const{return read_index_;}
 
-    void set_find_complete_message_func(FindCompleteMessageFunc func){find_complete_message_func_=std::move(func);}
-
+    char* findBorder(const char* border) 
+    {
+        return std::search(begin_read(),begin_write(),border,border+strlen(border));
+    }
+    char* findBorder(const char* border,size_t size)
+    {
+        return std::search(begin_read(),begin_write(),border,border+size);
+    }
+    char* findBorder(const char* border,size_t size,size_t& len) // FIXME
+    {
+        char* last=findBorder(border,size);
+        len=last-begin_read();
+        return last;
+    }
+    void ensureWritableBytes(size_t len);
   
-    void move_write_index(size_t size);
-    void move_read_index(size_t size);    
+    void hasWritten(size_t len);
+    void unwrite(size_t len);
 private:
-
+    void move_write_index(size_t size);
+    void move_read_index(size_t size);
     void check_index_validity(const char* file, int line)const;
     void ensure_appendable(size_t size);
 
@@ -54,7 +69,6 @@ private:
     size_t write_index_;
     // @brief 选择索引和buffer_的begin()迭代器使用而不是简单的char*,或者可读，可写的迭代器，防止动态扩容的失效
 
-    FindCompleteMessageFunc find_complete_message_func_;
 };    
 
 }

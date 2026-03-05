@@ -90,11 +90,8 @@ void TcpConnection::handleRead()
     auto n=sockets::recv(handler_.get_fd(),readBuffer_.append(),readBuffer_.get_writable_size(),0);
     if(n>0)
     {
-        readBuffer_.move_write_index(n);
-
-        std::string msg=readBuffer_.retrieve();
-
-        SmessageCallBack_(shared_from_this(),msg);
+        readBuffer_.append(n);
+        SmessageCallBack_(shared_from_this(),&readBuffer_);
     }
     else if(n==0)
     {
@@ -107,10 +104,9 @@ void TcpConnection::handleRead()
 }
 void TcpConnection::handleWrite()
 {
-    auto msg=writeBuffer_.peek();
     ssize_t len=static_cast<ssize_t>(writeBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
-    ssize_t n=sockets::send(fd,msg,len,MSG_NOSIGNAL);
+    ssize_t n=sockets::send(fd,writeBuffer_.peek(),len,MSG_NOSIGNAL);
     if(n==len)
     {
         if(status_==Status::DisConnected)

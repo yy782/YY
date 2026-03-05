@@ -25,18 +25,6 @@ public:
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1,_2));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
-        client_.setRMessageBorder([](const TcpServer::CharContainer& msg)->size_t
-        {
-            auto it=std::find(msg.begin(),msg.end(),'\n');
-            if(it!=msg.end())
-            {
-                return it-msg.end();
-            }
-            else 
-            {
-                return 0;
-            }
-        });
 
 
     }
@@ -53,8 +41,10 @@ public:
     {
         client_.disconnect();
     }
-    void handleMessage(TcpConnectionPtr conn,std::string msg) // @note 如果需要，要判断对端断开连接的消息
+    void handleMessage(TcpConnectionPtr conn,Buffer* buffer) // @note 如果需要，要判断对端断开连接的消息
     {
+        char* last=buffer->findBorder("\n",1);
+        std::string msg(buffer->peek(),last);
         cout<<"recv:"<<msg<<endl;
     }
     void handleClose(TcpConnectionPtr conn) // 对端关闭时的回调

@@ -19,11 +19,10 @@ class TcpConnection:noncopyable,
 public:
     typedef Buffer::CharContainer CharContainer;
     typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
-    typedef std::function<void(TcpConnectionPtr,std::string)> ServicesMessageCallBack;
+    typedef std::function<void(TcpConnectionPtr,Buffer*)> ServicesMessageCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesCloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
-    typedef Buffer::FindCompleteMessageFunc FindCompleteMessageFunc;
     typedef std::vector<std::any> ServicesData;
 
     enum class Status
@@ -65,7 +64,6 @@ public:
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallBack_=std::move(cb);} // @brief 这是对端关闭的回调
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallBack_=std::move(cb);}
 
-    void setRMessageBorder(FindCompleteMessageFunc cb){readBuffer_.set_find_complete_message_func(std::move(cb));};
     void setTcpAlive(bool on,int idleSeconds=7200, 
                   int intervalSeconds=75,int maxProbes=9)
     {
@@ -79,6 +77,8 @@ public:
     // CharContainer recv();
     ServicesData& getData(){return data_;}
     bool isConnected(){return status_==Status::Connected;}
+
+    Buffer& getWriteBuffer(){return writeBuffer_;}
 private:
     void sendInLoop(const char* message,size_t len);
     void disconnectInLoop();

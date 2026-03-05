@@ -31,6 +31,10 @@ char* Buffer::append()// FIXMETH 不移动指针，可读可写指针向外暴�
 {
     return begin_write();
 }
+void Buffer::append(size_t size)
+{
+    move_write_index(size);
+}
 char* Buffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())
@@ -46,21 +50,33 @@ char* Buffer::retrieveAll()
     auto size=get_readable_size();
     return retrieve(size);
 }
-char* Buffer::retrieve()
-{
-    assert(find_complete_message_func_);
-    size_t n=find_complete_message_func_(buffer_);
-    if(n==0)return nullptr;
-    return begin_read()+n;
-}
+
 std::string Buffer::retrieveAllToString()
 {
-    assert(find_complete_message_func_);
-    size_t n=find_complete_message_func_(buffer_);
-    if(n==0)return 0;
-    auto it=buffer_.begin()+read_index_;
-    return std::string(it,it+n-read_index_);
+    
+    return std::string(retrieveAll());
 }    
+void Buffer::ensureWritableBytes(size_t len)
+{
+    if (get_writable_size()<len)
+    {
+        expend(len);
+    }
+    assert(get_writable_size() >= len&&"可写尺寸小于需写尺寸");
+    check_index_validity(__FILE__, __LINE__);
+}
+void Buffer::hasWritten(size_t len)
+{
+    assert(len<=get_writable_size());
+    write_index_+=len;
+    check_index_validity(__FILE__, __LINE__);
+}
+void Buffer::unwrite(size_t len)
+{
+    assert(len<=get_readable_size());
+    write_index_-=len;
+    check_index_validity(__FILE__, __LINE__);
+}
 void Buffer::shrink(size_t reserve)
 {
     buffer_.resize(get_readable_size()+reserve+prepend_size_);
