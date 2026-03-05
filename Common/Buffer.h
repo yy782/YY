@@ -21,9 +21,10 @@ public: // @note 为了减少拷贝，但是又要保证指针安全，所以尽
     void append(const char* data,size_t size);
     void append(const void* data,size_t size);
     char* append();
-    std::string retrieve(size_t size);
-    std::string retrieveAll();
-    std::string retrieve();
+    char* retrieve(size_t size);
+    char* retrieveAll();
+    char* retrieve();
+    std::string retrieveAllToString();
     const char* peek(){return begin()+read_index_;}
     void shrink(size_t reserve);
     size_t get_readable_size()const{return write_index_-read_index_;}

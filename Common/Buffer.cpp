@@ -31,30 +31,36 @@ char* Buffer::append()// FIXMETH 不移动指针，可读可写指针向外暴�
 {
     return begin_write();
 }
-std::string Buffer::retrieve(size_t size)
+char* Buffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())
     {
         char* r=begin_read();
         move_read_index(size);
-        return std::string(r);
+        return r;
     }
     return nullptr;
 }
-std::string Buffer::retrieveAll()
+char* Buffer::retrieveAll()
 {
     auto size=get_readable_size();
-    return std::string(retrieve(size));
+    return retrieve(size);
 }
-std::string Buffer::retrieve()
+char* Buffer::retrieve()
+{
+    assert(find_complete_message_func_);
+    size_t n=find_complete_message_func_(buffer_);
+    if(n==0)return nullptr;
+    return begin_read()+n;
+}
+std::string Buffer::retrieveAllToString()
 {
     assert(find_complete_message_func_);
     size_t n=find_complete_message_func_(buffer_);
     if(n==0)return 0;
     auto it=buffer_.begin()+read_index_;
     return std::string(it,it+n-read_index_);
-}
-
+}    
 void Buffer::shrink(size_t reserve)
 {
     buffer_.resize(get_readable_size()+reserve+prepend_size_);
