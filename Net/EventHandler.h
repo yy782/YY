@@ -55,9 +55,21 @@ public:
     bool isReading()const{return events_&EventType::ReadEvent;}
     bool isExcept()const{return events_&EventType::ExceptEvent;}
     void setReading(){events_.add_event(EventType::ReadEvent);}
+    void cancelReading(){events_.remove_event(EventType::ReadEvent);}
     void setWriting(){events_.add_event(EventType::WriteEvent);}
-    void canecllWriting(){events_.remove_event(EventType::WriteEvent);}
+    void caneclWriting(){events_.remove_event(EventType::WriteEvent);}
     void setExcept(){events_.add_event(EventType::ExceptEvent);}
+    void cancelExcept(){events_.remove_event(EventType::ExceptEvent);}
+    void setReadingAndExcept()
+    {
+        setExcept();
+        setReading();
+    }
+    void cancelReadingAndExcept()
+    {
+        cancelExcept();
+        cancelReading();
+    }
 
     void setReadCallBack(TimeStampEventCallBack cb){readCallback_=std::move(cb);}
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}

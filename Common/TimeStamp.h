@@ -92,6 +92,12 @@ private:
     TimePeriod timePeriod_;    
 };
 
+typedef TimeStamp<LowPrecision> LTimeStamp;
+typedef TimeStamp<HighPrecision> HTimeStamp;
+typedef TimeInterval<LowPrecision> LTimeInterval;
+typedef TimeInterval<HighPrecision> HTimeInterval;
+
+
 
 template<typename PrecisionTag1,typename PrecisionTag2>
 TimeStamp<PrecisionTag1> operator+(const TimeStamp<PrecisionTag1>& lhs,const TimeInterval<PrecisionTag2>& rhs)
@@ -136,27 +142,19 @@ bool operator>=(const TimeStamp<PrecisionTag>& lhs,const TimeStamp<PrecisionTag>
 }
 
 template<typename PrecisionTag>
-size_t operator-(const TimeStamp<PrecisionTag>& lhs,const TimeStamp<PrecisionTag>& rhs)
+TimeInterval<PrecisionTag> operator-(const TimeStamp<PrecisionTag>& lhs,const TimeStamp<PrecisionTag>& rhs)
 {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(lhs.get_time_point()-rhs.get_time_point()).count();
+    return TimeInterval<PrecisionTag>((lhs.get_time_point()-rhs.get_time_point()).count());
+}
+
+template<typename PrecisionTag> 
+bool operator>=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
+{
+    return lhs.getTimePeriod()>=rhs.getTimePeriod();
 }
 
 
 
-// template<class PrecisionTag>
-// struct timespec convert(const TimeStamp<PrecisionTag>& timer)
-// {
-//     using namespace std::chrono;
-//     auto duration=timer.get_time_point().time_since_epoch();
-//     auto sec=duration_cast<seconds>(duration);
-//     auto nsec=duration_cast<nanoseconds>(duration-sec);
-
-//     timespec ts;
-//     memZero(&ts,sizeof ts);
-//     ts.tv_sec=sec.count();
-//     ts.tv_nsec=nsec.count();
-//     return ts;
-// }
 
 }
 #endif
