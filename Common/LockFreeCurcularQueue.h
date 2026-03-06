@@ -15,12 +15,12 @@ class LockFreeCurcularQueue:noncopyable
 public:
     explicit LockFreeCurcularQueue(size_t capacity);
     ~LockFreeCurcularQueue()=default;
-    LockFreeCurcularQueue(LockFreeCurcularQueue &&)=delete;
-    LockFreeCurcularQueue &operator=(LockFreeCurcularQueue &&)=delete;
+    LockFreeCurcularQueue(LockFreeCurcularQueue&&)=delete;
+    LockFreeCurcularQueue& operator=(LockFreeCurcularQueue&&)=delete;
 
-    bool enqueue(const T &data);
-    bool enqueue(T &&data);
-    bool dequeue(T &data);
+    bool enqueue(const T& data);
+    bool enqueue(T&& data);
+    bool dequeue(T& data);
 
     bool empty()const;
     size_t size()const;
@@ -73,7 +73,7 @@ LockFreeCurcularQueue<T>::LockFreeCurcularQueue(size_t capacity):
 
 template <typename T> 
 template<typename U>  
-bool LockFreeCurcularQueue<T>::enqueueImpl(U &&data)
+bool LockFreeCurcularQueue<T>::enqueueImpl(U&& data)
 {
     Slot *slot;
     size_t pos=enqueuePos_.load(std::memory_order_relaxed);
@@ -106,26 +106,26 @@ bool LockFreeCurcularQueue<T>::enqueueImpl(U &&data)
 }
 
 template <typename T> 
-bool LockFreeCurcularQueue<T>::enqueue(const T &data)
+bool LockFreeCurcularQueue<T>::enqueue(const T& data)
 {
     return enqueueImpl(data);
 }
 
 template <typename T> 
-bool LockFreeCurcularQueue<T>::enqueue(T &&data)
+bool LockFreeCurcularQueue<T>::enqueue(T&& data)
 {
     return enqueueImpl(std::forward<T>(data));
 }
 
 template <typename T> 
-bool LockFreeCurcularQueue<T>::dequeue(T &data)
+bool LockFreeCurcularQueue<T>::dequeue(T& data)
 {
     Slot *slot;
     size_t pos=dequeuePos_.load(std::memory_order_relaxed);
 
     while(true)
     {
-        slot=&buffer_[pos & bufferMask_];
+        slot=&buffer_[pos&bufferMask_];
         size_t seq=slot->sequence.load(std::memory_order_acquire);
         intptr_t dif=static_cast<intptr_t>(seq)-static_cast<intptr_t>(pos + 1);
 
