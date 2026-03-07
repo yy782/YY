@@ -92,45 +92,6 @@ private:
         Connected=1,
         DisConnected
     };
-    // /**
-    //  * @brief 背压策略枚举
-    //  * 
-    //  * 定义当发送缓冲区达到高水位时采取的不同处理策略。
-    //  * 每种策略适用于不同的业务场景和可靠性要求。
-    //  */
-    // enum class BackpressureStrategy
-    // {
-    //     kDiscard,         /**< 丢弃新数据 - 适用于实时数据（如音视频流、监控数据），允许丢包以保护内存 */
-    //     kCloseConnection, /**< 断开连接 - 极端保护措施，用于检测到恶意客户端或资源严重受限时 */
-    //     kBackoff,         /**< 停止读取 - 反向压力机制，暂停从socket读取新数据，最推荐的优雅策略 */
-    //     kThrottle,        /**< 限速发送 - 令牌桶算法控制发送速率，适用于带宽控制和流量整形 */
-    //     kPass             /**< 不处理 - 透传策略，继续追加数据，需要业务层自行保证不会OOM */
-    // };
-
-    /**
-     * @brief 背压配置结构体
-     * 
-     * 包含背压机制的所有可调参数，用于精细控制单个连接的流量行为。
-     */
-    // struct BackpressureConfig
-    // {
-    //     static size_t highWaterMark=64*1024;  /**< 高水位阈值（默认64KB）-当缓冲区超过此值时触发背压策略 */
-    //     static size_t lowWaterMark=16*1024;    /**< 低水位阈值（默认16KB）- 当缓冲区降至此值以下时解除背压 */
-    // };
-    // enum class BackpressureState
-    // {
-    //     kNormal,      /**< 正常状态 - 发送缓冲区低于高水位，一切正常 */
-    //     kHighWater,   /**< 高水位状态 - 已触发背压，正在执行相应策略 */
-    // };
-
-    
-    // // 新增：背压处理方法
-    // bool handleBackpressureBeforeSend(size_t len);
-    // void handleBackpressureAfterWrite();
-    // void checkWaterLevels();
-    // void startBackoff();   // 停止读取
-    // void resumeReading();  // 恢复读取
-    // void throttleSend();    // 限速发送
 
     //缓冲区的背压水位
     struct BackpressureConfig
@@ -155,19 +116,19 @@ private:
         kBackoff         /**< 停止读取 - 反向压力机制，暂停从socket读取新数据，最推荐的优雅策略 */ // Recv Buffer
     };    
     //Send Buffer的背压处理
-    struct ThrottleConfig
-    {
-        static size_t tokenBucketSize;  /**< 令牌桶大小（默认64KB）- 用于控制发送速率 */
-        static size_t refillRate;       /**< 令牌填充速率（默认1KB/s）- 每秒填充的令牌数 */
-    };
     bool handleBackpressureBeforeSend(size_t len);
+    void handleBackpressureAfterWrite();
+
     //recv Buffer的背压处理
+    bool handleBackpressureBeforeRead();
+    void handleBackpressureAfterRead(size_t len);
+
 
 
     Address addr_; // @prief 对端的地址
     EventHandler handler_;
     Buffer RecvBuffer_;
-    BackpressureState RecvbState_{BackpressureState::kNormal};
+    BackpressureState RecvbpState_{BackpressureState::kNormal};
     BufferBackpressureStrategy RecvbpStrategy_;
     Buffer SendBuffer_;
     BackpressureState SendbpState_{BackpressureState::kNormal};
