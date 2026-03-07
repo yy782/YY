@@ -22,7 +22,7 @@ Connstatus_(ConnectStatus::DisConnected)
 }
 TcpConnection::~TcpConnection()
 {
-    if(readBuffer_.get_readable_size()!=0)
+    if(RecvBuffer_.get_readable_size()!=0)
     {
         LOG_CLIENT_WARN("had data not read!");
     }
@@ -30,7 +30,7 @@ TcpConnection::~TcpConnection()
 void TcpConnection::disconnect()
 {
     Connstatus_=ConnectStatus::DisConnected;
-    if(writeBuffer_.get_readable_size()==0)
+    if(SendBuffer_.get_readable_size()==0)
     {
         EventLoop* loop=handler_.get_loop();
         loop->submit([this](){
@@ -63,7 +63,7 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
     auto n=sockets::send(handler_.get_fd(),message,len,MSG_NOSIGNAL);
     if(n>=0&&n<static_cast<ssize_t>(len))
     {
-        writeBuffer_.append(message+n,len-n);
+        SendBuffer_.append(message+n,len-n);
         if(!handler_.isWriting())
         {
             handler_.setWriting();
@@ -79,11 +79,11 @@ void TcpConnection::handleRead()
 {
     assert(SmessageCallBack_);
 
-    auto n=sockets::recv(handler_.get_fd(),readBuffer_.append(),readBuffer_.get_writable_size(),0);
+    auto n=sockets::recv(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
     if(n>0)
     {
-        readBuffer_.append(n);
-        SmessageCallBack_(shared_from_this(),&readBuffer_);
+        RecvBuffer_.append(n);
+        SmessageCallBack_(shared_from_this(),&RecvBuffer_);
     }
     else if(n==0)
     {
@@ -96,9 +96,9 @@ void TcpConnection::handleRead()
 }
 void TcpConnection::handleWrite()
 {
-    ssize_t len=static_cast<ssize_t>(writeBuffer_.get_readable_size());
+    ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
-    ssize_t n=sockets::send(fd,writeBuffer_.peek(),len,MSG_NOSIGNAL);
+    ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,MSG_NOSIGNAL);
     if(n==len)
     {
         if(Connstatus_==ConnectStatus::DisConnected)
@@ -114,7 +114,7 @@ void TcpConnection::handleWrite()
             }
             
         }
-        writeBuffer_.append(n);
+        SendBuffer_.append(n);
     }
     else if(n>=0&&n<len)
     {
@@ -123,7 +123,7 @@ void TcpConnection::handleWrite()
             handler_.setWriting();
             handler_.get_loop()->update_listen(&handler_);
         }
-        writeBuffer_.append(n);
+        SendBuffer_.append(n);
         if (backpressureStrategy_ == BackpressureStrategy::kThrottle)
         {
             bytesSentThisSecond_ += len;
@@ -157,80 +157,62 @@ void TcpConnection::handleError()
 
 bool TcpConnection::handleBackpressureBeforeSend(size_t len)
 {
-    size_t currentSize=writeBuffer_.get_readable_size();
+    size_t currentSize=SendBuffer_.get_readable_size();
     size_t newSize=currentSize+len;
     
-    
-    switch(backpressureStrategy_)
+    if(newSize>=BackpressureConfig::highWaterMark)
+            SendbpState_=BackpressureState::kHighWater;
+    else if(newSize<=BackpressureConfig::lowWaterMark)
+            SendbpState_=BackpressureState::kNormal;        
+
+    if(SendbpState_==BackpressureState::kHighWater)
     {
-    case BackpressureStrategy::kDiscard: //丢弃新数据
-        if (newSize>=backpressureConfig_.highWaterMark)
+        switch(SendbpStrategy_)
         {
+        case BufferBackpressureStrategy::kDiscard: //丢弃新数据
             LOG_CLIENT_WARN("Discarding "<<len<<" bytes due to backpressure");
             return false;
-        }
-        break;
+            
+            break;
+            
+        case BufferBackpressureStrategy::kCloseConnection: //断开连接
         
-    case BackpressureStrategy::kCloseConnection: //断开连接
-        if (newSize>backpressureConfig_.highWaterMark)
-        {
             LOG_CLIENT_WARN("Closing connection due to high watermark");
             disconnect();
             return false;
-        }
-        break;
-        
-    case BackpressureStrategy::kBackoff: //停止读取
-        if (newSize>backpressureConfig_.highWaterMark)
-        {
-            startBackoff();
-            return false;
-        }
-        else if (newSize<backpressureConfig_.lowWaterMark) 
-        {
             
-            return true;
-        }
-        break;
-        
-    case BackpressureStrategy::kThrottle: //限速发送
-            assert(backpressureConfig_.rateLimit>0);
-            LTimeStamp now=LTimeStamp::now();
-            if (now-lastRateCheck_>=LTimeInterval(1))
-            {
-                bytesSentThisSecond_=0;
-                lastRateCheck_=now;
-            }
+            break;
+        case BufferBackpressureStrategy::kThrottle: //限速发送
+            // TODO
             
-            if (bytesSentThisSecond_+len>backpressureConfig_.rateLimit) 
-            {
-                return false;
-            }
-        
-        break;
-    case BackpressureStrategy::kPass:   //不处理
-    default:
-        break;
+            break;
+        case BufferBackpressureStrategy::kPass:   //不处理
+        default:
+            break;
+        }   
+        return true;     
     }
+
     
     return true;
 }
 
 
-void TcpConnection::checkWaterLevels()
-{
-    size_t currentSize = writeBuffer_.get_readable_size();
+// void TcpConnection::checkWaterLevels()
+// {
+//     size_t currentSize = SendBuffer_.get_readable_size();
     
-    if (backpressureStrategy_ == BackpressureStrategy::kBackoff)
-    {
-        if (!readingPaused_ && currentSize > backpressureConfig_.highWaterMark)
-        {
-            startBackoff();
-        }
-        else if (readingPaused_ && currentSize < backpressureConfig_.lowWaterMark)
-        {
-            resumeReading();
-        }
-    }
+//     if (backpressureStrategy_ == BackpressureStrategy::kBackoff)
+//     {
+//         if (!readingPaused_ && currentSize > backpressureConfig_.highWaterMark)
+//         {
+//             startBackoff();
+//         }
+//         else if (readingPaused_ && currentSize < backpressureConfig_.lowWaterMark)
+//         {
+//             resumeReading();
+//         }
+//     }
+// }
 }
 }

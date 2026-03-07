@@ -9,17 +9,17 @@ class RingBuffer:noncopyable
 { 
 
 public:
-    RingBuffer(size_t size):queue_(size)
+    RingBuffer(size_t capacity):queue_(capacity)
     {}
-    bool push(const T& t)
+    bool append(const T& t)
     {
         return queue_.push(t);
     }
-    bool push(T&& t)
+    bool append(T&& t)
     {
         return queue_.push(std::move(t));
     }
-    bool pop(T& t)
+    bool retrieve(T& t)
     {
         return queue_.pop(t);
     }
@@ -30,7 +30,11 @@ public:
     bool full()
     {
         return queue_.full();
-    }    
+    }
+    size_t getRemainCapacity()
+    {
+        return queue_.getRemainCapacity();
+    }  
 private:
     LockFreeCurcularQueue<T> queue_;    
 };

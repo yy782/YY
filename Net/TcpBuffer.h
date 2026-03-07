@@ -1,21 +1,23 @@
-#ifndef _YY_BUFFER_
-#define _YY_BUFFER_
 #include <vector>
-#include <assert.h>    
-#include <string>      
-#include "Types.h"
+#include <algorithm>
+#include <string>
+#include "noncopyable.h"
+#include <cstring>
+
 namespace yy
 {
-
+namespace net
+{
 // @brief 缓冲区只管存，不管该存多大,存多大由业务判断
-class Buffer
+class TcpBuffer:noncopyable
 {
 public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎意外的无效，但是将数据交给计算密集型线程池，需要拷贝数据
 
     typedef std::vector<char> CharContainer;
 
-    explicit Buffer(size_t initial_size=1024,size_t prepend_size=8);
-    void swap(Buffer& other);
+    explicit TcpBuffer(size_t initial_size=1024,size_t prepend_size=8);
+    ~TcpBuffer()=default;
+    void swap(TcpBuffer& other);
 
     void append(const char* data,size_t size);
     void append(const void* data,size_t size);
@@ -47,9 +49,17 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
         return last;
     }
     void ensureWritableBytes(size_t len);
-  
     void hasWritten(size_t len);
     void unwrite(size_t len);
+
+
+        /**
+     * @brief 背压配置结构体
+     * 
+     * 包含背压机制的所有可调参数，用于精细控制单个连接的流量行为。
+     */
+
+
 private:
     void move_write_index(size_t size);
     void move_read_index(size_t size);
@@ -62,6 +72,9 @@ private:
     const char* begin()const{return &*buffer_.begin();}
     void expend(size_t size);
     void reuse_prependable_space();
+
+    
+
     CharContainer buffer_;
     // @brief 考虑到连续内存，不采用循环队列实现
     const size_t prepend_size_;
@@ -69,7 +82,7 @@ private:
     size_t write_index_;
     // @brief 选择索引和buffer_的begin()迭代器使用而不是简单的char*,或者可读，可写的迭代器，防止动态扩容的失效
 
-};    
+}; 
 
 }
-#endif
+}

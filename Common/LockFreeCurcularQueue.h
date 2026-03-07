@@ -23,7 +23,7 @@ public:
     bool dequeue(T& data);
 
     bool empty()const;
-    size_t size()const;
+    size_t getRemainCapacity()const;
 private:
     struct Slot
     {
@@ -160,7 +160,7 @@ bool LockFreeCurcularQueue<T>::empty()const
 }
 
 template <typename T> 
-size_t LockFreeCurcularQueue<T>::size()const
+size_t LockFreeCurcularQueue<T>::getRemainCapacity()const
 {
     size_t head=dequeuePos_.load(std::memory_order_relaxed);
     size_t tail=enqueuePos_.load(std::memory_order_relaxed);
