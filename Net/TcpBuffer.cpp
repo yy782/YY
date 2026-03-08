@@ -19,30 +19,19 @@ void TcpBuffer::swap(TcpBuffer& other)
     std::swap(read_index_,other.read_index_);
     std::swap(write_index_,other.write_index_);
 }
+
 void TcpBuffer::append(const char* data,size_t size)
+{
+    appendImp(data,size);
+}
+
+void TcpBuffer::appendImp(const char* data,size_t size)
 {
     ensure_appendable(size);
     std::copy(data,data+size,begin_write());
     move_write_index(size);
 }
 
-void TcpBuffer::append(const void* data,size_t size)
-{
-    append(static_cast<const char*>(data),size);
-}
-char* TcpBuffer::append()// FIXMETH 不移动指针，可读可写指针向外暴露?
-{
-    return begin_write();
-}
-void TcpBuffer::append(size_t size)
-{
-    move_write_index(size);
-}
-TcpBuffer& TcpBuffer::append(string_view data)
-{
-    append(data.data(),data.size());
-    return *this;
-}
 char* TcpBuffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())

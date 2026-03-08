@@ -13,6 +13,7 @@ public:
     string_view(const char *s) : pb_(s), pe_(s + strlen(s)) {}
 
     const char *data() const { return pb_; }
+    char* data() { return const_cast<char*>(pb_); }
     const char *begin() const { return pb_; }
     const char *end() const { return pe_; }
     char front() { return *pb_; }

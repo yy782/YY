@@ -10,18 +10,16 @@ typedef TcpConnection::TcpConnectionPtr TcpConnectionPtr;
 typedef TcpConnection::Buffer  Buffer; 
 typedef ::google::protobuf::Message Message;
 typedef ::google::protobuf::Descriptor Descriptor;
-typedef std::function<void(TcpConnectionPtr con, Message *msg)> ProtoCallBack;
+typedef std::function<void(TcpConnectionPtr con, Message* msg)> ProtoCallBack;
 
-struct ProtoMsgCodec {
-    static void encode(Message *msg, Buffer &buf);
-    static Message *decode(Buffer &buf);
-    static bool msgComplete(Buffer &buf);
+struct ProtoMsgCodec 
+{
+    static void encode(Message* msg, Buffer& buf);
+    static Message* decode(Buffer& buf);
+    static bool msgComplete(Buffer& buf);
     static Message* ProtoMsgCodec::createMessage(const std::string& typeName);
-    // 最大消息大小限制（例如 64MB）
-    static const size_t MAX_MESSAGE_SIZE = 64 * 1024 * 1024;  // 64MB
-    
-    // 最大类型名长度限制（例如 256字节）
-    static const size_t MAX_NAME_LENGTH = 256;  // 256字节
+    static const size_t MAX_MESSAGE_SIZE=64*1024*1024;  // 64MB
+    static const size_t MAX_NAME_LENGTH=256;  // 256字节
 };
 
 struct ProtoMsgDispatcher {
@@ -35,8 +33,9 @@ struct ProtoMsgDispatcher {
     std::map<const Descriptor *, ProtoCallBack> protocbs_;
 };
 
-inline bool ProtoMsgCodec::msgComplete(Buffer &buf) {
-    return buf.get_readable_size() >= 4 && buf.get_readable_size()>= *(uint32_t *) buf.peek();
+inline bool ProtoMsgCodec::msgComplete(Buffer& buf) 
+{
+    return buf.get_readable_size()>=4&&buf.get_readable_size()>=*(uint32_t *)buf.peek();
 }     
 }   
 }

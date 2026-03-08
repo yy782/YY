@@ -47,14 +47,14 @@ void TcpConnection::disconnectInLoop()
 {
     sockets::shutdown(handler_.get_fd(),SHUT_WR);   
 }
-void TcpConnection::send(const char* message,size_t len) // message是栈变量?
+void TcpConnection::send(const char* message,size_t len)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
     auto loop=handler_.get_loop();
 
     loop->submit([this,message,len](){
         sendInLoop(message,len);
-    });
+    });        
     
 
 }
@@ -63,33 +63,64 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
     if(!handleBackpressureBeforeSend())
         return;
     EventLoop* loop=handler_.get_loop();
-    auto n=sockets::send(handler_.get_fd(),message,len,MSG_NOSIGNAL);
-    if(n>=0&&n<static_cast<ssize_t>(len))
+
+    if(codec_)
     {
-        SendBuffer_.append(message+n,len-n);
+        codec_->encode(string_view(message,len),SendBuffer_);
         if(!handler_.isWriting())
         {
             handler_.setWriting();
             loop->update_listen(&handler_);
         }
     }
-    else if(n<0)
+    else 
     {
-        handleError();
-    } 
+        ssize_t n=sockets::sendET(handler_.get_fd(),message,len,MSG_NOSIGNAL);
+        if(n>=0&&n<static_cast<ssize_t>(len))
+        {
+            SendBuffer_.append(message+n,len-n);
+            if(!handler_.isWriting())
+            {
+                handler_.setWriting();
+                loop->update_listen(&handler_);
+            }
+        }
+        else if(n<0)
+        {
+            handleError();
+        }         
+    }
+
 }
 void TcpConnection::handleRead()
 {
     assert(SmessageCallBack_);
     if(!handleBackpressureBeforeRead())
         return;
-    auto n=sockets::recv(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
+    auto n=sockets::recvET(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
     if(n>0)
     {
         RecvBuffer_.append(n);
         updateWaterMark();
-        SmessageCallBack_(shared_from_this());
-    }
+        string_view data(string_view(RecvBuffer_.peek(),RecvBuffer_.get_readable_size()));
+        string_view msg;
+        if(codec_)
+        {
+            int ret=codec_->tryDecode(data,msg);
+            if(ret>0)
+            {
+                SmessageCallBack_(shared_from_this(),msg);
+            }
+            else if(ret<0)
+            {
+                handleError();
+            }
+        }
+        else 
+        {
+          SmessageCallBack_(shared_from_this(),data);  
+        }
+    }  
     else if(n==0)
     {
         handleClose();
