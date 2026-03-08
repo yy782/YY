@@ -87,6 +87,7 @@ public:
     
     
     void send(const char* message,size_t len);
+    void send(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     ServicesData& getData(){return data_;}
     bool isConnected(){return Connstatus_==ConnectStatus::Connected;}
 

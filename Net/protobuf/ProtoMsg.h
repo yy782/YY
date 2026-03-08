@@ -22,15 +22,17 @@ struct ProtoMsgCodec
     static const size_t MAX_NAME_LENGTH=256;  // 256字节
 };
 
-struct ProtoMsgDispatcher {
-    void handle(TcpConnectionPtr con, Message *msg);
+struct ProtoMsgDispatcher 
+{
+    void handle(TcpConnectionPtr con,Message* msg);
     template <typename M>
-    void onMsg(std::function<void(TcpConnectionPtr con, M *msg)> cb) {
-        protocbs_[M::descriptor()] = [cb](TcpConnectionPtr con, Message *msg) { cb(con, dynamic_cast<M *>(msg)); };
+    void onMsg(std::function<void(TcpConnectionPtr con,M* msg)> cb) 
+    {
+        protocbs_[M::descriptor()]=[cb](TcpConnectionPtr con,Message* msg){cb(con,dynamic_cast<M*>(msg)); };
     }
 
    private:
-    std::map<const Descriptor *, ProtoCallBack> protocbs_;
+    std::map<const Descriptor*, ProtoCallBack> protocbs_;
 };
 
 inline bool ProtoMsgCodec::msgComplete(Buffer& buf) 

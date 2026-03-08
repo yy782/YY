@@ -28,7 +28,7 @@ int LineCodec::tryDecode(string_view data,string_view& msg) {
 }
 void LineCodec::encode(string_view msg, TcpBuffer& buf) 
 {
-    buf.append<TcpBuffer>(msg)
+    buf.append(msg)
         .append("\r\n");
 }
 

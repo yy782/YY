@@ -58,6 +58,13 @@ void TcpConnection::send(const char* message,size_t len)
     
 
 }
+void TcpConnection::send()
+{
+    if(!handler_.isWriting())
+    {
+        handler_.setWriting();
+    }
+}
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
     if(!handleBackpressureBeforeSend())
