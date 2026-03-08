@@ -2,6 +2,7 @@
 #define _YY_RINGBUFFER_H_ 
 #include "noncopyable.h"
 #include "LockFreeCurcularQueue.h"
+#include <thread>
 namespace yy 
 { 
 template<typename T>
@@ -9,19 +10,34 @@ class RingBuffer:noncopyable
 { 
 
 public:
-    RingBuffer(size_t capacity):queue_(capacity)
+    RingBuffer(size_t capacity=1024):queue_(capacity)
     {}
     bool append(const T& t)
     {
-        return queue_.push(t);
+        return appendImpl(t);
     }
     bool append(T&& t)
     {
-        return queue_.push(std::move(t));
+        return appendImpl(std::move(t));
+    }
+    void blockappend(const T& t)
+    {
+        while(!append(t))
+        {
+            std::this_thread::yield();
+        }
+
+    }
+    void blockappend(T&& t)
+    {
+        while(!append(std::move(t)))
+        {
+            std::this_thread::yield();
+        }
     }
     bool retrieve(T& t)
     {
-        return queue_.pop(t);
+        return queue_.dequeue(t);
     }
     bool empty()
     {
@@ -36,6 +52,12 @@ public:
         return queue_.getRemainCapacity();
     }  
 private:
+    template<typename U>
+    bool appendImpl(U&& t)
+    {
+        return queue_.enqueue(std::forward<U>(t));
+    }
+    
     LockFreeCurcularQueue<T> queue_;    
 };
 

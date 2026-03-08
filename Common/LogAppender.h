@@ -15,6 +15,9 @@ class TimeStamp;
 template<typename PrecisionTag>
 class TimeInterval;
 
+
+
+
 class BaseLogAppender:noncopyable
 {
 public:

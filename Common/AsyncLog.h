@@ -4,19 +4,19 @@
 #include "noncopyable.h"
 #include "LogAppender.h"
 #include "LogFilter.h"
+#include "RingBuffer.h"
 #include <memory>
 #include <queue>
 #include <vector>
+#include <string>
+#include "Types.h"
 namespace yy
 {
 
-class Buffer;
-
-
-
-class AsyncLog :noncopyable
+class AsyncLog:noncopyable
 {
 public:
+    typedef RingBuffer<SharedString> Buffer;
     typedef std::unique_ptr<Buffer> BufferPtr;
     typedef std::vector<BufferPtr> BufferContainer;
     static AsyncLog& getInstance(const char* fileName,size_t flush_interval)
@@ -29,7 +29,7 @@ public:
     LogAppender* getAppender(){return &appender_;}
 private:
     AsyncLog(const char* fileName,size_t flush_interval);
-    void append(const char* msg,size_t len);
+    void append(const SharedString& data);
     void loop();
 
     
@@ -40,8 +40,6 @@ private:
     LogAppender appender_;
     LogFilter filter_;
 
-    
-    locker Receptionlock_;
     locker BackstageLock_;
     Thread thread_;
 };

@@ -16,7 +16,8 @@
 #include <sstream>
 #include "noncopyable.h"
 
-#include "Buffer.h"
+#include "Types.h"
+
 #include <string>
 namespace yy
 {
@@ -24,24 +25,94 @@ namespace yy
 class LogStream 
 {
 public:
-    template <typename T>
-    LogStream& operator<<(const T& val) {
-        if constexpr(std::is_same_v<T,Buffer::CharContainer>)
-        {
-            oss_.write(val.data(), val.size());
-        } 
-        else 
-        {
-            oss_<<val;  
-        }
+    LogStream() : oss_(std::make_shared<std::string>()) {}
+    LogStream& operator<<(short val) {
+        *oss_ += std::to_string(val);
         return *this;
     }
-    std::string str()const{return oss_.str();}
-    size_t size()const{
-        return oss_.str().size(); 
+    
+    LogStream& operator<<(unsigned short val) {
+        *oss_ += std::to_string(val);
+        return *this;
     }
+    
+    LogStream& operator<<(int val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned int val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned long val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long long val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned long long val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(float val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(double val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long double val) {
+        *oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(bool val) {
+        *oss_ += val ? "true" : "false";
+        return *this;
+    }
+    
+    LogStream& operator<<(char val) {
+        oss_->push_back(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(const char* val) {
+        assert(val);
+        *oss_ += val;
+        
+        return *this;
+    }
+    
+    LogStream& operator<<(const std::string& val) {
+        *oss_ += val;
+        return *this;
+    }
+    
+    LogStream& operator<<(const std::string_view& val) {
+        *oss_ += val;
+        return *this;
+    }
+    SharedString str() const{
+        return oss_;
+    }
+
 private:
-    std::ostringstream oss_;
+    SharedString oss_;
 };
 
 
@@ -85,10 +156,13 @@ inline const char* module_to_str(LogModule module) {
 class LogFilter:noncopyable // 只负责过滤，输出通过回调指向
 {
 public:
-    LogFilter():
-    global_level(LOG_LEVEL_DEBUG)
+    typedef std::function<void(const SharedString&)> AsyncLogCallback;
+    typedef std::function<void(const char* msg,size_t len)> SyncLogCallback;
+    LogFilter(bool is_async):
+    global_level_(LOG_LEVEL_DEBUG),
+    is_async_(is_async)
     {
-        module_enabled={
+        module_enabled_={
             {LogModule::THREAD, false},
             {LogModule::SIGNAL, false},
             {LogModule::LOCK, false}, 
@@ -101,27 +175,34 @@ public:
             {LogModule::DEFAULT, false}
         };
     }
-    void set_global_level(int level){global_level=level;}
+    void set_global_level(int level){global_level_=level;}
     void set_module_enabled(LogModule module, bool enabled){
-        module_enabled[module] = enabled;       
+        module_enabled_[module] = enabled;       
     }
-    void set_log_file_callback(std::function<void(const char* data,size_t len)> callback){
-        log_file_callback=std::move(callback);
+    void setSynccallback(SyncLogCallback callback){
+        Synccallback_=std::move(callback);
+    }
+    void setAsynccallback(AsyncLogCallback callback){
+        Asynccallback_=std::move(callback);
     }
     bool is_module_enabled(LogModule module) const{
-        auto it = module_enabled.find(module);
-        return it != module_enabled.end() ? it->second : true; // 默认启用
+        auto it = module_enabled_.find(module);
+        return it != module_enabled_.end() ? it->second : true; // 默认启用
     }
-    int get_global_level() const{return global_level;}
-    void printLog(const char* data, size_t len)
+    int get_global_level() const{return global_level_;}
+    void printLog(SharedString data)
     {
-        assert(log_file_callback);
-        log_file_callback(data,len);
+        if(is_async_)
+            Asynccallback_(data);
+        else
+            Synccallback_(data->c_str(),data->size());    
     }
 private:  
-    std::unordered_map<LogModule, bool> module_enabled;
-    int global_level;
-    std::function<void(const char* data,size_t len)> log_file_callback;
+    std::unordered_map<LogModule, bool> module_enabled_;
+    int global_level_;
+    SyncLogCallback Synccallback_;
+    AsyncLogCallback Asynccallback_;
+    const bool is_async_;
 };
 
 extern LogFilter* g_log_filter;
@@ -135,7 +216,7 @@ extern LogFilter* g_log_filter;
                 << "[" << module_to_str(module) << "] " \
                 << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
                 << msg << "\n"; \
-            g_log_filter->printLog(stream.str().c_str(), stream.size()); \
+            g_log_filter->printLog(stream.str()); \
         } \
     }\
 } while(0)

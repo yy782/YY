@@ -2,6 +2,7 @@
 #include "../net.h"
 using namespace yy;
 using namespace yy::net;
+using namespace yy::net::sockets;
 #include <algorithm>
 
 //./EchoServer
@@ -15,7 +16,7 @@ public:
     server_(addr,thread_num)
     {
         server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
-        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1,_2));
+        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
         server_.getSignalHandler().addSign(SIGTERM,std::bind(&EchoServer::stop,this));
 
@@ -75,8 +76,8 @@ private:
     {
         
         auto& data=conn->getData();
-        auto lastFulsh=std::any_cast<LTimeStamp>(data[0]);
-        if(LTimeStamp::now()-lastFulsh>10000)
+        LTimeStamp lastFulsh=std::any_cast<LTimeStamp>(data[0]);
+        if((LTimeStamp::now()-lastFulsh)>LTimeInterval(60*5))
         {
             conn->send("Close!",7);
             conn->disconnect();
@@ -86,14 +87,14 @@ private:
         
 
     }
-    void onMessage(TcpConnectionPtr conn,Buffer* buffer)
+    void onMessage(TcpConnectionPtr conn)
     {
-        assert(buffer);
+        TcpBuffer& buffer=conn->getRecvBuffer();
         auto& data=conn->getData();
         data[0]=LTimeStamp::now();
 
-        char* last=buffer->findBorder("\n");
-        std::string msg(buffer->peek(),last);
+        char* last=buffer.findBorder("\n");
+        std::string msg(buffer.peek(),last);
         if(msg=="bye\n") // @note 
         {
             return;
@@ -116,7 +117,14 @@ private:
 
 int main(int argc,char* argv[])
 {
-    //daemonize();
+    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
+    instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
+    instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
+    instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
+    instance.getFilter()->set_module_enabled(LogModule::TIME,true);
+    instance.getFilter()->set_module_enabled(LogModule::CLIENT,true);    
+    
+    daemonize();
     Address addr;
     if(argc<2)
     {
@@ -127,12 +135,7 @@ int main(int argc,char* argv[])
        addr=Address(std::stoi(argv[1]),true); 
     }
     
-    auto& instance=AsyncLog::getInstance("../../build/Log.log",10);
-    instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
-    instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
-    instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
-    instance.getFilter()->set_module_enabled(LogModule::TIME,true);
-    instance.getFilter()->set_module_enabled(LogModule::CLIENT,true);
+
 
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
 

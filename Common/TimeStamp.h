@@ -148,13 +148,26 @@ TimeInterval<PrecisionTag> operator-(const TimeStamp<PrecisionTag>& lhs,const Ti
 }
 
 template<typename PrecisionTag> 
-bool operator>=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
+bool operator<(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
 {
-    return lhs.getTimePeriod()>=rhs.getTimePeriod();
+    return lhs.getTimePeriod()<rhs.getTimePeriod();
+}
+template<typename PrecisionTag> 
+bool operator>(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
+{
+    return lhs.getTimePeriod()>rhs.getTimePeriod();
+}
+template<typename PrecisionTag> 
+bool operator<=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
+{
+    return !(lhs>rhs);
 }
 
-
-
+template<typename PrecisionTag> 
+bool operator>=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<PrecisionTag>& rhs)
+{
+    return !(lhs<rhs);
+}
 
 }
 #endif

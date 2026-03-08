@@ -1,22 +1,24 @@
-#include "Buffer.h"
-#include "AsyncLog.h"
+#include "LogAppender.h"
+#include "RingBuffer.h"
 #include "Types.h"
+#include "AsyncLog.h"
 namespace yy
 {
-constexpr size_t BufferSize=100;
+constexpr size_t BufferSize=5;
 
 AsyncLog::AsyncLog(const char* fileName,size_t flush_interval):
 Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
 SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
 BackstageBuffers_(),
-appender_(fileName,flush_interval)
+appender_(fileName,flush_interval),
+filter_(true)
 {
     g_log_filter=&filter_;
 
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.append(p,strlen(p));
 
-    filter_.set_log_file_callback(std::bind(&AsyncLog::append,this,_1,_2));
+    filter_.setAsynccallback(std::bind(&AsyncLog::append,this,_1));
     thread_.run(std::bind(&AsyncLog::loop,this));
 }  
 AsyncLog::~AsyncLog()
@@ -30,11 +32,10 @@ AsyncLog::~AsyncLog()
     appender_.append(p,strlen(p));
     appender_.flush(); 
 }
-void AsyncLog::append(const char* msg,size_t len)
+void AsyncLog::append(const SharedString& log)
 {
-    assert(len);
-    Receptionlock_.lock();
-    if(Receptionbuffer_->get_writable_size()<len)
+    assert(!log->empty());
+    if(Receptionbuffer_->full())
     {
         BackstageLock_.lock();
         BackstageBuffers_.push_back(std::move(Receptionbuffer_));
@@ -50,9 +51,8 @@ void AsyncLog::append(const char* msg,size_t len)
         }
     }
     assert(Receptionbuffer_);
-    assert(Receptionbuffer_->get_writable_size()>=len);
-    Receptionbuffer_->append(msg,len);
-    Receptionlock_.unlock();
+    Receptionbuffer_->blockappend(log);
+
 }
 void AsyncLog::loop()
 {
@@ -67,21 +67,21 @@ void AsyncLog::loop()
             WriteBuffer.swap(BackstageBuffers_);
         }
         BackstageLock_.unlock();
-        Receptionlock_.lock();
         if(!SpareBuffer_)
         {
             SpareBuffer_=std::make_unique<Buffer>(BufferSize);
         }
-
         if(!Receptionbuffer_)
         {
             Receptionbuffer_=std::make_unique<Buffer>(BufferSize);
         }
-        Receptionlock_.unlock();
         for(auto& buffer:WriteBuffer)
         {
-            std::string msg=buffer->retrieveAll();
-            appender_.append(msg.c_str(),msg.size());
+            SharedString msg;
+            while(buffer->retrieve(msg))
+            {
+                appender_.append(msg->c_str(),msg->size());
+            }
         }
         WriteBuffer.clear();
     }

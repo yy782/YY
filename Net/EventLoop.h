@@ -9,6 +9,7 @@
 #include "../Common/locker.h"
 
 #include <queue>
+#include "../Common/RingBuffer.h"
 namespace yy
 {
 namespace net
@@ -22,7 +23,7 @@ public:
     typedef Thread::Pid_t Pid_t;
     typedef PollerType::HandlerList HandlerList;
     typedef std::function<void()> Functor;
-    typedef std::queue<Functor> FunctionList;
+    typedef RingBuffer<Functor> FunctionList;
     EventLoop();
     ~EventLoop()=default;
     void loop();
@@ -72,13 +73,12 @@ private:
     PollerType poller_;
     HandlerList activeHandlers_;
     FunctionList FunctionList_;
-    locker lock_;
+    
     Pid_t threadId_;
 
     int status_;
     EventHandler wakeupHandler_;
-    TimeStamp<LowPrecision> pollReturnTime_;
-    int64_t iteration_;//记录事件循环的迭代次数
+    
 };
 }    
 }

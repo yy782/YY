@@ -6,7 +6,7 @@ find_package(Protobuf REQUIRED)
 file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.proto")
 
 set(PROTO_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/proto_gen)
-
+file(MAKE_DIRECTORY ${PROTO_GEN_DIR})
 protobuf_generate(
     LANGUAGE cpp
     OUT_VAR PROTO_GEN_SRCS

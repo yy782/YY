@@ -15,7 +15,7 @@ loop_(loop)
     assert(loop_!=nullptr);
 } 
   
-void EventHandler::handler_revent(Time_Stamp receiveTime)
+void EventHandler::handler_revent()
 {
 
 if(revents_&EventType::HupEvent&&!(revents_&EventType::ReadEvent))
@@ -40,7 +40,7 @@ if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent||revents_&Event
      LOG_CLIENT_DEBUG(printName()<<" handler_revent ReadEvent");
     if(readCallback_)
     {
-        readCallback_(receiveTime);
+        readCallback_();
     }
 }
 if(revents_&EventType::WriteEvent)

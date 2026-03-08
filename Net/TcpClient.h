@@ -13,7 +13,7 @@ public:
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
-    typedef TcpConnection::Status Status;
+    typedef TcpConnection::ConnectStatus Status;
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectCallBack;
 
     TcpClient(const Address& serverAddr):

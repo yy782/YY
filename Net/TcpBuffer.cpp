@@ -38,6 +38,11 @@ void TcpBuffer::append(size_t size)
 {
     move_write_index(size);
 }
+TcpBuffer& TcpBuffer::append(string_view data)
+{
+    append(data.data(),data.size());
+    return *this;
+}
 char* TcpBuffer::retrieve(size_t size)
 {
     if(size<=get_readable_size())

@@ -3,6 +3,9 @@
 #include <assert.h>
 #include <iostream>
 #include <errno.h>
+
+
+
 namespace yy
 {
 
@@ -22,7 +25,7 @@ static std::string getSuffix(const char* filename)
 BaseLogAppender::BaseLogAppender(const char* filename):
 name_(getFileName(filename).c_str()),
 type_(getSuffix(filename).c_str()),
-fp_(::fopen(filename,"ae")), // e是当进程执行FD_CLOEXEC时关闭
+fp_(::fopen(filename,"a")), // e是当进程执行FD_CLOEXEC时关闭
 writtenBytes_(0)
 {
     if(fp_==nullptr)

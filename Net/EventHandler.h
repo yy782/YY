@@ -24,7 +24,7 @@ public:
     typedef std::function<void(Time_Stamp)> TimeStampEventCallBack;
     typedef std::function<void()> EventCallBack;
 
-    typedef TimeStampEventCallBack ReadCallBack;
+    typedef EventCallBack ReadCallBack;
     typedef EventCallBack WriteCallBack;
     typedef EventCallBack CloseCallBack;
 
@@ -54,6 +54,7 @@ public:
     bool isWriting()const{return events_&EventType::WriteEvent;}
     bool isReading()const{return events_&EventType::ReadEvent;}
     bool isExcept()const{return events_&EventType::ExceptEvent;}
+    bool isReadingAndExcept()const{return events_&(EventType::ReadEvent|EventType::ExceptEvent);}
     void setReading(){events_.add_event(EventType::ReadEvent);}
     void cancelReading(){events_.remove_event(EventType::ReadEvent);}
     void setWriting(){events_.add_event(EventType::WriteEvent);}
@@ -71,7 +72,7 @@ public:
         cancelReading();
     }
 
-    void setReadCallBack(TimeStampEventCallBack cb){readCallback_=std::move(cb);}
+    void setReadCallBack(EventCallBack cb){readCallback_=std::move(cb);}
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
     void setCloseCallBack(EventCallBack cb){closeCallback_=std::move(cb);}
     void setErrorCallBack(EventCallBack cb){errorCallback_=std::move(cb);}
@@ -87,7 +88,7 @@ public:
         return name_;
     }
 
-    void handler_revent(Time_Stamp receiveTime);
+    void handler_revent();
     void disableAll()
     {
         events_=EventType::NoneEvent;

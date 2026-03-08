@@ -5,6 +5,7 @@
 #include <sys/signalfd.h>
 #include <iostream>
 #include "../Common/LogFilter.h"
+#include <sys/stat.h>
 namespace yy
 {
 namespace net
@@ -277,6 +278,150 @@ ssize_t send(int fd,const void* buf,size_t len,int flags)
     }
     return n;
 }
+
+/**
+ * ET模式下的read函数 - recvn风格
+ * 特点：内部循环，尽可能读取数据，遇到EAGAIN返回已读取字节数
+ * @param fd 文件描述符
+ * @param buf 缓冲区
+ * @param len 期望读取的长度
+ * @return >0 实际读取的字节数，0 对端关闭，-1 错误
+ */
+ssize_t readET(int fd, void* buf, size_t len)
+{
+    if (len == 0) return 0;
+    
+    char* ptr = static_cast<char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) {
+        ssize_t n = ::read(fd, ptr, left);
+        
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // 没有数据可读了，返回已经读取的字节数
+                return len - left;
+            } else if (errno == EINTR) {
+                // 被信号中断，继续读取
+                continue;
+            } else {
+                LOG_SYSTEM_ERROR("[read errno] " << errno);
+                // 如果已经读取了一些数据，返回已读取的字节数；否则返回-1
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else if (n == 0) {
+            // 对端关闭连接，返回已读取的字节数
+            return len - left;
+        } else {
+            // 成功读取n字节
+            ptr += n;
+            left -= n;
+            // 注意：不判断left是否为0，继续循环直到left==0或出错
+        }
+    }
+    
+    return len;  // 完全读取了len字节
+}
+
+/**
+ * ET模式下的write函数 - recvn风格
+ * 特点：内部循环，尽可能写入数据，遇到EAGAIN返回已写入字节数
+ */
+ssize_t writeET(int fd, const void* buf, size_t len)
+{
+    if (len == 0) return 0;
+    
+    const char* ptr = static_cast<const char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) {
+        ssize_t n = ::write(fd, ptr, left);
+        
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // 缓冲区满，返回已经写入的字节数
+                return len - left;
+            } else if (errno == EINTR) {
+                // 被信号中断，继续写入
+                continue;
+            } else {
+                LOG_SYSTEM_ERROR("[write errno] " << errno);
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else {
+            // 成功写入n字节
+            ptr += n;
+            left -= n;
+        }
+    }
+    
+    return len;  // 完全写入了len字节
+}
+
+/**
+ * ET模式下的recv函数 - recvn风格
+ */
+ssize_t recvET(int fd, void* buf, size_t len, int flags)
+{
+    if (len == 0) return 0;
+    
+    char* ptr = static_cast<char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) {
+        ssize_t n = ::recv(fd, ptr, left, flags);
+        
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return len - left;
+            } else if (errno == EINTR) {
+                continue;
+            } else {
+                LOG_SYSTEM_ERROR("[recv errno] " << errno);
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else if (n == 0) {
+            // 对端关闭
+            return len - left;
+        } else {
+            ptr += n;
+            left -= n;
+        }
+    }
+    
+    return len;
+}
+
+/**
+ * ET模式下的send函数 - recvn风格
+ */
+ssize_t sendET(int fd, const void* buf, size_t len, int flags)
+{
+    if (len == 0) return 0;
+    
+    const char* ptr = static_cast<const char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) {
+        ssize_t n = ::send(fd, ptr, left, flags);
+        
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return len - left;
+            } else if (errno == EINTR) {
+                continue;
+            } else {
+                LOG_SYSTEM_ERROR("[send errno] " << errno);
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else {
+            ptr += n;
+            left -= n;
+        }
+    }
+    
+    return len;
+}
 int sockfd_has_error(int fd)
 {
     int error;
@@ -325,6 +470,44 @@ void shutdown(int fd,int how)
         LOG_PRINT_ERRNO(errno);
     }
 }
+void daemonize(){
+    pid_t pid=fork();
+    if(pid==-1){
+        perror("[pid] false");
+        exit(1);
+    }
+    if(pid>0){
+        exit(0);
+    }
+    
+    if(setsid()==-1){
+        exit(1);
+    }
+    pid=fork();//防止重新获取终端
+    if(pid>0)exit(0);
+    umask(0);
+    //LOG_SYSTEM_INFO("[PID] "<<getpid());
+    
+    
+    if(chdir("/")==-1){
+        //LOG_SYSTEM_ERROR("[chdir] "<<"false");
+        exit(1);
+    }
+
+    int null_fd=open("/dev/null",O_WRONLY);//stdcout,stdcerr重定向输出文件设备，以防cout阻塞
+    if(null_fd==-1){
+        //LOG_SYSTEM_ERROR("[open] "<<"false");
+    }
+    
+    if(dup2(null_fd,STDOUT_FILENO)==-1){
+        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
+        close(null_fd);
+    }
+    if(dup2(null_fd,STDERR_FILENO)==-1){
+        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
+        close(null_fd);       
+    }
+} 
 }   
 }    
 }

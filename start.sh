@@ -17,11 +17,12 @@ fi
 
 
 ./EchoServer
-echo "等待"
 
-sleep(1)
 
-./ManyEchoClients
+sleep 1
+
+./EchoClient << EOF
+
 
 echo "程序已退出"
 

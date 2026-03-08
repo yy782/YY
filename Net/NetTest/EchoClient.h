@@ -23,7 +23,7 @@ public:
     EchoClient(const Address& serverAddr):
     client_(serverAddr)
     {
-        client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1,_2));
+        client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
 
 
@@ -41,10 +41,11 @@ public:
     {
         client_.disconnect();
     }
-    void handleMessage(TcpConnectionPtr conn,Buffer* buffer) // @note 如果需要，要判断对端断开连接的消息
+    void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
-        char* last=buffer->findBorder("\n",1);
-        std::string msg(buffer->peek(),last);
+        TcpBuffer& buffer=conn->getRecvBuffer();
+        char* last=buffer.findBorder("\n",1);
+        std::string msg(buffer.peek(),last);
         cout<<"recv:"<<msg<<endl;
     }
     void handleClose(TcpConnectionPtr conn) // 对端关闭时的回调

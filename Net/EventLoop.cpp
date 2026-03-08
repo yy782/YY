@@ -34,7 +34,7 @@ activeHandlers_(),
 status_(EventLoopStatus::Init),
 wakeupHandler_(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
-    auto eventCallBack=[this](EventHandler::Time_Stamp)->void
+    auto eventCallBack=[this]()->void
     {
         uint64_t one=1;
         ssize_t n=sockets::read(wakeupHandler_.get_fd(),&one,sizeof one);
@@ -56,14 +56,13 @@ void EventLoop::loop()
     while(status_&EventLoopStatus::Looping)
     {
         activeHandlers_.clear();
-        pollReturnTime_=poller_.poll(PollTimeMs,activeHandlers_);
-        ++iteration_;
+        poller_.poll(PollTimeMs,activeHandlers_);
         status_|=EventLoopStatus::EventHandling;
         assert(CheckeEventLoopStatus());
         for(auto& handler:activeHandlers_)
         {
             assert(handler!=nullptr);
-            handler->handler_revent(pollReturnTime_);
+            handler->handler_revent();
         }
         if(status_==EventLoopStatus::Quit)break;
         assert(status_&EventLoopStatus::EventHandling);
@@ -85,9 +84,7 @@ void EventLoop::quit()
 }
 void EventLoop::submit(Functor cb)
 {
-    lock_.lock();
-    FunctionList_.push(std::move(cb));
-    lock_.unlock();
+    FunctionList_.blockappend(std::move(cb));
 }
 void EventLoop::wakeup()
 {
@@ -99,16 +96,12 @@ void EventLoop::doPendingFunctions()
 {
     status_|=EventLoopStatus::PendingFunctions;
     assert(CheckeEventLoopStatus());
-    lock_.lock();
     while(!FunctionList_.empty())
     {
-        auto cb=FunctionList_.front();
-        FunctionList_.pop();
-        lock_.unlock();
+        Functor cb;
+        FunctionList_.retrieve(cb);
         cb();
-        lock_.lock();
     }
-    lock_.unlock();
     status_&=~EventLoopStatus::PendingFunctions;
     assert(CheckeEventLoopStatus());
 }   

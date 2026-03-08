@@ -1,7 +1,11 @@
+#ifndef _YY_NET_TCP_BUFFER_H_
+#define _YY_NET_TCP_BUFFER_H_
+
 #include <vector>
 #include <algorithm>
 #include <string>
 #include "noncopyable.h"
+#include "string_view.h"
 #include <cstring>
 
 namespace yy
@@ -23,6 +27,12 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     void append(const void* data,size_t size);
     char* append();
     void append(size_t size);
+    TcpBuffer& append(string_view data);
+    template<typename T>
+    TcpBuffer& appendValue(T value)
+    {
+        append(reinterpret_cast<const char*>(&value), sizeof(T));
+    }
     char* retrieve(size_t size);
     char* retrieveAll();
     
@@ -42,22 +52,35 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     {
         return std::search(begin_read(),begin_write(),border,border+size);
     }
-    char* findBorder(const char* border,size_t size,size_t& len) // FIXME
+    char* findBorder(const char* border,size_t size,size_t& len)
     {
         char* last=findBorder(border,size);
         len=last-begin_read();
         return last;
     }
+    
+    
+    void prepend(const char* data,size_t size)
+    {
+        assert(size <= get_prependable_size());
+        read_index_ -= size;
+        std::copy(data, data + size, begin_read());
+    }
+    
+    void prepend(const void* data,size_t size)
+    {
+        prepend(static_cast<const char*>(data), size);
+    }
+
+    
+
+    
     void ensureWritableBytes(size_t len);
     void hasWritten(size_t len);
     void unwrite(size_t len);
 
 
-        /**
-     * @brief 背压配置结构体
-     * 
-     * 包含背压机制的所有可调参数，用于精细控制单个连接的流量行为。
-     */
+
 
 
 private:
@@ -86,3 +109,4 @@ private:
 
 }
 }
+#endif

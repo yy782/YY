@@ -1,11 +1,12 @@
 
 
+
 #include <google/protobuf/io/zero_copy_stream.h>
 
 #include "../net.h"
 
 #include "student.pb.h"
-#include "../ProtocolCodec.h"
+#include "../protobuf/ProtoMsg.h"
 using namespace yy;
 using namespace yy::net;
 class MyServer {
@@ -16,7 +17,7 @@ public:
         // 设置消息回调
         server_.setMessageCallBack(
             std::bind(&MyServer::onMessage,this, 
-                      _1,_2));
+                      _1));
     }
     
     void start() {
@@ -24,11 +25,11 @@ public:
     }
     
 private:
-    void onMessage(TcpConnectionPtr conn,Buffer* buffer) 
+    void onMessage(TcpConnectionPtr conn) 
     {
+        TcpBuffer& buffer=conn->getRecvBuffer();
         
-        
-        ProtocolCodec  codec(buffer);
+        ProtocolCodec  codec(&buffer);
         
         // 根据消息类型解析
         demo::Student student;
@@ -50,7 +51,7 @@ private:
         response.set_message("收到学生信息: " + student.name());
         
         // 获取连接的输出Buffer（假设TcpConnection有outputBuffer）
-        Buffer& output = conn->getWriteBuffer();  // 你需要有这个接口
+        TcpBuffer& output = conn->getSendBuffer();  // 你需要有这个接口
         
         // 创建编码器
         ProtocolCodec codec(&output);
@@ -72,7 +73,7 @@ public:
         client_.setMessageCallBack(
             std::bind(&MyClient::onConnect, this,_1));
         client_.setMessageCallBack(std::bind(&MyClient::onMessage, this,
-                      _1,_2));
+                      _1));
     }
     
     void connect() {
@@ -86,7 +87,7 @@ public:
         student.set_age(age);
         student.set_school(school);
         
-        Buffer& output=conn->getWriteBuffer();
+        TcpBuffer& output=conn->getSendBuffer();
         
         ProtocolCodec codec(&output);
         if (codec.encode(student)) {
@@ -104,9 +105,10 @@ private:
         
     }
     
-    void onMessage(TcpConnectionPtr conn,Buffer* buffer) 
+    void onMessage(TcpConnectionPtr conn) 
     {
-        ProtocolCodec codec(buffer);
+        TcpBuffer& buffer=conn->getRecvBuffer();
+        ProtocolCodec codec(&buffer);
         demo::StudentResponse response;
         
         if(codec.decode(response)) 

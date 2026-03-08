@@ -25,7 +25,7 @@ struct EventType
     static constexpr Type_ INVAID_EVENT=-1;
     static constexpr Type_ NoneEvent=0;
     static constexpr Type_ ReadEvent=
-                    std::is_same_v<PollerType,Epoll>? static_cast<Type_>(EPOLLIN)// @note 我们选择水平触发模式，所以省略了边缘触发模式的完善
+                    std::is_same_v<PollerType,Epoll>? static_cast<Type_>(EPOLLIN|EPOLLET)// @note 我们选择水平触发模式，所以省略了边缘触发模式的完善
                     :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLIN)
                     :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLIN)
                     :INVAID_EVENT;

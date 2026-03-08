@@ -23,6 +23,7 @@ public:
     bool dequeue(T& data);
 
     bool empty()const;
+    bool full()const;
     size_t getRemainCapacity()const;
 private:
     struct Slot
@@ -60,10 +61,10 @@ size_t LockFreeCurcularQueue<T>::roundUpToPowerOf2(size_t n)
 
 template <typename T>
 LockFreeCurcularQueue<T>::LockFreeCurcularQueue(size_t capacity): 
-    buffer_(roundUpToPowerOf2(capacity)),
-    bufferMask_(buffer_.size()-1), 
     enqueuePos_(0), 
-    dequeuePos_(0)
+    dequeuePos_(0),
+    buffer_(roundUpToPowerOf2(capacity)),
+    bufferMask_(buffer_.size()-1)
 {
     for(size_t i=0;i<buffer_.size();++i)
     {
@@ -158,7 +159,13 @@ bool LockFreeCurcularQueue<T>::empty()const
     size_t tail=enqueuePos_.load(std::memory_order_relaxed);
     return head==tail;
 }
-
+template<typename T>
+bool LockFreeCurcularQueue<T>::full()const
+{
+    size_t head=dequeuePos_.load(std::memory_order_relaxed);
+    size_t tail=enqueuePos_.load(std::memory_order_relaxed);
+    return tail - head >= buffer_.size();
+}
 template <typename T> 
 size_t LockFreeCurcularQueue<T>::getRemainCapacity()const
 {
