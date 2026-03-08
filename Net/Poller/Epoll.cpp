@@ -1,0 +1,134 @@
+#include "Epoll.h"
+#include "../sockets.h"
+#include "../Event.h"
+#include "../../Common/LogFilter.h"
+
+namespace yy 
+{
+namespace net 
+{
+/*
+struct epoll_event {
+    uint32_t events;  // 要监听的事件（如 EPOLLIN/EPOLLOUT）
+    epoll_data_t data;// 自定义数据（通常存 fd，方便后续处理）
+};
+typedef union epoll_data {
+    void *ptr;
+    int fd;          // 最常用：存要监听的 fd
+    uint32_t u32;
+    uint64_t u64;
+} epoll_data_t;
+*/
+namespace
+{
+const int New=-1;
+const int Added=1;
+const int Delete=2;
+}
+Epoll::Epoll():
+events_(1024),
+epollfd_(sockets::create_epollfd(EPOLL_CLOEXEC))
+{
+    assert(epollfd_>0);
+}
+Epoll::~Epoll()
+{
+    if(::close(epollfd_)<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
+TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
+{
+    auto ready_fds=::epoll_wait(epollfd_,&*events_.begin(),
+                    static_cast<int>(events_.size()),timeout);
+    int save_errno=errno;
+    auto timer=TimeStamp<LowPrecision>::now();
+    if(ready_fds<0)
+    {
+        if((save_errno==EAGAIN)||(save_errno==EWOULDBLOCK))
+        {
+            LOG_PRINT_ERRNO(save_errno);
+        }
+        return timer;
+    }
+    else if(ready_fds==0)
+    {
+        return timer;
+    }                
+    else
+    {
+
+        for(int i=0;i<ready_fds;++i)
+        {
+           
+            
+            uint32_t revents=events_[i].events;
+            
+            EventHandler* handler=static_cast<EventHandler*>(events_[i].data.ptr);
+
+           assert(handler);
+
+
+
+            handler->set_revent(Event(revents));
+            // @note 这里是uint32_t到int的隐形转换，但是epollfd_返回的就绪事件是在0X00000000-0x0000001F,不会溢出
+
+            event_handlers.push_back(handler);
+        }
+    }
+    if(static_cast<size_t>(ready_fds)==events_.size())
+    {
+        events_.resize(events_.size()*2);
+    }
+    return timer;
+}
+void Epoll::add_listen(EventHandler* handler)
+{
+    assert(handler);
+    LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
+
+    operator_epoll(EPOLL_CTL_ADD,handler);
+
+    assert((handler->get_status()==New||
+            handler->get_status()==Delete));
+    assert(has_handler(handler)); 
+    assert(handlers_.find(handler->get_fd())==handlers_.end());
+    handlers_[handler->get_fd()]=handler;
+    handler->set_status(Added);
+}
+void Epoll::update_listen(EventHandler* handler)
+{
+    assert(handler);
+    assert(handler->get_status()==Added);
+    
+    assert(has_handler(handler));
+
+    operator_epoll(EPOLL_CTL_MOD,handler);
+}
+void Epoll::remove_listen(EventHandler* handler)
+{
+    assert(handler);
+    assert(handler->get_status()==Added);
+    assert(has_handler(handler));
+    operator_epoll(EPOLL_CTL_DEL,handler);
+    remove_handler(handler);
+    handler->set_status(Delete);
+}
+void Epoll::operator_epoll(int operation,EventHandler* handler)
+{
+    assert(handler);
+    struct epoll_event ev;
+    memZero(&ev,sizeof ev);
+    ev.events=handler->get_event().get_event();
+    ev.data.ptr=handler;
+    if(::epoll_ctl(epollfd_,operation,handler->get_fd(),&ev)==-1)
+    {
+            if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK))
+            {
+                LOG_PRINT_ERRNO(errno);
+            }
+    }    
+}    
+}    
+}

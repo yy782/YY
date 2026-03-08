@@ -15,7 +15,7 @@ namespace net
 {
 
 class EventLoop;
-class EventHandler;
+
 
 class EventHandler:public noncopyable
 {

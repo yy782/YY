@@ -10,15 +10,13 @@
 
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
-
+#include "EventHandler.h"
 #include <memory>
 
 namespace yy
 {
 namespace net
 {
-
-class EventHandler;
 
 template<class PollerTag>
 class Poller:noncopyable
@@ -56,17 +54,14 @@ protected:
     // @brief 选择指针存储，1.避免拷贝开销，2.EventHandler拒绝拷贝
     Poller()=default; // @note CRTP模型下不能创建Poller对象，只能创建子类对象，因为无法解释子类多出的内存布局
 
-    // template<class PollerTag_>
-    // friend EventHandlerPtr get_event_handler(const Poller<PollerTag_>* poller,int fd);
+    EventHandler* get_event_handler(int fd);
 
-    // template<class PollerTag_>
-    // friend void add_handler(Poller<PollerTag_>* poller,EventHandlerPtr handler);
+    void add_handler(EventHandler* handler);
 
-    // template<class PollerTag_>
-    // friend void remove_handler(Poller<PollerTag_>* poller,EventHandlerPtr handler);
+    void remove_handler(EventHandler* handler);
 
-    // template<class PollerTag_>
-    // friend bool has_handler(const Poller<PollerTag_>* poller,EventHandlerPtr handler);
+    bool has_handler(EventHandler* event_handler);
+
 private:
 
     template<class T>
@@ -133,136 +128,46 @@ public:
     template<class T>
     constexpr static bool has_update_listen_v=decltype(has_update_listen<T>(0))::value;
 };
-// template<class PollerTag_>
-// EventHandlerPtr get_event_handler(const Poller<PollerTag_>* poller,int fd)
-// {
-    // auto it=poller->event_handlers_.find(fd);
-    // assert(it!=poller->event_handlers_.end()&&"监听的套接字不存在");
-    // auto handler=it->second;
-    // assert(handler->get_fd()==fd&&"奇怪的套接字");
-//     return handler;
-// }
 
-// template<class PollerTag_>
-// void add_handler(Poller<PollerTag_>* poller,EventHandlerPtr handler)
-// {
-    // assert(poller->event_handlers_.find(handler->get_fd())==poller->event_handlers_.end());
-    // poller->event_handlers_[handler->get_fd()]=handler;
-// }
-// template<class PollerTag_>
-// void remove_handler(Poller<PollerTag_>* poller,EventHandlerPtr handler)
-// {
-//     assert(poller->event_handlers_.find(handler->get_fd())!=poller->event_handlers_.end());
-// #ifndef NDEBUG
-//     size_t n=poller->event_handlers_.erase(handler->get_fd());
-//     assert(n==1);        
-// #else
-//     poller->event_handlers_.erase(handler->get_fd());  
-// #endif
-// }
-// template<class PollerTag_>
-// bool has_handler(const Poller<PollerTag_>* poller,EventHandlerPtr event_handler)
-// {
-//     auto it=poller->event_handlers_.find(event_handler->get_fd());
-//     return it!=poller->event_handlers_.end();
-// }
-class Select:public Poller<Select>
+template<class PollerTag>
+EventHandler* Poller<PollerTag>::get_event_handler(int fd)
 {
-    // @note Select的拉黑没有Poll和EPoll那样修改事件结构体这么简单，只能移除事件集，等同于删除，所以Select的"拉黑"我没完善
-public:
-    Select():
-    max_fd_(-1),
-    is_listening_(1024,false)
-    {
-        clear_set(read_fds_);
-        clear_set(write_fds_);
-        clear_set(except_fds_);
-    }
-    ~Select()
-    {
-        clear();
-    }    
-    TimeStamp<LowPrecision> poll(int timeout,HandlerList& event_handlers);
+    auto it=handlers_.find(fd);
+    assert(it!=handlers_.end()&&"监听的套接字不存在");
+    auto handler=it->second;
+    assert(handler->get_fd()==fd&&"奇怪的套接字");
+    return handler;
+}
 
-    void add_listen(EventHandler& handler);
-    void update_listen(EventHandler& handler);
-    void remove_listen(EventHandler& handler);
-
-private:
-    void update_max_fd(int fd);
-    void clear()
-    {
-        clear_set(read_fds_);
-        clear_set(write_fds_);
-        clear_set(except_fds_);
-        max_fd_=-1;
-    }
-    void clear_set(fd_set& set)
-    {
-        FD_ZERO(&set);
-        // @brief 由于FD_ZERO是宏展开，不能直接用return FD_ZERO(&set)
-    }
-    void set_fd(int fd,fd_set& set)
-    {
-        return  FD_SET(fd,&set);
-    }
-    void remove_fd(int fd,fd_set& set)
-    {
-        return FD_CLR(fd,&set);
-    }
-    bool check_fd(int fd,fd_set& set)
-    {
-        return FD_ISSET(fd,&set);
-    }
-    fd_set read_fds_;
-    fd_set write_fds_;
-    fd_set except_fds_;
-
-    int max_fd_;
-
-    std::vector<bool> is_listening_;
-    // @brief 主要是找最大的文件描述符，，，选择用vector<bool>因为fd分配原则下不太需要erase,性能更好
-};
-class Poll:public Poller<Poll>
+template<class PollerTag>
+void Poller<PollerTag>::add_handler(EventHandler* handler)
 {
-public:
-    Poll();
-    ~Poll()=default;
-    TimeStamp<LowPrecision> poll(int timeout,HandlerList& event_handlers);
-    void add_listen(EventHandler& handler);
-    void update_listen(EventHandler& handler);
-    void remove_listen(EventHandler& handler);
-private:
-    typedef std::vector<pollfd> PollFdList;
-    PollFdList pollfds_;
-};
+    assert(handlers_.find(handler->get_fd())==handlers_.end());
+    handlers_[handler->get_fd()]=handler;
+}
 
-class Epoll:public Poller<Epoll>
+template<class PollerTag>
+void Poller<PollerTag>::remove_handler(EventHandler* handler)
 {
-public:
-    Epoll();
-    ~Epoll();
-    TimeStamp<LowPrecision> poll(int timeout,HandlerList& event_handlers);
-    void add_listen(EventHandler* handler);
-    void update_listen(EventHandler* handler);
-    void remove_listen(EventHandler* handler);
-private:
-    void operator_epoll(int operation,EventHandler* handler);
-
-    typedef std::vector<struct ::epoll_event> EventList;
-    EventList events_;
-    int epollfd_;
-};
-
-#ifdef POLL
-    typedef Poll PollerType;
-#elif defined(EPOLL)
-    typedef Epoll PollerType;
-#elif defined(SELECT)
-    typedef Select PollerType;  
+    assert(handlers_.find(handler->get_fd())!=handlers_.end());
+#ifndef NDEBUG
+    size_t n=handlers_.erase(handler->get_fd());
+    assert(n==1);        
 #else
-    typedef Epoll PollerType;
+    handlers_.erase(handler->get_fd());  
 #endif
+}
+
+template<class PollerTag>
+bool Poller<PollerTag>::has_handler(EventHandler* event_handler)
+{
+    auto it=handlers_.find(event_handler->get_fd());
+    return it!=handlers_.end();
+}
+
+
+
+
 
 }    
 }
