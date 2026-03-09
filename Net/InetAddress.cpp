@@ -4,6 +4,7 @@ namespace yy
 {
 namespace net
 {
+    
 Address::Address(uint16_t port,bool loopbackOnly,bool ipv6):
 is_ipv6_(ipv6)
 {
@@ -30,6 +31,19 @@ is_ipv6_(ipv6)
     else
     {
         Address::fromIpPort(ip,port,&addr_);
+    }
+}
+Address::Address(const struct sockaddr_storage& peerAddr)
+{
+    if(peerAddr.ss_family==AF_INET)
+    {
+        is_ipv6_=false;
+        memcpy(&addr_,&peerAddr,sizeof(sockaddr_in));
+    }
+    else
+    {
+        is_ipv6_=true;
+        memcpy(&addr6_,&peerAddr,sizeof(sockaddr_in6));
     }
 }
 void Address::fromIpPort(const char* ip, uint16_t port,

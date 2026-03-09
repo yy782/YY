@@ -1,0 +1,176 @@
+
+#include "UdpConnection.h"
+#include "../sockets.h"
+#include "../PollerType.h"
+#include "../Timer.h"
+namespace yy 
+{
+namespace net 
+{
+// 创建客户端UDP连接（connect方式，固定对端）
+UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
+    EventLoop* loop, const char* host, unsigned short port) 
+{
+    
+    Address addr(std::atoi(host), port);
+    int fd=sockets::create_udpsocket(addr.get_family());
+    sockets::set_CloseOnExec(fd);
+    sockets::set_nonblock(fd);
+    sockets::connect(fd, addr);
+
+    UdpConnectionPtr conn(new UdpConnection(loop,fd,Address()));
+    conn->peer_=addr;
+    conn->isServer_=false;
+    return conn;
+}
+UdpConnection::UdpConnectionPtr UdpConnection::createServer(
+    EventLoop* loop, const  char* bindHost, unsigned short port) 
+    {
+    
+    Address addr(bindHost, port);
+    int fd=sockets::create_udpsocket(addr.get_family());
+    sockets::set_CloseOnExec(fd);
+    sockets::set_nonblock(fd);
+
+    sockets::bind(fd,addr);
+    UdpConnectionPtr conn(new UdpConnection(loop,fd,addr));
+    conn->isServer_=true;
+    return conn;
+}
+
+UdpConnection::UdpConnection(EventLoop* loop, int fd, const Address& local):
+    loop_(loop), 
+    handler_(fd, loop), 
+    local_(local), 
+    closed_(false), 
+    isServer_(false) 
+{
+    
+    handler_.setReadCallBack([this](){handleRead();});
+    handler_.setErrorCallBack([this](){handleError();});
+    handler_.setReading();
+    loop_->addListen(&handler_);
+}
+
+UdpConnection::~UdpConnection()
+{
+    close();
+}
+
+void UdpConnection::onMessage(UdpMessageCallBack cb) 
+{
+    messageCallback_=std::move(cb);
+}
+
+void UdpConnection::onError(UdpErrorCallBack cb) 
+{
+    errorCallback_=std::move(cb);
+}
+
+void UdpConnection::send(const char* buf, size_t len) {
+    assert(!isServer_);
+    sendTo(buf,len,peer_);
+}
+
+void UdpConnection::send(const std::string& s) {
+    send(s.data(), s.size());
+}
+
+void UdpConnection::send(const char* s) 
+{
+    send(s, strlen(s));
+}
+
+void UdpConnection::sendTo(const char* buf, size_t len, const Address& dest) {
+
+    sendTo(std::string(buf, len),dest);
+}
+
+void UdpConnection::sendTo(const std::string& s,const Address& dest) 
+{
+    if (closed_) 
+    {
+        LOG_NULL_WARN("UDP connection closed");
+        return;
+    }
+
+    loop_->submit([this,buf=std::move(s),dest]() 
+    {
+        sendInLoop(buf.data(), buf.size(), &dest);
+    });    
+}
+void UdpConnection::startHeartbeat(long interval,LTimeInterval MaxidleTime)
+{
+    MaxidleTime_=MaxidleTime;
+    checkUdpAlive_=true;
+    LTimer timer([this](){
+        send("heartbeat");
+        lastSendTimestamp_=LTimeStamp::now();
+    },interval,FOREVER);
+    int timerfd=sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
+    sockets::timerfd_settime(timerfd,0,timer);
+    timerHandler_.init(timerfd,loop_);
+    timerHandler_.setReadCallBack([this](){
+        lastRecvTimestamp_=LTimeStamp::now();
+        if(lastRecvTimestamp_-lastSendTimestamp_>MaxidleTime_)
+        {
+            ispeerAlive_=false;
+        }
+    });
+    timerHandler_.setReading();
+    loop_->addListen(&timerHandler_);
+}
+void UdpConnection::close() 
+{
+    assert(!closed_);
+    loop_->remove_listen(&handler_);
+    closed_=true;
+}
+
+Address UdpConnection::getPeerAddr()const 
+{
+    assert(!isServer_);
+    return peer_;
+}
+
+void UdpConnection::handleRead() {
+    char buf[kUdpPacketSize];
+    bool is_ipv6=local_.get_family()==AF_INET6?true:false;   
+    struct sockaddr_storage peerAddr;
+
+    ssize_t n=sockets::recvfromAuto(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
+
+
+    messageCallback_(shared_from_this(),string_view(buf,n),peerAddr);
+}
+
+void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest) {
+    if (closed_) return;
+
+    ssize_t n;
+    if (dest) 
+    {
+        n=sockets::sendtoAuto(handler_.get_fd(), buf, len, 0,
+                     *dest);
+    }else 
+    {
+        // 发送给固定对端（客户端模式）
+        n =sockets::sendAuto(handler_.get_fd(),buf,len,0);
+    }
+    
+
+}
+
+void UdpConnection::handleError() 
+{
+    LOG_PRINT_ERRNO(errno);
+    if (errorCallback_) 
+    {
+        errorCallback_(shared_from_this());
+    }
+    
+    // UDP错误通常不会致命，但可以根据情况决定是否关闭
+    // 这里选择不自动关闭，让用户决定
+}
+}    
+}

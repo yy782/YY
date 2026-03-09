@@ -19,6 +19,7 @@ public:
     explicit Address(int port,bool loopbackOnly=false,bool ipv6=false):
     Address(static_cast<uint16_t>(port),loopbackOnly,ipv6){}
     explicit Address(uint16_t port,bool loopbackOnly=false,bool ipv6=false);
+    Address(const struct sockaddr_storage& peerAddr);
     Address(const char* ip,int port,bool ipv6=false):
     Address(ip,static_cast<uint16_t>(port),ipv6){}
 

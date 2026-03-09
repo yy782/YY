@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../Common/LogFilter.h"
 #include <sys/stat.h>
+#include "PollerType.h"
 namespace yy
 {
 namespace net
@@ -21,6 +22,15 @@ int create_tcpsocket(sa_family_t family)
         LOG_PRINT_ERRNO(errno);
     }
     return listenfd;
+}
+int create_udpsocket(sa_family_t family)
+{
+    int fd=socket(family,SOCK_DGRAM,0);
+    if(fd<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return fd;
 }
 int create_epollfd(int flags)
 {
@@ -242,6 +252,7 @@ void set_CloseOnExec(int fd)
     }
     // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
 }
+
 ssize_t read(int fd,void* buf,size_t len)
 {
     auto n=::read(fd,buf,len);
@@ -421,6 +432,157 @@ ssize_t sendET(int fd, const void* buf, size_t len, int flags)
     }
     
     return len;
+}
+ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
+{
+    socklen_t size=sizeof(peerAddr);
+    ssize_t n=::recvfrom(fd,buf,len,flags,(struct sockaddr*)&peerAddr,&size);
+    if(n<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+    return n;
+}
+ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
+{
+    socklen_t size=sizeof(peerAddr);
+    if (len == 0) return 0;
+    
+    char* ptr = static_cast<char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) 
+    {
+        ssize_t n =::recvfrom(fd,ptr,left,flags,(struct sockaddr*)&peerAddr,&size);
+        if (n == -1) 
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return len - left;
+            } else if (errno == EINTR) {
+                continue;
+            } else {
+                LOG_SYSTEM_ERROR("[recvform errno] " << errno);
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else if (n == 0) 
+        {
+            assert(false);
+            return len-left;
+        } else {
+            ptr += n;
+            left -= n;
+        }
+    }
+
+    return len;
+}
+ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address)
+{
+    socklen_t address_len=address.get_len();
+    if (len == 0) return 0;
+    
+    int n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
+    if (n == -1) 
+    {
+        LOG_PRINT_ERRNO(errno); 
+    }
+    return n;
+}
+ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address)
+{
+    socklen_t address_len=address.get_len();
+    if (len == 0) return 0;
+    
+    const char* ptr = static_cast<const char*>(buf);
+    size_t left = len;
+    
+    while (left > 0) {
+        ssize_t n=::sendto(fd, ptr, left, flags,address.getSockAddr(),address_len);
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) 
+            {
+                return len - left;
+            } else if (errno == EINTR) 
+            {
+                continue;
+            } else 
+            {
+                LOG_SYSTEM_ERROR("[send errno] " << errno);
+                return (len - left) > 0 ? (len - left) : -1;
+            }
+        } else {
+            ptr += n;
+            left -= n;
+        }
+    }
+    
+    return len;
+}
+ssize_t readAuto(int fd,void* buf,size_t len)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return readET(fd,buf,len);
+    }
+    else
+    {
+        return read(fd,buf,len);
+    }
+}
+ssize_t writeAuto(int fd,const void* buf,size_t len)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return writeET(fd,buf,len);
+    }
+    else
+    {
+        return write(fd,buf,len);
+    }
+}
+ssize_t recvAuto(int fd,void* buf,size_t len,int flags)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return recvET(fd,buf,len,flags);
+    }
+    else
+    {
+        return recv(fd,buf,len,flags);
+    }
+}
+ssize_t sendAuto(int fd,const void* buf,size_t len,int flags)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return sendET(fd,buf,len,flags);
+    }
+    else
+    {
+        return send(fd,buf,len,flags);
+    }
+}
+ssize_t recvfromAuto(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return recvfromET(fd,buf,len,flags,peerAddr);
+    }
+    else
+    {
+        return recvfrom(fd,buf,len,flags,peerAddr);
+    }
+}
+ssize_t sendtoAuto(int fd,const void* buf,size_t len,int flags,const Address& address)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return sendtoET(fd,buf,len,flags,address);
+    }
+    else
+    {
+        return sendto(fd,buf,len,flags,address.getSockAddr(),address.get_len());
+    }
 }
 int sockfd_has_error(int fd)
 {

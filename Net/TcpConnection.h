@@ -8,6 +8,7 @@
 #include <any>
 #include "../Common/TimeStamp.h"
 #include "Codec.h"
+#include "AutoContext.h"
 namespace yy
 {
 namespace net
@@ -31,7 +32,7 @@ public:
 
     typedef std::function<bool(TcpConnectionPtr)> BackpressureBeforeSendCallBack;
     typedef std::function<bool(TcpConnectionPtr)> BackpressureBeforeReadCallBack;
-    typedef std::vector<std::any> ServicesData;
+    typedef AutoContext ServicesData;
 
 
 
@@ -82,13 +83,15 @@ public:
         codec_=codec;
     }
 
+    
     // @brief 这些是有多线程安全问题的
     void disconnect(); // @brief 这是我端主动关闭连接时的回调,关闭我方的写端    
     
     
     void send(const char* message,size_t len);
     void send(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
-    ServicesData& getData(){return data_;}
+    template<typename T>
+    T& context(){ return data_.context<T>()}
     bool isConnected(){return Connstatus_==ConnectStatus::Connected;}
 
     Buffer& getSendBuffer(){return SendBuffer_;}
@@ -106,8 +109,8 @@ public:
     }; 
     struct BackpressureConfig
     {   
-        static size_t highWaterMark;
-        static size_t lowWaterMark;
+        static const size_t highWaterMark=64*1024;
+        static const size_t lowWaterMark=16*1024;
     };
     BackpressureState getRecvBufferState()const{return RecvbpState_;}
     BackpressureState getSendBufferState()const{return SendbpState_;}

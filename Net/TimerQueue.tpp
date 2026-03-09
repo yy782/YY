@@ -108,11 +108,7 @@ void TimerQueue<PrecisionTag>::modifyTimerfd(const TimerPtr& timer)
 */    
     
     int fd=handler_.get_fd();
-    auto diff_us=timer->getTimeInterval().getTimePeriod().count();
-    struct itimerspec new_ts{};
-    new_ts.it_value.tv_sec=diff_us/1000000;            
-    new_ts.it_value.tv_nsec=(diff_us%1000000)*1000; 
-    sockets::timerfd_settime(fd,0,new_ts); 
+    sockets::timerfd_settime(fd,0,timer.get()); 
 }
 template<typename PrecisionTag>
 std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::getDueTasks(const Time_Stamp& now)

@@ -1,7 +1,7 @@
 #ifndef _YY_NET_EVENTLOOP_H_
 #define _YY_NET_EVENTLOOP_H_
 #include <vector>
-#include "Poller.h"
+#include "PollerType.h"
 #include "EventHandler.h"
 #include "sockets.h"
 #include "../Common/noncopyable.h"

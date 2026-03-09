@@ -79,6 +79,9 @@ class TimeInterval:copyable
 {
 public:
     typedef typename ClockTraits<PrecisionTag>::S TimePeriod;
+    TimeInterval():
+    timePeriod_()
+    {}
     TimeInterval(TimePeriod timePeriod):
     timePeriod_(timePeriod)
     {}

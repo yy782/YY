@@ -36,6 +36,12 @@ public:
         sockets::close(fd_);
     }
     EventHandler(int fd,EventLoop* loop);
+    void init(int fd,EventLoop* loop)
+    {
+        assert(!loop_);
+        loop_=loop;
+        fd_=fd;
+    }
     int get_fd()const{return fd_;}
     EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}
@@ -46,9 +52,9 @@ public:
         assert(events_!=EventType::NoneEvent);
         events_=EventType::NoneEvent;
     }
-    void set_fd(int fd){fd_=fd;}
+
     void set_event(Event event){events_.add_event(event);}
-    void set_loop(EventLoop* loop){loop_=loop;}
+
     void set_revent(Event event){revents_.add_event(event);}
     void set_status(int status){status_=status;}
     bool isWriting()const{return events_&EventType::WriteEvent;}

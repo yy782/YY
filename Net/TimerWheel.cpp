@@ -124,7 +124,7 @@ void TimerWheel::tick()
 void TimerWheel::ReadTimerfd()
 {
     uint64_t howmany;
-    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
+    ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
     }

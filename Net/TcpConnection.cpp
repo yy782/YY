@@ -7,13 +7,6 @@ namespace yy
 namespace net
 {
 
-    // struct BackpressureConfig
-    // {   
-    //     static size_t highWaterMark;
-    //     static size_t lowWaterMark;
-    // };
-size_t TcpConnection::BackpressureConfig::highWaterMark=64*1024;
-size_t TcpConnection::BackpressureConfig::lowWaterMark=16*1024;
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
 handler_(fd,loop),
