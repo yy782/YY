@@ -13,65 +13,70 @@ namespace net
 {
 namespace sockets
 {
-
-int create_tcpsocket(sa_family_t family)
+ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address);
+ssize_t readET(int fd,void* buf,size_t len);
+ssize_t writeET(int fd,const void* buf,size_t len);
+ssize_t recvET(int fd,void* buf,size_t len,int flags);
+ssize_t sendET(int fd,const void* buf,size_t len,int flags);
+ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
+int createTcpSocketOrDie(sa_family_t family)
 {
-    auto listenfd=socket(family,SOCK_STREAM,0);
+    auto listenfd=::socket(family,SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
     if(listenfd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return listenfd;
 }
-int create_udpsocket(sa_family_t family)
+int createUdpSocketOrDie(sa_family_t family)
 {
-    int fd=socket(family,SOCK_DGRAM,0);
+    int fd=::socket(family,SOCK_DGRAM| SOCK_NONBLOCK | SOCK_CLOEXEC,IPPROTO_UDP);
     if(fd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return fd;
 }
-int create_epollfd(int flags)
+int createEpollFdOrDie(int flags)
 {
     int epfd=::epoll_create1(flags);
     if(epfd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return epfd;
 }
-int create_eventfd(size_t count,int flags)
+int createEventFdOrDie(size_t count,int flags)
 {
     int fd=::eventfd(static_cast<unsigned int>(count),flags);
     if(fd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return fd;
 }
-int create_timerfd(clockid_t clock_id,int flags)
+int createTimerFdOrDie(clockid_t clock_id,int flags)
 {
     int fd=::timerfd_create(clock_id,flags);
     if(fd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return fd;
 }
-int set_signalfd(int fd,sigset_t* sigset,int flags)
+int  setSignalOrDie(int fd,sigset_t* sigset,int flags)
 {
 
     int signfd=::signalfd(fd,sigset,flags);
     if(signfd<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::createNonblockingOrDie");
     }
     return signfd;
 }
 
 
-void timerfd_settime(int fd,int flags,const struct timespec* interval,const struct timespec* value)
+int timerfd_settime(int fd,int flags,const struct timespec* interval,const struct timespec* value)
 {
 /*
     struct timespec {
@@ -90,45 +95,48 @@ void timerfd_settime(int fd,int flags,const struct timespec* interval,const stru
     if(value!=NULL)NewValue.it_value=(*value);
     
 
-    timerfd_settime(fd,flags,NewValue);
+    return timerfd_settime(fd,flags,NewValue);
 }
-void timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
+int timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
 {
     int ret=::timerfd_settime(fd,flags,&new_ts,NULL); 
     if(ret<0)
     {
         LOG_PRINT_ERRNO(errno);
-    }    
+    }  
+    return ret;  
 }
 
-void bind(int fd,const Address& addr)
+void bindOrDie(int fd,const Address& addr)
 {
     if(::bind(fd,addr.getSockAddr(),addr.get_len())==-1)
     {
         LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::bindOrDie");
     }
+
 // @brief 这里bind传入的长度是sockaddr_in6的长度，也就是最大的长度，兼容ipv4和ipv6,因为bind的第三个参数要求接收多少字节数据，但是解释多少数据
 //          由传入addr的family属性决定
 }
-void listen(int fd,int queue_size)
+void listenOrDie(int fd,int queue_size)
 {
     auto ret=::listen(fd,queue_size);
     if(ret<0)
     {
         LOG_PRINT_ERRNO(errno);
+        LOG_SYSFATAL("sockets::listenOrDie");
     }
 }
-void connect(int fd,const Address& addr)
+int connect(int fd,const Address& addr)
 {
     auto ret=::connect(fd,addr.getSockAddr(),addr.get_len());
     if(ret==-1)
     {
         LOG_PRINT_ERRNO(errno);
-        std::cout<<"连接失败 "<<errno<<std::endl;
-        exit(1);
     }
+    return ret;
 }
-int accept(int fd,Address& address,bool is_ipv6)
+int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
 {
     int connfd=-1;
     if(is_ipv6)
@@ -155,9 +163,12 @@ int accept(int fd,Address& address,bool is_ipv6)
         LOG_PRINT_ERRNO(errno);
         switch (errno)
         {
+        case EINTR://被信号中断  
+            if constexpr (std::is_same_v<PollerType,Epoll>)
+                return acceptAutoOrDie(fd,address,is_ipv6);            
+            
         case EAGAIN://连接队列为空
         case ECONNABORTED://连接被客户端终止
-        case EINTR://被信号中断
         case EPROTO://协议错误
         case EPERM://权限错误
         case EMFILE: //进程打开的FD达到上限
@@ -170,10 +181,10 @@ int accept(int fd,Address& address,bool is_ipv6)
         case ENOMEM://内存不足
         case ENOTSOCK://FD不是套接字
         case EOPNOTSUPP://操作不被支持
-            LOG_NULL_WARN("unexpected error of ::accept ");
+            LOG_SYSFATAL("unexpected error of ::accept ");
             break;
         default:
-            LOG_NULL_WARN("unknown error of ::accept ");
+            LOG_SYSFATAL("unexpected error of ::accept ");
             break;
         }
     }
@@ -251,6 +262,160 @@ void set_CloseOnExec(int fd)
         LOG_PRINT_ERRNO(errno);
     }
     // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
+}
+
+
+ssize_t readAuto(int fd,void* buf,size_t len)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return readET(fd,buf,len);
+    }
+    else
+    {
+        return read(fd,buf,len);
+    }
+}
+ssize_t writeAuto(int fd,const void* buf,size_t len)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return writeET(fd,buf,len);
+    }
+    else
+    {
+        return write(fd,buf,len);
+    }
+}
+ssize_t recvAuto(int fd,void* buf,size_t len,int flags)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return recvET(fd,buf,len,flags|MSG_DONTWAIT);
+    }
+    else
+    {
+        return recv(fd,buf,len,flags);
+    }
+}
+ssize_t sendAuto(int fd,const void* buf,size_t len,int flags)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return sendET(fd,buf,len,flags|MSG_DONTWAIT|MSG_NOSIGNAL|MSG_MORE);
+    }
+    else
+    {
+        return send(fd,buf,len,flags|MSG_NOSIGNAL|MSG_MORE);
+    }
+}
+ssize_t recvfromAuto(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return recvfromET(fd,buf,len,flags,peerAddr);
+    }
+    else
+    {
+        return recvfrom(fd,buf,len,flags,peerAddr);
+    }
+}
+ssize_t sendtoAuto(int fd,const void* buf,size_t len,int flags,const Address& address)
+{
+    if constexpr (std::is_same_v<PollerType,Epoll>)
+    {
+        return sendtoET(fd,buf,len,flags,address);
+    }
+    else
+    {
+        return sendto(fd,buf,len,flags,address.getSockAddr(),address.get_len());
+    }
+}
+int sockfd_has_error(int fd)
+{
+    int error;
+    socklen_t len=sizeof(error);
+    // @note 由于error是小整数，所以从size_t到socklen_t转换是安全的，不会溢出
+    auto ret=::getsockopt(fd,SOL_SOCKET,SO_ERROR,&error,&len);
+    if(ret==0)
+    {
+        if(error!=0)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }            
+    }
+    else
+    {
+        LOG_PRINT_ERRNO(errno);
+        return -1;
+    }
+    assert(false&&"不可能执行到这");
+    return -2;
+}
+void OnlyIpv6(int fd,bool ipv6_only)
+{
+    int optval=ipv6_only?1:0;
+    auto ret=::setsockopt(fd,SOL_IPV6,IPV6_V6ONLY,&optval,sizeof(optval));
+    if(ret<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+} 
+void close(int fd)
+{
+    if(::close(fd)<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
+void shutdown(int fd,int how)
+{
+    if(::shutdown(fd,how)<0)
+    {
+        LOG_PRINT_ERRNO(errno);
+    }
+}
+void daemonize(){
+    pid_t pid=fork();
+    if(pid==-1){
+        perror("[pid] false");
+        exit(1);
+    }
+    if(pid>0){
+        exit(0);
+    }
+    
+    if(setsid()==-1){
+        exit(1);
+    }
+    pid=fork();//防止重新获取终端
+    if(pid>0)exit(0);
+    umask(0);
+    //LOG_SYSTEM_INFO("[PID] "<<getpid());
+    
+    
+    if(chdir("/")==-1){
+        //LOG_SYSTEM_ERROR("[chdir] "<<"false");
+        exit(1);
+    }
+
+    int null_fd=open("/dev/null",O_WRONLY);//stdcout,stdcerr重定向输出文件设备，以防cout阻塞
+    if(null_fd==-1){
+        //LOG_SYSTEM_ERROR("[open] "<<"false");
+    }
+    
+    if(dup2(null_fd,STDOUT_FILENO)==-1){
+        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
+        close(null_fd);
+    }
+    if(dup2(null_fd,STDERR_FILENO)==-1){
+        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
+        close(null_fd);       
+    }
 }
 
 ssize_t read(int fd,void* buf,size_t len)
@@ -378,7 +543,6 @@ ssize_t recvET(int fd, void* buf, size_t len, int flags)
     
     char* ptr = static_cast<char*>(buf);
     size_t left = len;
-    
     while (left > 0) {
         ssize_t n = ::recv(fd, ptr, left, flags);
         
@@ -414,12 +578,14 @@ ssize_t sendET(int fd, const void* buf, size_t len, int flags)
     size_t left = len;
     
     while (left > 0) {
-        ssize_t n = ::send(fd, ptr, left, flags);
-        
-        if (n == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        ssize_t n = ::send(fd, ptr, left, flags); 
+        if (n == -1) 
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) 
+            {
                 return len - left;
-            } else if (errno == EINTR) {
+            } else if (errno == EINTR) 
+            {
                 continue;
             } else {
                 LOG_SYSTEM_ERROR("[send errno] " << errno);
@@ -518,158 +684,7 @@ ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& addr
     
     return len;
 }
-ssize_t readAuto(int fd,void* buf,size_t len)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return readET(fd,buf,len);
-    }
-    else
-    {
-        return read(fd,buf,len);
-    }
-}
-ssize_t writeAuto(int fd,const void* buf,size_t len)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return writeET(fd,buf,len);
-    }
-    else
-    {
-        return write(fd,buf,len);
-    }
-}
-ssize_t recvAuto(int fd,void* buf,size_t len,int flags)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return recvET(fd,buf,len,flags);
-    }
-    else
-    {
-        return recv(fd,buf,len,flags);
-    }
-}
-ssize_t sendAuto(int fd,const void* buf,size_t len,int flags)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return sendET(fd,buf,len,flags);
-    }
-    else
-    {
-        return send(fd,buf,len,flags);
-    }
-}
-ssize_t recvfromAuto(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return recvfromET(fd,buf,len,flags,peerAddr);
-    }
-    else
-    {
-        return recvfrom(fd,buf,len,flags,peerAddr);
-    }
-}
-ssize_t sendtoAuto(int fd,const void* buf,size_t len,int flags,const Address& address)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return sendtoET(fd,buf,len,flags,address);
-    }
-    else
-    {
-        return sendto(fd,buf,len,flags,address.getSockAddr(),address.get_len());
-    }
-}
-int sockfd_has_error(int fd)
-{
-    int error;
-    socklen_t len=sizeof(error);
-    // @note 由于error是小整数，所以从size_t到socklen_t转换是安全的，不会溢出
-    auto ret=::getsockopt(fd,SOL_SOCKET,SO_ERROR,&error,&len);
-    if(ret==0)
-    {
-        if(error!=0)
-        {
-            return 1;
-        }
-        else
-        {
-            return 0;
-        }            
-    }
-    else
-    {
-        LOG_PRINT_ERRNO(errno);
-        return -1;
-    }
-    assert(false&&"不可能执行到这");
-    return -2;
-}
-void OnlyIpv6(int fd,bool ipv6_only)
-{
-    int optval=ipv6_only?1:0;
-    auto ret=::setsockopt(fd,SOL_IPV6,IPV6_V6ONLY,&optval,sizeof(optval));
-    if(ret<0)
-    {
-        LOG_PRINT_ERRNO(errno);
-    }
-} 
-void close(int fd)
-{
-    if(::close(fd)<0)
-    {
-        LOG_PRINT_ERRNO(errno);
-    }
-}
-void shutdown(int fd,int how)
-{
-    if(::shutdown(fd,how)<0)
-    {
-        LOG_PRINT_ERRNO(errno);
-    }
-}
-void daemonize(){
-    pid_t pid=fork();
-    if(pid==-1){
-        perror("[pid] false");
-        exit(1);
-    }
-    if(pid>0){
-        exit(0);
-    }
-    
-    if(setsid()==-1){
-        exit(1);
-    }
-    pid=fork();//防止重新获取终端
-    if(pid>0)exit(0);
-    umask(0);
-    //LOG_SYSTEM_INFO("[PID] "<<getpid());
-    
-    
-    if(chdir("/")==-1){
-        //LOG_SYSTEM_ERROR("[chdir] "<<"false");
-        exit(1);
-    }
 
-    int null_fd=open("/dev/null",O_WRONLY);//stdcout,stdcerr重定向输出文件设备，以防cout阻塞
-    if(null_fd==-1){
-        //LOG_SYSTEM_ERROR("[open] "<<"false");
-    }
-    
-    if(dup2(null_fd,STDOUT_FILENO)==-1){
-        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
-        close(null_fd);
-    }
-    if(dup2(null_fd,STDERR_FILENO)==-1){
-        //LOG_SYSTEM_ERROR("[dup2] "<<"false");
-        close(null_fd);       
-    }
-} 
 }   
 }    
 }

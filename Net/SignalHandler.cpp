@@ -13,9 +13,9 @@ sigset_(),
 handler_()
 {
     ::sigemptyset(&sigset_);
-    
-    handler_.set_fd(sockets::set_signalfd(-1,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC));
-    handler_.set_loop(loop);
+
+    int fd=sockets::setSignalOrDie(-1,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC);
+    handler_.init(fd,loop);
     
     handler_.setReadCallBack(std::bind(&SignalHandler::handle,this));
     handler_.setReading();
@@ -32,7 +32,7 @@ void SignalHandler::addSign(int sig,SigCallBack cb)
     ::sigaddset(&sigset_,sig);
     ::sigprocmask(SIG_BLOCK,&sigset_,NULL);
     int fd=handler_.get_fd();
-    sockets::set_signalfd(fd,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC);   
+    sockets::setSignalOrDie(-1,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC);   
     callbacks_[sig]=std::move(cb);
     // @brief 这里没有断言检查map里原来有没有对应的sig,主要是sig的信号处理是可以更新的，没必要
 
@@ -43,7 +43,7 @@ void SignalHandler::handle()
     struct signalfd_siginfo sig_info;
 
     int fd=handler_.get_fd();
-    sockets::read(fd,&sig_info,sizeof(sig_info));
+    sockets::readAuto(fd,&sig_info,sizeof(sig_info));
 
     int sig = sig_info.ssi_signo;
     auto it = callbacks_.find(sig);

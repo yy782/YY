@@ -108,7 +108,12 @@ void TimerQueue<PrecisionTag>::modifyTimerfd(const TimerPtr& timer)
 */    
     
     int fd=handler_.get_fd();
-    sockets::timerfd_settime(fd,0,timer.get()); 
+    int ret=sockets::timerfd_settime(fd,0,timer.get()); 
+    if (ret<0) // 简单的忽略
+    {
+        timers_.erase(timer);
+        modifyTimerfd(timers_.begin()->second);
+    }
 }
 template<typename PrecisionTag>
 std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::getDueTasks(const Time_Stamp& now)
@@ -130,7 +135,7 @@ template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::ReadTimerfd()
 {
     uint64_t howmany;
-    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
+    ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
     }

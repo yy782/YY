@@ -23,7 +23,7 @@ public:
     void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
     void listen()
     {
-        sockets::listen(handler_.get_fd());
+        sockets::listenOrDie(handler_.get_fd());
         handler_.setReading();
     }
 private:

@@ -19,7 +19,7 @@ public:
     TcpClient(const Address& serverAddr):
     serverAddr_(serverAddr),
     loopThread_(),
-    connection_(std::make_shared<TcpConnection>(sockets::create_tcpsocket(serverAddr.get_family()),serverAddr,loopThread_.getEventLoop()))
+    connection_(std::make_shared<TcpConnection>(sockets::createTcpSocketOrDie(serverAddr.get_family()),serverAddr,loopThread_.getEventLoop()))
     {
         loopThread_.getEventLoop()->addListen(connection_->getHandler());
     }

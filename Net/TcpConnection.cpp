@@ -75,7 +75,7 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
     }
     else 
     {
-        ssize_t n=sockets::sendET(handler_.get_fd(),message,len,MSG_NOSIGNAL);
+        ssize_t n=sockets::sendAuto(handler_.get_fd(),message,len,0);
         if(n>=0&&n<static_cast<ssize_t>(len))
         {
             SendBuffer_.append(message+n,len-n);
@@ -97,7 +97,7 @@ void TcpConnection::handleRead()
     assert(SmessageCallBack_);
     if(!handleBackpressureBeforeRead())
         return;
-    auto n=sockets::recvET(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
+    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
     if(n>0)
     {
         RecvBuffer_.append(n);
@@ -134,7 +134,7 @@ void TcpConnection::handleWrite()
 {
     ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
-    ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,MSG_NOSIGNAL);
+    ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
     if(n>0)
     {
         if(n==len)
@@ -175,8 +175,16 @@ void TcpConnection::handleClose()
 }
 void TcpConnection::handleError()   
 {
-    LOG_CLIENT_ERROR("have errno");
-    if(SerrorCallBack_)SerrorCallBack_(shared_from_this());
+    if(errno==EPIPE||errno==ECONNRESET)
+    {
+        handleClose();
+    }
+    else if (errno==ESHUTDOWN)
+    {
+        return;
+    } // sendOrrecv 函数的错误
+    else if(SerrorCallBack_)SerrorCallBack_(shared_from_this()); //也许业务层需要errno
+    
 }
 
 bool TcpConnection::handleBackpressureBeforeSend()

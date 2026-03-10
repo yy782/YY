@@ -20,7 +20,7 @@ struct TimerWheel::Node
 };    
 TimerWheel::TimerWheel(EventLoop* loop):
 cur_slot_(0),
-handler_(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
+handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
 {
     for(int i=0;i<MAX_SLOTS;++i)
     {

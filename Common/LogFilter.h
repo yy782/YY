@@ -261,7 +261,9 @@ extern LogFilter* g_log_filter;
     #define LOG_MEMORY_ERROR(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_ERROR,  "ERROR",  msg)    
 
 
-    #define LOG_NULL_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg) 
+    #define LOG_NULL_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg)
+    #define LOG_SYSFATAL(msg)       LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_ERROR, "SYSTEM", msg); \
+                                    exit(1)        
 
 #define LOG_PRINT_ERRNO(save_errno) \
                         switch(save_errno){\
