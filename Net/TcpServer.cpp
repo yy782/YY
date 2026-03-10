@@ -4,33 +4,28 @@ namespace yy
 {
 namespace net
 {
-TcpServer::TcpServer(const Address& addr,int threadnum,int listenFdnum):
-loop_(),
-acceptors_(listenFdnum),
+TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
+loop_(loop),
+acceptor_(std::make_unique<Acceptor>(addr,loop_)),
 threadpool_(threadnum),
-signalHandler_(&loop_),
-LTimerQueue_(&loop_),
-HTimerQueue_(&loop_),
-TimerWheel_(&loop_)
+signalHandler_(loop_),
+LTimerQueue_(loop_),
+HTimerQueue_(loop_),
+TimerWheel_(loop_)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
-    for(auto& acceptor:acceptors_)
-    {
-        acceptor=std::make_unique<Acceptor>(addr,&loop_);
-        acceptor->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1));
-        acceptor->listen();
-    }
+
+    acceptor_->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1));
+    acceptor_->listen();    
 }   
 
 void TcpServer::loop()
 {
     threadpool_.run();
-    loop_.loop();
 } 
 void TcpServer::stop()
 {
     threadpool_.stop();
-    loop_.quit();
 }
 void TcpServer::newConnection(TcpConnectionPtr conn)
 {

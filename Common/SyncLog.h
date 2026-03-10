@@ -12,14 +12,14 @@ public:
     typedef LogAppender::FlushInterval FlushInterval;
     LogFilter* getFilter(){return &filter_;}
     LogAppender* getAppender(){return &appender_;}
-    static SyncLog& getInstance(const char* filename,size_t flush_interval)
+    static SyncLog& getInstance(const char* filename,FlushInterval flush_interval=10s)
     {
         static SyncLog instance(filename,flush_interval);
         return instance;
     }
     ~SyncLog();
 private:
-    SyncLog(const char* filename,size_t flush_interval);
+    SyncLog(const char* filename,FlushInterval flush_interval=10s);
     LogAppender appender_;
     LogFilter filter_;
 };

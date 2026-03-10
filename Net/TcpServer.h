@@ -26,14 +26,15 @@ class TcpServer:public noncopyable
 public:
     
     typedef std::set<TcpConnectionPtr> ConnectMap;
-    typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
+    //typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
+    typedef std::unique_ptr<Acceptor> AcceptorPtr;
     typedef Acceptor::NewConnectCallBack ServicesConnectCallBack;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::CharContainer CharContainer;
 
-    TcpServer(const Address& addr,int threadnum,int listenFdnum=1);
+    TcpServer(const Address& addr,int threadnum,EventLoop* loop);
     ~TcpServer()=default;
     void setConnectCallBack(ServicesConnectCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallback_=std::move(cb);}
@@ -71,8 +72,8 @@ public:
     void stop();
 private:
     void newConnection(TcpConnectionPtr conn);
-    EventLoop loop_;
-    AcceptorList acceptors_;
+    EventLoop* loop_;
+    AcceptorPtr acceptor_;
     EventLoopThreadPool threadpool_;
     ConnectMap connects_;
     SignalHandler signalHandler_;

@@ -6,6 +6,8 @@
 #include "Types.h"
 #include <string>
 #include <iomanip>
+#include <chrono>
+
 namespace yy
 {
    
@@ -87,6 +89,13 @@ public:
     {}
     TimeInterval(long times):
     TimeInterval(TimePeriod(times))
+    {}
+    TimeInterval(size_t times):
+    TimeInterval(TimePeriod(static_cast<long>(times)))
+    {}    
+        template<typename Rep, typename Period>
+    TimeInterval(std::chrono::duration<Rep, Period> duration)
+        : timePeriod_(std::chrono::duration_cast<TimePeriod>(duration))
     {}
     const TimePeriod& getTimePeriod()const{return timePeriod_;}
     TimePeriod& getTimePeriod(){return timePeriod_;}

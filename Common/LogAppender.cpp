@@ -1,5 +1,5 @@
 #include "LogAppender.h"
-#include "TimeStamp.h"
+
 #include <assert.h>
 #include <iostream>
 #include <errno.h>
@@ -66,10 +66,10 @@ void BaseLogAppender::flush()
 {
     ::fflush(fp_);
 }
-LogAppender::LogAppender(const char* filename,size_t Flushinterval):
+LogAppender::LogAppender(const char* filename,LTimeInterval flush_interval):
 baseLogFile_(std::make_unique<BaseLogAppender>(filename)),
 logFileName_(getFileName(filename)),
-flushInterval_(std::make_unique<FlushInterval>(static_cast<long>(Flushinterval)))
+flushInterval_(flush_interval)
 {
     assert(filename);
 }
@@ -100,10 +100,8 @@ void LogAppender::Timeflush()
     static size_t checkInterval=5;
     ++count;
     if(count<checkInterval)return;// @brief 为了减少系统调用，减少性能开销
-    auto time=Time_Stamp(Time_Stamp::now());
-    auto& interval=*flushInterval_.get();
-
-    static Time_Stamp NextFlushTime=time+interval;
+    auto time=LTimeStamp(LTimeStamp::now());
+    static LTimeStamp NextFlushTime=time+flushInterval_;
 
     if(time>NextFlushTime)
     {
@@ -117,7 +115,7 @@ std::string LogAppender::getLogFileName()
     auto suffix=baseLogFile_->getTyps();
     filename.reserve(logFileName_.size()+32+suffix.size());
     filename=logFileName_;
-    auto nowTime=Time_Stamp::nowToString();
+    auto nowTime=LTimeStamp::nowToString();
     filename+=nowTime;
     filename+=suffix;
     return filename;

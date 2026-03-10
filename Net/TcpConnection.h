@@ -24,6 +24,7 @@ public:
     typedef Buffer::CharContainer CharContainer;
     typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
     typedef std::function<void(TcpConnectionPtr,string_view)> ServicesMessageCallBack;
+    typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesCloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
@@ -65,6 +66,7 @@ public:
     void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallBack_=std::move(cb);} // @brief 这是对端关闭的回调
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallBack_=std::move(cb);}
+    void setExceptCallBack(ServicesExceptCallBack cb){SexceptCallBack_=std::move(cb);}
 
     void setBackpressureCallback(BackpressureBeforeSendCallBack cb1,BackpressureBeforeReadCallBack cb2)
     {
@@ -121,7 +123,7 @@ private:
     void handleWrite();
     void handleClose();
     void handleError();
-
+    void handleException();
     void parseMessagesWithCodec();
 
     bool handleBackpressureBeforeSend();
@@ -142,6 +144,7 @@ private:
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
     ServicesCloseCallBack ScloseCallBack_; // @brief 这是对端选择断开连接时的回调
     ServicesErrorCallBack SerrorCallBack_;
+    ServicesExceptCallBack SexceptCallBack_;
     ServicesData data_;
 
     std::atomic<ConnectStatus> Connstatus_;

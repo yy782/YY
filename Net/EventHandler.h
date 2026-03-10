@@ -20,14 +20,15 @@ class EventLoop;
 class EventHandler:public noncopyable
 {
 public:
-    typedef TimeStamp<LowPrecision> Time_Stamp;
-    typedef std::function<void(Time_Stamp)> TimeStampEventCallBack;
+    // typedef TimeStamp<LowPrecision> Time_Stamp;
+    // typedef std::function<void(Time_Stamp)> TimeStampEventCallBack;
     typedef std::function<void()> EventCallBack;
 
     typedef EventCallBack ReadCallBack;
     typedef EventCallBack WriteCallBack;
     typedef EventCallBack CloseCallBack;
-
+    typedef EventCallBack ErrorCallBack;
+    typedef EventCallBack ExceptCallBack;
     EventHandler():
     status_(-1)
     {}
@@ -82,6 +83,7 @@ public:
     void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
     void setCloseCallBack(EventCallBack cb){closeCallback_=std::move(cb);}
     void setErrorCallBack(EventCallBack cb){errorCallback_=std::move(cb);}
+    void setExceptCallBack(EventCallBack cb){exceptCallback_=std::move(cb);}
 
     void set_name(const std::string& name){name_=name;}
     const std::string& printName()
@@ -113,8 +115,9 @@ private:
 
     ReadCallBack readCallback_;
     WriteCallBack writeCallback_;
-    EventCallBack errorCallback_;
-    
+    ErrorCallBack errorCallback_;
+    ExceptCallBack exceptCallback_;
+
     CloseCallBack closeCallback_;
 };
 }    

@@ -35,7 +35,15 @@ if(revents_&EventType::ErrorEvent)
     LOG_CLIENT_DEBUG(printName()<<" handler_revent ErrorEvent");
     if(errorCallback_)errorCallback_();
 }
-if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent||revents_&EventType::ExceptEvent)
+if(revents_&EventType::ExceptEvent)
+{
+    LOG_CLIENT_DEBUG(printName()<<" handler_revent ExceptEvent");
+    if(exceptCallback_)
+    {
+        exceptCallback_();
+    }
+}
+if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent)
 {
      LOG_CLIENT_DEBUG(printName()<<" handler_revent ReadEvent");
     if(readCallback_)

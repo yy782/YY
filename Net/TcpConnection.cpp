@@ -14,6 +14,7 @@ Connstatus_(ConnectStatus::DisConnected)
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
+    handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
     handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
     handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
@@ -97,6 +98,7 @@ void TcpConnection::handleRead()
     assert(SmessageCallBack_);
     if(!handleBackpressureBeforeRead())
         return;
+     
     auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
     if(n>0)
     {
@@ -186,7 +188,23 @@ void TcpConnection::handleError()
     else if(SerrorCallBack_)SerrorCallBack_(shared_from_this()); //也许业务层需要errno
     
 }
-
+void TcpConnection::handleException()
+{   
+    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),MSG_OOB);
+    if(n>0)
+    {
+        char oob_buf[1];
+        if(SexceptCallBack_)SexceptCallBack_(shared_from_this(),oob_buf);          
+    }  
+    else if(n==0)
+    {
+        handleClose();
+    }
+    else
+    {
+        handleError();
+    }  
+}
 bool TcpConnection::handleBackpressureBeforeSend()
 {
     if(!BackpressureBeforeSend_)return true;

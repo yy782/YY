@@ -4,9 +4,9 @@
 #include "AsyncLog.h"
 namespace yy
 {
-constexpr size_t BufferSize=5;
 
-AsyncLog::AsyncLog(const char* fileName,size_t flush_interval):
+
+AsyncLog::AsyncLog(const char* fileName,LTimeInterval flush_interval,size_t BufferSize):
 Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
 SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
 BackstageBuffers_(),
@@ -47,7 +47,7 @@ void AsyncLog::append(const SharedString& log)
         }
         else
         {
-            Receptionbuffer_=std::make_unique<Buffer>(BufferSize);
+            Receptionbuffer_=std::make_unique<Buffer>(BufferSize_);
         }
     }
     assert(Receptionbuffer_);
@@ -69,11 +69,11 @@ void AsyncLog::loop()
         BackstageLock_.unlock();
         if(!SpareBuffer_)
         {
-            SpareBuffer_=std::make_unique<Buffer>(BufferSize);
+            SpareBuffer_=std::make_unique<Buffer>(BufferSize_);
         }
         if(!Receptionbuffer_)
         {
-            Receptionbuffer_=std::make_unique<Buffer>(BufferSize);
+            Receptionbuffer_=std::make_unique<Buffer>(BufferSize_);
         }
         for(auto& buffer:WriteBuffer)
         {

@@ -1,22 +1,16 @@
 #ifndef _YY_LOGAPPENDER_H_
 #define _YY_LOGAPPENDER_H_
-
+#include "TimeStamp.h"
 #include "noncopyable.h"
 #include <stdio.h>
 #include <assert.h>
 #include <memory>
 #include <string>
+
+using namespace std::chrono_literals;
+
 namespace yy
 {
-
-struct LowPrecisionTag;
-template<typename PrecisionTag>
-class TimeStamp;
-template<typename PrecisionTag>
-class TimeInterval;
-
-
-
 
 class BaseLogAppender:noncopyable
 {
@@ -42,11 +36,8 @@ private:
 class LogAppender:noncopyable
 {//添加回滚操作
 public:
-    typedef TimeStamp<LowPrecisionTag> Time_Stamp;
-    typedef TimeInterval<LowPrecisionTag> FlushInterval;
-    typedef std::unique_ptr<Time_Stamp> Time_StampPtr;
-    typedef std::unique_ptr<const FlushInterval> FlushIntervalPtr;
-    LogAppender(const char* filename,size_t FlushInterval);
+    typedef LTimeInterval FlushInterval;
+    LogAppender(const char* filename,LTimeInterval flush_interval=10s);
     ~LogAppender();
     typedef std::unique_ptr<BaseLogAppender> BaseLogFilePtr;
     void append(const char* logline, size_t len);
@@ -58,10 +49,10 @@ private:
     std::string getLogFileName();
     BaseLogFilePtr baseLogFile_;
     const std::string logFileName_;
-    const off_t rollSize_={2*1024*1024}; // @param 回滚大小
+    const off_t rollSize_={2*1024}; // @param 回滚大小
 
-    Time_StampPtr lastFlushTime_;
-    const FlushIntervalPtr flushInterval_;
+    LTimeStamp lastFlushTime_;
+    const FlushInterval flushInterval_;
 };
 }
 
