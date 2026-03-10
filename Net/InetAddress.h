@@ -14,7 +14,7 @@ class Address:public copyable
 {
     
 public:
-    Address()=default;
+    Address();
 
     explicit Address(int port,bool loopbackOnly=false,bool ipv6=false):
     Address(static_cast<uint16_t>(port),loopbackOnly,ipv6){}
@@ -35,6 +35,8 @@ public:
         addr_=addr;
         return *this;
     }
+    Address(const Address& addr);
+    Address& operator=(const Address& addr);
     
     void set_ipv6_addr(const struct sockaddr_in6& addr6){addr6_=addr6; is_ipv6_=true;}
     void set_ipv4_addr(const struct sockaddr_in& addr){addr_=addr; is_ipv6_=false;}
