@@ -7,137 +7,137 @@
 
 #include "student.pb.h"
 #include "../protobuf/ProtoMsg.h"
+#include <memory>
 using namespace yy;
 using namespace yy::net;
 class MyServer {
 public:
-    MyServer(const Address& addr) 
-        : server_(addr, 4)  // 4个线程
+    MyServer(EventLoop* loop) 
+        : server_(Address(8080,true),2,loop), loop_(loop)
     {
-        // 设置消息回调
-        server_.setMessageCallBack(
-            std::bind(&MyServer::onMessage,this, 
-                      _1));
+        dispatcher_.onMsg<demo::Student>(
+            [this](TcpConnectionPtr conn, demo::Student* msg) {
+                handleStudent(conn,msg);
+            }
+        );
+        
+        server_.setMessageCallBack([this](TcpConnectionPtr conn,string_view msg){
+            onMessage(conn, msg);
+        });
     }
     
-    void start() {
+    void start() 
+    {
         server_.loop();
     }
     
 private:
-    void onMessage(TcpConnectionPtr conn) 
-    {
-        TcpBuffer& buffer=conn->getRecvBuffer();
-        
-        ProtocolCodec  codec(&buffer);
-        
-        // 根据消息类型解析
-        demo::Student student;
-        if (codec.decode(student)) 
-        {
-            std::cout << "收到Student消息:" << std::endl;
-            std::cout << "  姓名: " << student.name() << std::endl;
-            std::cout << "  年龄: " << student.age() << std::endl;
-            std::cout << "  学校: " << student.school() << std::endl;
-            
-            sendResponse(conn, student);
+    void onMessage(TcpConnectionPtr conn,string_view msg) {
+        TcpBuffer& buf = conn->getRecvBuffer();
+        while (ProtoMsgCodec::msgComplete(buf)) {
+            Message* msg = ProtoMsgCodec::decode(buf);
+            if (msg) {
+                dispatcher_.handle(conn,msg);
+            }
         }
     }
     
-    void sendResponse(TcpConnectionPtr conn, const demo::Student& student) {
-        // 准备响应消息
+    void handleStudent(TcpConnectionPtr conn,demo::Student* student) {
+        std::cout << "服务器收到Student消息:" << std::endl;
+        std::cout << "  姓名: " << student->name() << std::endl;
+        std::cout << "  年龄: " << student->age() << std::endl;
+        std::cout << "  学校: " << student->school() << std::endl;
+        
+        // 发送响应
         demo::StudentResponse response;
         response.set_success(true);
-        response.set_message("收到学生信息: " + student.name());
+        response.set_message("收到学生信息: " + student->name());
         
-        // 获取连接的输出Buffer（假设TcpConnection有outputBuffer）
-        TcpBuffer& output = conn->getSendBuffer();  // 你需要有这个接口
-        
-        // 创建编码器
-        ProtocolCodec codec(&output);
-        
-        // 编码并发送
-        if (codec.encode(response)) {
-            conn->send(output.peek(), output.get_readable_size());
-            codec.reset();  // 重置Buffer
-        }
+        ProtoMsgCodec::encode(&response, conn->getSendBuffer());
+        conn->sendOutput();
     }
     
+    EventLoop* loop_;
     TcpServer server_;
+    ProtoMsgDispatcher dispatcher_;
 };
+
+// 客户端类
 class MyClient {
 public:
-    MyClient(const Address& serverAddr)
-        : client_(serverAddr)
-    {       
-        client_.setMessageCallBack(
-            std::bind(&MyClient::onConnect, this,_1));
-        client_.setMessageCallBack(std::bind(&MyClient::onMessage, this,
-                      _1));
+    MyClient(const Address& addr) 
+        : client_(addr)
+    {
+        
+        client_.setMessageCallBack([this](TcpConnectionPtr conn,string_view){
+            onMessage(conn);
+        });
     }
     
-    void connect() {
+    void connect() 
+    {
         client_.connect();
-    }
-    
-    // 发送Student消息的接口
-    void sendStudent(TcpConnectionPtr conn,const std::string& name, int age, const std::string& school) {
-        demo::Student student;
-        student.set_name(name);
-        student.set_age(age);
-        student.set_school(school);
-        
-        TcpBuffer& output=conn->getSendBuffer();
-        
-        ProtocolCodec codec(&output);
-        if (codec.encode(student)) {
-            // 发送数据
-            conn->send(output.peek(), output.get_readable_size());
-            codec.reset();  // 发送后重置
-            std::cout << "发送Student消息: " << name << std::endl;
-        }
+        sendStudent();
     }
     
 private:
-    void onConnect(TcpConnectionPtr conn) {
-
-        sendStudent(conn,"张三", 20, "北京大学");
+    void sendStudent() 
+    {
+        demo::Student student;
+        student.set_name("张三");
+        student.set_age(20);
+        student.set_school("北京大学");
         
+        ProtoMsgCodec::encode(&student,client_.getSendBuffer());
+        client_.sendOutput();
+        
+        std::cout << "客户端发送Student消息: " << student.name() << std::endl;
     }
     
     void onMessage(TcpConnectionPtr conn) 
     {
-        TcpBuffer& buffer=conn->getRecvBuffer();
-        ProtocolCodec codec(&buffer);
-        demo::StudentResponse response;
-        
-        if(codec.decode(response)) 
+        // 接收服务器响应
+        TcpBuffer& buf = conn->getRecvBuffer();
+        while (ProtoMsgCodec::msgComplete(buf)) 
         {
-            std::cout << "服务器响应: " << response.message() << std::endl;
+            Message* msg = ProtoMsgCodec::decode(buf);
+            if (msg) {
+                if (msg->GetDescriptor() == demo::StudentResponse::descriptor()) {
+                    demo::StudentResponse* resp = 
+                        dynamic_cast<demo::StudentResponse*>(msg);
+                    std::cout << "客户端收到服务器响应: " 
+                              << resp->message() << std::endl;
+                }
+                delete msg;
+            }
         }
     }
-    
     TcpClient client_;
 };
+
 int main() {
-    GOOGLE_PROTOBUF_VERIFY_VERSION;  // 初始化protobuf
+    // 初始化protobuf
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
     
-    Address serverAddr("127.0.0.1", 8888);
-    MyServer server(serverAddr);
+    EventLoop loop;
     
-    std::thread serverThread([&server]() {
-        std::cout << "服务器启动..." << std::endl;
-        server.start();
+    // 创建服务器
+    MyServer server(&loop);
+    server.start();
+    
+    // 在一个单独的线程中运行服务器（可选，这里直接在主线程运行）
+    std::thread serverThread([&loop]() {
+        loop.loop();
     });
     
+    // 给服务器一点启动时间
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
-    MyClient client(serverAddr);
+    MyClient client(Address(8080,true));
     client.connect();
     
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+
     
     google::protobuf::ShutdownProtobufLibrary();
-    
     return 0;
 }

@@ -19,6 +19,14 @@ ssize_t writeET(int fd,const void* buf,size_t len);
 ssize_t recvET(int fd,void* buf,size_t len,int flags);
 ssize_t sendET(int fd,const void* buf,size_t len,int flags);
 ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
+ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address);
+ssize_t read(int fd,void* buf,size_t len);
+ssize_t write(int fd,const void* buf,size_t len);
+ssize_t recv(int fd,void* buf,size_t len,int flags);
+ssize_t send(int fd,const void* buf,size_t len,int flags);
+ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
+
+
 int createTcpSocketOrDie(sa_family_t family)
 {
     auto listenfd=::socket(family,SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
@@ -602,7 +610,7 @@ ssize_t sendET(int fd, const void* buf, size_t len, int flags)
 ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
 {
     socklen_t size=sizeof(peerAddr);
-    ssize_t n=::recvfrom(fd,buf,len,flags,(struct sockaddr*)&peerAddr,&size);
+    ssize_t n=::recvfrom(fd,buf,len,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
     if(n<0)
     {
         LOG_PRINT_ERRNO(errno);
@@ -619,7 +627,7 @@ ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage
     
     while (left > 0) 
     {
-        ssize_t n =::recvfrom(fd,ptr,left,flags,(struct sockaddr*)&peerAddr,&size);
+        ssize_t n =::recvfrom(fd,ptr,left,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
         if (n == -1) 
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -642,12 +650,12 @@ ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage
 
     return len;
 }
-ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address)
+ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address)
 {
     socklen_t address_len=address.get_len();
     if (len == 0) return 0;
     
-    int n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
+    ssize_t n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
     if (n == -1) 
     {
         LOG_PRINT_ERRNO(errno); 

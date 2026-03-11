@@ -1,4 +1,5 @@
-
+#ifndef YY_NET_POLLER_EPOLL_H_
+#define YY_NET_POLLER_EPOLL_H_
 #include "../Poller.h"
 
 namespace yy 
@@ -23,3 +24,4 @@ private:
 };     
 }    
 }
+#endif

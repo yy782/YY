@@ -12,8 +12,8 @@ class EchoServer
 public:
 
     typedef TcpConnection::CharContainer CharContainer;
-    EchoServer(const Address& addr,int thread_num):
-    server_(addr,thread_num)
+    EchoServer(const Address& addr,int thread_num,EventLoop* loop):
+    server_(addr,thread_num,loop)
     {
         server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
@@ -41,8 +41,7 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
-        auto& data=conn->getData();
-        data.push_back(LTimeStamp::now());
+        conn->context<LTimeStamp>()=LTimeStamp::now();
 
         std::weak_ptr<TcpConnection> weakConn=conn;
         auto timer=std::make_shared<LTimer>(
@@ -53,7 +52,7 @@ private:
                 checkAlive(c);                
             }
         },
-        60*5,
+        5min,
         FOREVER
         );
         server_.addTime(timer,false);
@@ -66,22 +65,21 @@ private:
                 LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
             }
         },
-        120*(1e6),
+        120min,
         1    
         );
         server_.addTime(Htimer,true);
-        data.push_back(timer);
+        conn->context<LTimerPtr>()=timer;
     }
     void checkAlive(TcpConnectionPtr conn)
     {
         
-        auto& data=conn->getData();
-        LTimeStamp lastFulsh=std::any_cast<LTimeStamp>(data[0]);
-        if((LTimeStamp::now()-lastFulsh)>LTimeInterval(60*5))
+        LTimeStamp& lastFulsh=conn->context<LTimeStamp>();
+        if((LTimeStamp::now()-lastFulsh)>LTimeInterval(5min))
         {
             conn->send("Close!",7);
             conn->disconnect();
-            auto timer=std::any_cast<LTimerPtr>(data[1]);
+            LTimerPtr timer=conn->context<LTimerPtr>();
             timer->cancel();
         }            
         
@@ -90,10 +88,9 @@ private:
     void onMessage(TcpConnectionPtr conn)
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        auto& data=conn->getData();
-        data[0]=LTimeStamp::now();
+        conn->context<LTimeStamp>()=LTimeStamp::now();
 
-        char* last=buffer.findBorder("\n");
+        const char* last=buffer.findBorder("\n");
         std::string msg(buffer.peek(),last);
         if(msg=="bye\n") // @note 
         {
@@ -107,9 +104,7 @@ private:
     {
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
-        auto& data=conn->getData();
-        auto timer=std::any_cast<LTimerPtr>(data[1]);
-        timer->cancel();
+        conn->context<LTimerPtr>()->cancel();
     }
     TcpServer server_;
 
@@ -117,7 +112,7 @@ private:
 
 int main(int argc,char* argv[])
 {
-    auto& instance=SyncLog::getInstance("../../build/Log.log",10);
+    auto& instance=SyncLog::getInstance("../../build/Log.log",10s);
     instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
     instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
     instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
@@ -138,7 +133,7 @@ int main(int argc,char* argv[])
 
 
     LOG_SYSTEM_INFO("[PID] "<<getpid());   
-
-    EchoServer server(addr,1);
+    EventLoop loop;
+    EchoServer server(addr,1,&loop);
     server.start();
 }

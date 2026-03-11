@@ -11,7 +11,7 @@ namespace net
 {
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::TimerQueue(EventLoop* loop):
-handler_(sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
+handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
 {
     
     handler_.setReadCallBack(std::bind(&TimerQueue::handlerRead,this));
@@ -36,7 +36,7 @@ TimerQueue<PrecisionTag>::~TimerQueue()
     
 }    
 template<typename PrecisionTag>
-void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,int interval,int execute_count)
+void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count)
 {
     auto timer=std::make_shared<PTimer>(std::move(cb),interval,execute_count);
    insert(timer);
@@ -108,10 +108,10 @@ void TimerQueue<PrecisionTag>::modifyTimerfd(const TimerPtr& timer)
 */    
     
     int fd=handler_.get_fd();
-    int ret=sockets::timerfd_settime(fd,0,timer.get()); 
+    int ret=sockets::timerfd_settime(fd,0,*timer.get()); 
     if (ret<0) // 简单的忽略
     {
-        timers_.erase(timer);
+        timers_.erase(Entry(timer->getTimerStamp(),timer));
         modifyTimerfd(timers_.begin()->second);
     }
 }

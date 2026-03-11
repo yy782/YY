@@ -40,18 +40,12 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
   
 
     conn->setName(conn->getAddr().sockaddrToString().c_str());
-    threadpool_.addHandler(conn->getHandler());
+    EventLoop* loop=threadpool_.getEventLoop();
+    conn->getHandler()->init(conn->get_fd(),loop);
+    loop->addListen(conn->getHandler());
+
 }
-void TcpServer::addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isisHighPrecision)
-{
-    if(is_persice)
-        if(isisHighPrecision)
-            HTimerQueue_.insert(std::move(cb),interval,execute_count);
-        else
-            LTimerQueue_.insert(std::move(cb),interval,execute_count);
-    else
-        TimerWheel_.insert(std::move(cb),interval,execute_count);
-}
+
 void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
     assert(connects_.find(conn)!=connects_.end());

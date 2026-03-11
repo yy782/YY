@@ -38,7 +38,7 @@ public:
     TimerQueue()=default;
     TimerQueue(EventLoop* loop);
     ~TimerQueue();
-    void insert(TimerCallBack cb,int interval,int execute_count);
+    void insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count);
     void insert(TimerPtr timer);
     void cancelTimer(PTimer* timer);
     void handlerRead();

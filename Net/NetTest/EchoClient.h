@@ -44,7 +44,7 @@ public:
     void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        char* last=buffer.findBorder("\n",1);
+        const char* last=buffer.findBorder("\n",1);
         std::string msg(buffer.peek(),last);
         cout<<"recv:"<<msg<<endl;
     }

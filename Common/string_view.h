@@ -1,4 +1,5 @@
-
+#ifndef YY_STRING_VIEW_H_
+#define YY_STRING_VIEW_H_
 #include <cstring>
 #include <string>
 #include <vector>
@@ -112,7 +113,7 @@ inline bool operator!=(const string_view &x, const string_view &y)
 inline int string_view::compare(const string_view &b) const
 {
     size_t sz = size(), bsz = b.size();
-    const int min_len = (sz < bsz) ? sz : bsz;
+    const size_t min_len = (sz < bsz) ? sz : bsz;
     int r = memcmp(pb_, b.pb_, min_len);
     if (r == 0)
     {
@@ -140,3 +141,4 @@ inline std::vector<string_view> string_view::split(char ch) const
         r.push_back(string_view(pb, pe_));
     return r;
 }
+#endif

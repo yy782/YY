@@ -1,4 +1,5 @@
-
+#ifndef YY_NET_UDP_UDP_CONNECTION_H_
+#define YY_NET_UDP_UDP_CONNECTION_H_
 #include <memory>
 #include "../../Common/noncopyable.h"
 #include "../EventLoop.h"
@@ -57,7 +58,7 @@ public:
     // 状态查询
     bool isServer() const { return isServer_; }
     bool isClosed() const { return closed_; }
-    void startHeartbeat(long interval,LTimeInterval MaxidleTime);
+    void startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleTime);
     EventLoop* getLoop() { return loop_; }
 
     // 上下文管理
@@ -94,3 +95,4 @@ private:
 };   
 }    
 }
+#endif

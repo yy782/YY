@@ -48,11 +48,17 @@ public:
     {
         connection_->send(msg,len);
     }
+    void sendOutput()
+    {
+        connection_->sendOutput();
+    }
+    
     bool isConnected(){return connection_->isConnected();}
     void setMessageCallBack(ServicesMessageCallBack callback){ connection_->setMessageCallBack(std::move(callback));}
     void setCloseCallBack(ServicesCloseCallBack callback){ connection_->setCloseCallBack(std::move(callback));}
     void setErrorCallBack(ServicesErrorCallBack callback){ connection_->setErrorCallBack(std::move(callback));}
-    
+    TcpBuffer& getSendBuffer(){return connection_->getSendBuffer();}
+    TcpBuffer& getRecvBuffer(){return connection_->getRecvBuffer();}
 
     Address getPeerAddr(){return serverAddr_;}
 private:

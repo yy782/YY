@@ -28,7 +28,7 @@ public:
     TimerWheel()=delete;
     TimerWheel(EventLoop* loop);  
     ~TimerWheel();
-    void insert(TimerCallBack cb,int interval,int execute_count)
+    void insert(TimerCallBack cb,LTimer::Time_Interval interval,int execute_count)
     {
         auto timer=std::make_shared<LTimer>(std::move(cb),interval,execute_count);
         insert(timer);

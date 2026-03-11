@@ -1,5 +1,6 @@
 
-
+#ifndef YY_NET_CONFIG_CENTER_H_
+#define YY_NET_CONFIG_CENTER_H_
 #include <list>
 #include <map>
 #include <string>
@@ -36,8 +37,9 @@ struct Conf {
     std::list<std::string> getStrings(const std::string& section, const std::string& name);
 
     std::map<std::string, std::list<std::string>> values_;
-    std::string filename;
+    std::string filename_;
 };
 
 }
 }
+#endif

@@ -4,7 +4,6 @@
 #include <google/protobuf/message.h>
 #include "TcpBuffer.h"
 #include "../Common/noncopyable.h"
-#include "ProtoBufBuffer.h"
 #include "string_view.h"
 namespace yy
 {

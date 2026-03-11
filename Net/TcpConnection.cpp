@@ -9,7 +9,21 @@ namespace net
 
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
+fd_(fd),
 handler_(fd,loop),
+Connstatus_(ConnectStatus::DisConnected)
+{
+
+    handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
+    handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
+    handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
+    handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
+    handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
+}
+TcpConnection::TcpConnection(int fd,const Address& addr):
+addr_(addr),
+fd_(fd),
+handler_(), // 监听的loop不确定，延迟初始化
 Connstatus_(ConnectStatus::DisConnected)
 {
 
@@ -52,7 +66,7 @@ void TcpConnection::send(const char* message,size_t len)
     
 
 }
-void TcpConnection::send()
+void TcpConnection::sendOutput()
 {
     if(!handler_.isWriting())
     {
@@ -61,8 +75,7 @@ void TcpConnection::send()
 }
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
-    if(!handleBackpressureBeforeSend())
-        return;
+
     EventLoop* loop=handler_.get_loop();
 
     if(codec_)
@@ -96,13 +109,11 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
 void TcpConnection::handleRead()
 {
     assert(SmessageCallBack_);
-    if(!handleBackpressureBeforeRead())
-        return;
      
-    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),0);
+    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),0);
     if(n>0)
     {
-        RecvBuffer_.append(n);
+        RecvBuffer_.hasWritten(n);
         updateWaterMark();
         string_view data(string_view(RecvBuffer_.peek(),RecvBuffer_.get_readable_size()));
         string_view msg;
@@ -122,6 +133,7 @@ void TcpConnection::handleRead()
         {
           SmessageCallBack_(shared_from_this(),data);  
         }
+        handleBackpressureAfterRead();
     }  
     else if(n==0)
     {
@@ -155,8 +167,9 @@ void TcpConnection::handleWrite()
             }
             
         }
-        SendBuffer_.append(n);
+        SendBuffer_.hasWritten(n);
         updateWaterMark();
+        handleBackpressureAfterSend();
     }
     else 
     {
@@ -190,7 +203,7 @@ void TcpConnection::handleError()
 }
 void TcpConnection::handleException()
 {   
-    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.append(),RecvBuffer_.get_writable_size(),MSG_OOB);
+    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),MSG_OOB);
     if(n>0)
     {
         char oob_buf[1];
@@ -205,17 +218,17 @@ void TcpConnection::handleException()
         handleError();
     }  
 }
-bool TcpConnection::handleBackpressureBeforeSend()
+void TcpConnection::handleBackpressureAfterSend()
 {
-    if(!BackpressureBeforeSend_)return true;
+    if(!BackpressureAfterSend_)return;
     else
-        return BackpressureBeforeSend_(shared_from_this());
+        return BackpressureAfterSend_(shared_from_this());
 }
-bool TcpConnection::handleBackpressureBeforeRead()
+void TcpConnection::handleBackpressureAfterRead()
 {
-    if(!BackpressureBeforeRead_)return true;
+    if(!BackpressureAfterRead_)return;
     else 
-        return BackpressureBeforeRead_(shared_from_this());
+        return BackpressureAfterRead_(shared_from_this());
 }
 
 void TcpConnection::updateWaterMark()
@@ -232,63 +245,63 @@ void TcpConnection::updateWaterMark()
 
 }
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
 {
     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-        return false;
+        return;
     else
-        return true;    
+        return;    
 }
 
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
 {
     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {
         if(conn->isConnected())
             conn->disconnect();
-        return false;        
+        return;        
     }
     else 
-        return true;
+        return;
 }
 
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
+void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
 {
-    return true;
+    return;
 }
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-        return false;
+        return;
     else
-        return true;    
+        return;    
 }
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {
         if(conn->isConnected())
             conn->disconnect();
-        return false;        
+        return;        
     }
     else 
-        return true;
+        return;
 }
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
+void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
 {
-    return true;
+    return;
 }
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {
@@ -296,7 +309,7 @@ bool handleBeforeRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpCo
         {
             conn->getHandler()->cancelReadingAndExcept();
         }
-        return false;        
+        return;        
     }
     else
     {
@@ -304,7 +317,7 @@ bool handleBeforeRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpCo
         {
             conn->getHandler()->setReadingAndExcept();
         }
-        return true;
+        return;
     }    
 }
 }

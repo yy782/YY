@@ -41,7 +41,7 @@ void Acceptor::accept()
     {
         fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
     }
-    auto conn=TcpConnection::accept(fd,addr,loop_);
+    auto conn=TcpConnection::accept(fd,addr);
 
     conn->getHandler()->set_name(addr.sockaddrToString());
     

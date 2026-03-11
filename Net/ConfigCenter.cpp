@@ -120,8 +120,8 @@ struct LineScanner {
 }  // namespace
 
 int Conf::parse(const std::string &filename) {
-    this->filename = filename;
-    FILE *file = fopen(this->filename.c_str(), "r");
+    this->filename_ = filename;
+    FILE *file = fopen(this->filename_.c_str(), "r");   
     if (!file)
         return -1;
     std::unique_ptr<FILE, decltype(fclose) *> release2(file, fclose);

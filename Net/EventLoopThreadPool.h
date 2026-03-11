@@ -37,7 +37,8 @@ public:
             (*it)->stop();
         } 
     }
-    void addHandler(EventHandler* handler);
+    ///void addHandler(EventHandler* handler);
+    EventLoop* getEventLoop();    
     // void removeHandler(EventHandlerPtr handler);
     // void updateHandler(EventHandlerPtr handler);
 private:

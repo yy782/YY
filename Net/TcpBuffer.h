@@ -24,23 +24,20 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     explicit TcpBuffer(size_t initial_size=1024,size_t prepend_size=8);
     ~TcpBuffer()=default;
     void swap(TcpBuffer& other);
-
-    void append(const char* data,size_t size);
-    void append(const void* data,size_t size);
-    char* append();
-    void append(size_t size);
-    TcpBuffer& append(string_view data);
     template<typename T>
-    TcpBuffer& appendValue(T value)
-    {
-        append(reinterpret_cast<const char*>(&value), sizeof(T));
-    }
+    void append(T&& value);
+    void append(const char* data,size_t size);
+    template<typename T>
+    TcpBuffer& FluentAppend(T&& value);
+    void consume(size_t size);
+    char* BeginWrite();
     char* retrieve(size_t size);
     char* retrieveAll();
     
     std::string retrieveAllToString();
     const char* peek()const {return begin()+read_index_;}
-    char* peek(){return begin()+read_index_;}
+    char* ModifyData(){return begin()+read_index_;}
+
     void shrink(size_t reserve);
     size_t get_readable_size()const{return write_index_-read_index_;}
     size_t get_writable_size()const{return buffer_.size()-write_index_;}
@@ -98,8 +95,7 @@ private:
     void expend(size_t size);
     void reuse_prependable_space();
 
-    
-
+    void appendImp(const char* data,size_t size);
     CharContainer buffer_;
     // @brief 考虑到连续内存，不采用循环队列实现
     const size_t prepend_size_;
@@ -109,6 +105,23 @@ private:
 
 
 };
+template<typename T>
+void TcpBuffer::append(T&& value)
+{
+    appendImp(reinterpret_cast<const char*>(&value), sizeof(T));
+}
+template<typename T>
+TcpBuffer& TcpBuffer::FluentAppend(T&& value)
+{
+    static_assert(!std::is_same_v<T,size_t>);
+    if constexpr(std::is_same_v<T,string_view>)
+    {
+        appendImp(value.data(),value.size());
+    }
+    else
+        appendImp(reinterpret_cast<const char*>(&value), sizeof(T));
+    return *this;
+}
 }
 }
 #endif

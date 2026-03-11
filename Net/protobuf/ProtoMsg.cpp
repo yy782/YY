@@ -15,8 +15,8 @@ void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
     size_t len_pos=buf.get_readable_size();
     
     // 2. 先占位长度字段（4字节）和名字长度字段（4字节）
-    buf.appendValue((uint32_t)0);  // 总长度占位
-    buf.appendValue((uint32_t)0);  // 名字长度占位
+    buf.FluentAppend(htonl(0)).  // 总长度占位
+        append(htonl(0));  // 名字长度占位
     
     // 3. 获取类型名
     const std::string& typeName=msg->GetDescriptor()->full_name();
@@ -37,7 +37,7 @@ void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
     size_t name_len=typeName.size();
     
     // 7. 回头修改长度字段
-    char* p=buf.peek()+len_pos;
+    char* p=buf.ModifyData()+len_pos;
     *(reinterpret_cast<uint32_t*>(p))=htonl(static_cast<uint32_t>(total_len));
     *(reinterpret_cast<uint32_t*>(p+4))=htonl(static_cast<uint32_t>(name_len));
 }
@@ -62,7 +62,7 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     {
         return NULL;
     }
-    char* p = buf.peek();
+    char* p = buf.ModifyData();
     
     // 1. 读取长度字段（注意网络字节序转换）
     uint32_t total_len=ntohl(*reinterpret_cast<uint32_t*>(p));

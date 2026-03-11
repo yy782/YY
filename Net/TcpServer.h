@@ -41,8 +41,8 @@ public:
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallback_=std::move(cb);}
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallback_=std::move(cb);}
 
-
-    void addTime(TimerCallBack cb,int interval,int execute_count,bool is_persice,bool isHighPrecision=false);
+    template<class PrecisionTag>
+    void addTime(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count,bool is_persice,bool isHighPrecision=false);
     template<class PrecisionTag>
     void addTime(std::shared_ptr<Timer<PrecisionTag>> timer,bool is_persice)
     {
@@ -88,7 +88,17 @@ private:
     ServicesCloseCallBack ScloseCallback_;
     ServicesErrorCallBack SerrorCallback_;
 }; 
-
+template<class PrecisionTag>
+void TcpServer::addTime(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count,bool is_persice,bool isHighPrecision)
+{
+    if(is_persice)
+        if(isHighPrecision)
+            HTimerQueue_.insert(std::move(cb),interval,execute_count);
+        else
+            LTimerQueue_.insert(std::move(cb),interval,execute_count);
+    else
+        TimerWheel_.insert(std::move(cb),interval,execute_count);
+}
 }    
 }
 

@@ -21,3 +21,7 @@ target_link_libraries(net
 
 add_dependencies(net common)
 add_subdirectory(NetTest)
+add_subdirectory(Poller)
+add_subdirectory(protobuf)
+add_subdirectory(UDP)
+add_subdirectory(HTTP)

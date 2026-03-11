@@ -13,9 +13,9 @@ UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
 {
     
     Address addr(std::atoi(host), port);
-    int fd=sockets::create_udpsocket(addr.get_family());
+    int fd=sockets::createUdpSocketOrDie(addr.get_family());
     sockets::set_CloseOnExec(fd);
-    sockets::set_nonblock(fd);
+    
     sockets::connect(fd, addr);
 
     UdpConnectionPtr conn(new UdpConnection(loop,fd,Address()));
@@ -28,11 +28,9 @@ UdpConnection::UdpConnectionPtr UdpConnection::createServer(
     {
     
     Address addr(bindHost, port);
-    int fd=sockets::create_udpsocket(addr.get_family());
-    sockets::set_CloseOnExec(fd);
-    sockets::set_nonblock(fd);
+    int fd=sockets::createUdpSocketOrDie(addr.get_family());
 
-    sockets::bind(fd,addr);
+    sockets::bindOrDie(fd,addr);
     UdpConnectionPtr conn(new UdpConnection(loop,fd,addr));
     conn->isServer_=true;
     return conn;
@@ -99,7 +97,7 @@ void UdpConnection::sendTo(const std::string& s,const Address& dest)
         sendInLoop(buf.data(), buf.size(), &dest);
     });    
 }
-void UdpConnection::startHeartbeat(long interval,LTimeInterval MaxidleTime)
+void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleTime)
 {
     MaxidleTime_=MaxidleTime;
     checkUdpAlive_=true;
@@ -107,7 +105,7 @@ void UdpConnection::startHeartbeat(long interval,LTimeInterval MaxidleTime)
         send("heartbeat");
         lastSendTimestamp_=LTimeStamp::now();
     },interval,FOREVER);
-    int timerfd=sockets::create_timerfd(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
+    int timerfd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
     sockets::timerfd_settime(timerfd,0,timer);
     timerHandler_.init(timerfd,loop_);
     timerHandler_.setReadCallBack([this](){
@@ -135,7 +133,7 @@ Address UdpConnection::getPeerAddr()const
 
 void UdpConnection::handleRead() {
     char buf[kUdpPacketSize];
-    bool is_ipv6=local_.get_family()==AF_INET6?true:false;   
+  
     struct sockaddr_storage peerAddr;
 
     ssize_t n=sockets::recvfromAuto(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
@@ -157,7 +155,10 @@ void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest)
         // 发送给固定对端（客户端模式）
         n =sockets::sendAuto(handler_.get_fd(),buf,len,0);
     }
-    
+    if (n<0)
+    {
+        if(errorCallback_)errorCallback_(shared_from_this());
+    }
 
 }
 

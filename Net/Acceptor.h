@@ -1,3 +1,5 @@
+#ifndef YY_NET_ACCEPTOR_H_
+#define YY_NET_ACCEPTOR_H_
 #include "../Common/noncopyable.h"
 
 #include "sockets.h"
@@ -36,3 +38,4 @@ private:
 
 }  
 }
+#endif

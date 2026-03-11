@@ -31,13 +31,14 @@ public:
 
     typedef std::shared_ptr<CodecBase> CodecPtr;
 
-    typedef std::function<bool(TcpConnectionPtr)> BackpressureBeforeSendCallBack;
-    typedef std::function<bool(TcpConnectionPtr)> BackpressureBeforeReadCallBack;
+    typedef std::function<void(TcpConnectionPtr)> BackpressureAfterSendCallBack;
+    typedef std::function<void(TcpConnectionPtr)> BackpressureAfterReadCallBack;
     typedef AutoContext ServicesData;
 
 
 
     TcpConnection(int fd,const Address& addr,EventLoop* loop);
+    TcpConnection(int fd,const Address& addr); // 服务端的构造函数
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     void connect()
     {
@@ -45,21 +46,25 @@ public:
         assert(Connstatus_==ConnectStatus::DisConnected);
         Connstatus_=ConnectStatus::Connected;
     }
-    static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop)// @note 服务端用这个接口
+    static TcpConnectionPtr accept(int fd,const Address& addr)// @note 服务端用这个接口
     {
-        auto conn=std::make_shared<TcpConnection>(fd,addr,loop);
+        auto conn=std::make_shared<TcpConnection>(fd,addr);
         conn->Connstatus_=ConnectStatus::Connected;
         return conn;
     }
 
     EventHandler* getHandler(){return &handler_;}    
-    int get_fd()const{return handler_.get_fd();}
+    int get_fd()const{return fd_;}
     Address getAddr()const{return addr_;}
 
 
     void setReading()
     {
         handler_.setReading();
+    
+    }
+    void setExcept()
+    {
         handler_.setExcept();
     }
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
@@ -68,10 +73,10 @@ public:
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallBack_=std::move(cb);}
     void setExceptCallBack(ServicesExceptCallBack cb){SexceptCallBack_=std::move(cb);}
 
-    void setBackpressureCallback(BackpressureBeforeSendCallBack cb1,BackpressureBeforeReadCallBack cb2)
+    void setBackpressureCallback(BackpressureAfterSendCallBack cb1,BackpressureAfterReadCallBack cb2)
     {
-        BackpressureBeforeSend_=std::move(cb1);
-        BackpressureBeforeRead_=std::move(cb2);
+        BackpressureAfterSend_=std::move(cb1);
+        BackpressureAfterRead_=std::move(cb2);
     }
 
     void setTcpAlive(bool on,int idleSeconds=7200, 
@@ -91,9 +96,9 @@ public:
     
     
     void send(const char* message,size_t len);
-    void send(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
+    void sendOutput(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     template<typename T>
-    T& context(){ return data_.context<T>()}
+    T& context(){ return data_.context<T>();}
     bool isConnected(){return Connstatus_==ConnectStatus::Connected;}
 
     Buffer& getSendBuffer(){return SendBuffer_;}
@@ -116,6 +121,7 @@ public:
     };
     BackpressureState getRecvBufferState()const{return RecvbpState_;}
     BackpressureState getSendBufferState()const{return SendbpState_;}
+    void updateWaterMark();
 private:
     void sendInLoop(const char* message,size_t len);
     void disconnectInLoop();
@@ -126,19 +132,20 @@ private:
     void handleException();
     void parseMessagesWithCodec();
 
-    bool handleBackpressureBeforeSend();
-    bool handleBackpressureBeforeRead();
-    void updateWaterMark();
+    void handleBackpressureAfterSend();
+    void handleBackpressureAfterRead();
+    
 
 
     Address addr_; // @prief 对端的地址
+    const int fd_;
     EventHandler handler_;
     Buffer RecvBuffer_;
     BackpressureState RecvbpState_{BackpressureState::kNormal};
-    BackpressureBeforeSendCallBack BackpressureBeforeSend_;
+    BackpressureAfterSendCallBack BackpressureAfterSend_;
     Buffer SendBuffer_;
     BackpressureState SendbpState_{BackpressureState::kNormal};
-    BackpressureBeforeReadCallBack BackpressureBeforeRead_;
+    BackpressureAfterReadCallBack BackpressureAfterRead_;
 
     ServicesMessageCallBack SmessageCallBack_;
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
@@ -167,34 +174,34 @@ enum class BufferBackpressureStrategy
 
 // 主模板声明（必须有！）
 template<BufferBackpressureStrategy strategy>
-bool handleBeforeSend(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend(TcpConnection::TcpConnectionPtr conn);
 
 // 特化声明
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
 
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
 
 template<>
-bool handleBeforeSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
 
 // 主模板声明
 template<BufferBackpressureStrategy strategy>
-bool handleBeforeRecv(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv(TcpConnection::TcpConnectionPtr conn);
 
 // 特化声明
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
 
 template<>
-bool handleBeforeRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn);
 }    
 }
 

@@ -31,7 +31,7 @@ void SignalHandler::addSign(int sig,SigCallBack cb)
     
     ::sigaddset(&sigset_,sig);
     ::sigprocmask(SIG_BLOCK,&sigset_,NULL);
-    int fd=handler_.get_fd();
+    
     sockets::setSignalOrDie(-1,&sigset_,SFD_NONBLOCK|SFD_CLOEXEC);   
     callbacks_[sig]=std::move(cb);
     // @brief 这里没有断言检查map里原来有没有对应的sig,主要是sig的信号处理是可以更新的，没必要

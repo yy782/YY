@@ -90,9 +90,9 @@ public:
     TimeInterval(long times):
     TimeInterval(TimePeriod(times))
     {}
-    TimeInterval(size_t times):
-    TimeInterval(TimePeriod(static_cast<long>(times)))
-    {}    
+    // TimeInterval(size_t times):
+    // TimeInterval(TimePeriod(static_cast<long>(times)))
+    // {}    
         template<typename Rep, typename Period>
     TimeInterval(std::chrono::duration<Rep, Period> duration)
         : timePeriod_(std::chrono::duration_cast<TimePeriod>(duration))

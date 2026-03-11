@@ -1,9 +1,11 @@
 #ifndef _YY_NET_EVENTLOOP_H_
 #define _YY_NET_EVENTLOOP_H_
 #include <vector>
-#include "PollerType.h"
 #include "EventHandler.h"
 #include "sockets.h"
+#include "Poller.h"
+#define _NEED_SPECIFIC_POLLER_TYPE_
+#include "PollerType.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"
@@ -21,7 +23,6 @@ class EventLoop:public noncopyable
 {
 public:
     typedef Thread::Pid_t Pid_t;
-    typedef PollerType::HandlerList HandlerList;
     typedef std::function<void()> Functor;
     typedef RingBuffer<Functor> FunctionList;
     EventLoop();
@@ -71,7 +72,7 @@ private:
     bool CheckeEventLoopStatus();
     
     PollerType poller_;
-    HandlerList activeHandlers_;
+    PollerHandlerList activeHandlers_;
     FunctionList FunctionList_;
     
     Pid_t threadId_;

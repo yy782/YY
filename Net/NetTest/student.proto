@@ -1,6 +1,4 @@
-// student.proto
 syntax = "proto3";
-
 package demo;
 
 message Student {

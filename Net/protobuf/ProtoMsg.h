@@ -1,3 +1,5 @@
+#ifndef YY_NET_PROTOBUF_PROTOMSG_H_
+#define YY_NET_PROTOBUF_PROTOMSG_H_
 #include <google/protobuf/message.h>
 #include "../TcpConnection.h"
 #include <map>
@@ -17,7 +19,7 @@ struct ProtoMsgCodec
     static void encode(Message* msg, Buffer& buf);
     static Message* decode(Buffer& buf);
     static bool msgComplete(Buffer& buf);
-    static Message* ProtoMsgCodec::createMessage(const std::string& typeName);
+    static Message* createMessage(const std::string& typeName);
     static const size_t MAX_MESSAGE_SIZE=64*1024*1024;  // 64MB
     static const size_t MAX_NAME_LENGTH=256;  // 256字节
 };
@@ -37,7 +39,8 @@ struct ProtoMsgDispatcher
 
 inline bool ProtoMsgCodec::msgComplete(Buffer& buf) 
 {
-    return buf.get_readable_size()>=4&&buf.get_readable_size()>=*(uint32_t *)buf.peek();
+    return buf.get_readable_size()>=4&&buf.get_readable_size()>=*reinterpret_cast<const uint32_t*>(buf.peek());
 }     
 }   
 }
+#endif

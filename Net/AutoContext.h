@@ -1,4 +1,5 @@
-
+#ifndef YY_NET_AUTO_CONTEXT_H_
+#define YY_NET_AUTO_CONTEXT_H_
 #include <unordered_map>
 #include <functional>
 #include <typeindex>
@@ -25,12 +26,12 @@ public:
             
             ContextNode node;
             node.obj=new T();
-            node.deleter=[this]{delete (T*)node.obj;};
+            node.deleter=[this,&node](){delete static_cast<T*>(node.obj);};
             
             auto result=contexts_.emplace(typeid(T),std::move(node));
             it=result.first;
         }
-        return *(T*)(it->second.obj);
+        return *static_cast<T*>(it->second.obj);
     }
     
     ~AutoContext() 
@@ -43,3 +44,4 @@ public:
 };    
 }    
 }
+#endif

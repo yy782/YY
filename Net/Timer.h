@@ -25,11 +25,11 @@ public:
     typedef TimeInterval<PrecisionTag> Time_Interval;
     
     
-    Timer(TimerCallBack cb,long interval,int execute_count):
+    Timer(TimerCallBack cb,Time_Interval interval,int execute_count):
     callback_(std::move(cb)),
     interval_(interval),
     execute_count_(execute_count),
-    expiration_(Time_Stamp::now()+Time_Interval(interval))
+    expiration_(Time_Stamp::now()+interval)
     {
         assert((execute_count_.load()<0&&execute_count_.load()==FOREVER)||execute_count_.load()>=0);
     }

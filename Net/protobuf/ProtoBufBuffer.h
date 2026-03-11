@@ -27,9 +27,7 @@ public:
         if (free_space < 4096) {
             buffer_->ensureWritableBytes(4096);
         }
-        
-        // 注意：这里应该用 beginWrite()，而不是 append()
-        *data = buffer_->append();
+        *data = buffer_->BeginWrite();
         *size = static_cast<int>(buffer_->get_writable_size());
         
         // 标记这些空间已被使用
@@ -90,15 +88,15 @@ public:
 
     void BackUp(int count) override {
         if (count > 0) {
-            position_ = (count > position_) ? 0 : position_ - count;
+            position_ = (static_cast<size_t>(count) > position_) ? 0 : position_ - static_cast<size_t>(count);
         }
     }
 
     bool Skip(int count) override {
-        if (count < 0 || position_ + count > total_bytes_) {
+        if (count < 0 || position_ + static_cast<size_t>(count) > total_bytes_) {
             return false;
         }
-        position_ += count;
+        position_ += static_cast<size_t>(count);
         return true;
     }
 

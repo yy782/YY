@@ -3,18 +3,26 @@ namespace yy
 {
 namespace net
 {
-void EventLoopThreadPool::addHandler(EventHandler* handler)
+// void EventLoopThreadPool::addHandler(EventHandler* handler)
+// {
+//     static size_t nextId=0;
+//     handler->init(fd_);
+//     assert(nextId<threads_.size());
+//     auto loop=threads_[nextId]->getEventLoop();
+//     threads_[nextId]->getEventLoop()->addListen(handler);
+
+//     // assert(handlers_.find(handler)==handlers_.end());
+//     // handlers_[handler]=loop;
+
+//     nextId=(nextId+1)%threads_.size();
+// }
+EventLoop* EventLoopThreadPool::getEventLoop()
 {
     static size_t nextId=0;
     assert(nextId<threads_.size());
     auto loop=threads_[nextId]->getEventLoop();
-    handler->set_loop(loop);
-    threads_[nextId]->getEventLoop()->addListen(handler);
-
-    // assert(handlers_.find(handler)==handlers_.end());
-    // handlers_[handler]=loop;
-
     nextId=(nextId+1)%threads_.size();
+    return loop;
 }
 // void EventLoopThreadPool::updateHandler(EventHandlerPtr handler)
 // {

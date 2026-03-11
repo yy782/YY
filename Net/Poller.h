@@ -17,13 +17,13 @@ namespace yy
 {
 namespace net
 {
-
+typedef std::vector<EventHandler*> PollerHandlerList;
 template<class PollerTag>
 class Poller:noncopyable
 {
 public:
-    typedef std::vector<EventHandler*> HandlerList;
     
+    typedef PollerHandlerList HandlerList;
     
     TimeStamp<LowPrecision> poll(int timeout,HandlerList& handler)// @param timeout是毫秒为单位
     {
@@ -171,6 +171,7 @@ bool Poller<PollerTag>::has_handler(EventHandler* event_handler)
 
 }    
 }
+
 
 
 #endif

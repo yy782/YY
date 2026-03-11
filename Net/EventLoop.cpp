@@ -32,12 +32,12 @@ EventLoop::EventLoop():
 poller_(),
 activeHandlers_(),
 status_(EventLoopStatus::Init),
-wakeupHandler_(sockets::create_eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
+wakeupHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
     auto eventCallBack=[this]()->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::read(wakeupHandler_.get_fd(),&one,sizeof one);
+        ssize_t n=sockets::readAuto(wakeupHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         status_=EventLoopStatus::Quit;
         
@@ -89,7 +89,7 @@ void EventLoop::submit(Functor cb)
 void EventLoop::wakeup()
 {
     uint64_t one =1;
-    ssize_t n=sockets::write(wakeupHandler_.get_fd(), &one, sizeof one);
+    ssize_t n=sockets::writeAuto(wakeupHandler_.get_fd(), &one, sizeof one);
     assert(n==sizeof one);
 }
 void EventLoop::doPendingFunctions()

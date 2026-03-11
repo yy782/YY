@@ -27,7 +27,7 @@ const int Delete=2;
 }
 Epoll::Epoll():
 events_(1024),
-epollfd_(sockets::create_epollfd(EPOLL_CLOEXEC))
+epollfd_(sockets::createEpollFdOrDie(EPOLL_CLOEXEC))
 {
     assert(epollfd_>0);
 }

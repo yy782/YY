@@ -50,6 +50,18 @@ Address::Address(const struct sockaddr_storage& peerAddr)
         memcpy(&addr6_,&peerAddr,sizeof(sockaddr_in6));
     }
 }
+Address::Address(const Address& addr):
+is_ipv6_(addr.is_ipv6_)
+{
+    if(is_ipv6_)
+    {
+        memcpy(&addr6_,&addr.addr6_,sizeof(sockaddr_in6));
+    }
+    else
+    {
+        memcpy(&addr_,&addr.addr_,sizeof(sockaddr_in));
+    }
+}
  Address& Address::operator=(const Address& addr)
  {
     if(this!=&addr)

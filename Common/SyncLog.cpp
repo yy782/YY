@@ -6,8 +6,8 @@ namespace yy
 
 LogFilter* g_log_filter=nullptr;    
 
-SyncLog::SyncLog(const char* fileName,size_t flush_interval):
-appender_(fileName,flush_interval),
+SyncLog::SyncLog(const char* filename,FlushInterval flush_interval):
+appender_(filename,flush_interval),
 filter_(false)
 {
     g_log_filter=&filter_;

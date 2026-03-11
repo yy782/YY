@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "../Common/copyable.h"
 
-#include "Poller.h"
+#include "PollerType.h"
 #include <sys/poll.h>
 #include <sys/epoll.h>
 #include <type_traits>
