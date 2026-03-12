@@ -84,13 +84,13 @@ void Address::fromIpPort(const char* ip, uint16_t port,
 {
 if(ip==nullptr)
 {
-    LOG_NULL_WARN("空指针访问");
+    LOG_WARN("空指针访问");
     return;
 }
 auto r=::inet_addr(ip);
 if(r==INADDR_NONE)
 {
-    LOG_NULL_WARN("地址解析失败");
+    LOG_WARN("地址解析失败");
     return;
 }
 // @learn inet_addr的返回值>=0;=0时地址是0,0,0,0,传入空指针会奔溃
@@ -102,7 +102,7 @@ void Address::fromIpPort(in_addr_t ip,uint16_t port,
 {
     if(addr==nullptr)
     {
-        LOG_NULL_WARN("空指针访问");
+        LOG_WARN("空指针访问");
         return;
     }
     memZero(addr,sizeof *addr);
@@ -119,11 +119,11 @@ if(r<=0)
 {
     if(r<0)
     {
-        LOG_NULL_WARN("地址转换失败,地址非法");//可能为空指针                                    
+        LOG_WARN("地址转换失败,地址非法");//可能为空指针                                    
     }
     else
     {
-        LOG_NULL_WARN("地址转换失败，不是IPV6地址");
+        LOG_WARN("地址转换失败，不是IPV6地址");
     }
     return;
 
@@ -135,7 +135,7 @@ void Address::fromIpPort(const struct in6_addr& ip, uint16_t port,
 {
     if(addr==nullptr)
     {
-        LOG_NULL_WARN("空指针访问");
+        LOG_WARN("空指针访问");
         return;
     }
     memZero(addr,sizeof *addr);

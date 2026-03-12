@@ -57,8 +57,9 @@ void TaskManager::add_dependency(size_t task_id,size_t dep_task_id){
 
 #pragma region WorkerManager;
 void WorkerManager::Worker::run(IThreadPool* pool){
-    LOG_THREAD_INFO("[线程:"<<worker_id<<"]"<<"开始执行任务");
-
+    IGNORE(
+        LOG_THREAD_INFO("[线程:"<<worker_id<<"]"<<"开始执行任务");
+    )
         while(true){
             if(status_==Status::Stoping)break;
             std::shared_ptr<BaseTask> task=nullptr;
@@ -152,7 +153,7 @@ void WorkerManager::add_worker()
     if(worker_ptr==nullptr)return;
     worker_ptr->thread.run([worker_ptr,this](){
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        LOG_THREAD_DEBUG("[Worker "<<worker_ptr->worker_id<<"] 启动成功");
+        
         worker_ptr->run(pool_);
     });
    

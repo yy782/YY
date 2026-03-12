@@ -37,7 +37,7 @@ TcpConnection::~TcpConnection()
 {
     if(RecvBuffer_.get_readable_size()!=0)
     {
-        LOG_CLIENT_WARN("had data not read!");
+        LOG_TCP_WARN("had data not read!");
     }
 }
 void TcpConnection::disconnect()

@@ -19,131 +19,118 @@
 #include "Types.h"
 
 #include <string>
+#include <list>
+#include <set>
 namespace yy
 {
 
 class LogStream 
 {
 public:
-    LogStream() : oss_(std::make_shared<std::string>()) {}
+    LogStream() : oss_(std::string()) {}
     LogStream& operator<<(short val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(unsigned short val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(int val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(unsigned int val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(long val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(unsigned long val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(long long val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(unsigned long long val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(float val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(double val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(long double val) {
-        *oss_ += std::to_string(val);
+        oss_ += std::to_string(val);
         return *this;
     }
     
     LogStream& operator<<(bool val) {
-        *oss_ += val ? "true" : "false";
+        oss_ += val ? "true" : "false"; 
         return *this;
     }
     
     LogStream& operator<<(char val) {
-        oss_->push_back(val);
+        oss_ += val;
         return *this;
     }
     
     LogStream& operator<<(const char* val) {
         assert(val);
-        *oss_ += val;
+        oss_ += val;
         
         return *this;
     }
     
     LogStream& operator<<(const std::string& val) {
-        *oss_ += val;
+        oss_ += val;
         return *this;
     }
     
     LogStream& operator<<(const std::string_view& val) {
-        *oss_ += val;
+        oss_ += std::string(val);   
         return *this;
     }
-    SharedString str() const{
+    std::string str() const{
         return oss_;
     }
 
 private:
-    SharedString oss_;
+    std::string oss_;
 };
 
-
-enum class LogModule 
+struct LogModule 
 {
-    THREAD, 
-    SIGNAL, 
-    LOCK, 
-    CONFIG, 
-    SYSTEM, 
-    CLIENT,
-    TIME,
-    MEMORY,
-    WARN,
-    DEFAULT
+    static inline const std::string THREAD = "THREAD";
+    static inline const std::string SIGNAL = "SIGNAL";
+    static inline const std::string SYSTEM = "SYSTEM";
+    static inline const std::string TCP = "TCP";
+    static inline const std::string TIME = "TIME";
+    static inline const std::string MEMORY = "MEMORY";
+    static inline const std::string EVENT = "EVENT";
+    static inline const std::string WARN = "WARN";
+    static inline const std::string DEFAULT = "DEFAULT";
 };
 
-inline const char* module_to_str(LogModule module) {
-    switch (module) {
-        case LogModule::THREAD: return "THREAD";
-        case LogModule::SIGNAL: return "SIGNAL";
-        case LogModule::LOCK: return "LOCK";
-        case LogModule::CONFIG: return "CONFIG";
-        case LogModule::SYSTEM: return "SYSTEM";
-        case LogModule::CLIENT: return "CLIENT";
-        case LogModule::TIME: return "TIME";
-        case LogModule::MEMORY: return "MEMORY";
-        case LogModule::WARN: return "WARN";
-        default: return "DEFAULT";
-    }
-}
+
 
 // 日志级别定义
 #define LOG_LEVEL_DEBUG 0
@@ -156,196 +143,195 @@ inline const char* module_to_str(LogModule module) {
 class LogFilter:noncopyable // 只负责过滤，输出通过回调指向
 {
 public:
-    typedef std::function<void(const SharedString&)> AsyncLogCallback;
-    typedef std::function<void(const char* msg,size_t len)> SyncLogCallback;
-    LogFilter(bool is_async):
-    global_level_(LOG_LEVEL_DEBUG),
-    is_async_(is_async)
+    typedef std::function<void(const std::string&)> LogCallback;
+    
+    LogFilter():
+    global_level_(LOG_LEVEL_DEBUG)
     {
-        module_enabled_={
-            {LogModule::THREAD, false},
-            {LogModule::SIGNAL, false},
-            {LogModule::LOCK, false}, 
-            {LogModule::CONFIG, false},
-            {LogModule::SYSTEM, false},
-            {LogModule::CLIENT, false},
-            {LogModule::TIME,false},
-            {LogModule::MEMORY, false},
-            {LogModule::WARN, false},
-            {LogModule::DEFAULT, false}
-        };
     }
-    void set_global_level(int level){global_level_=level;}
-    void set_module_enabled(LogModule module, bool enabled){
-        module_enabled_[module] = enabled;       
-    }
-    void setSynccallback(SyncLogCallback callback){
-        Synccallback_=std::move(callback);
-    }
-    void setAsynccallback(AsyncLogCallback callback){
-        Asynccallback_=std::move(callback);
-    }
-    bool is_module_enabled(LogModule module) const{
-        auto it = module_enabled_.find(module);
-        return it != module_enabled_.end() ? it->second : true; // 默认启用
-    }
-    int get_global_level() const{return global_level_;}
-    void printLog(SharedString data)
+    LogFilter& set_global_level(int level)
     {
-        if(is_async_)
-            Asynccallback_(data);
-        else
-            Synccallback_(data->c_str(),data->size());    
+        global_level_=level;
+        return *this;
+    }
+    LogFilter& set_global_level(std::string& level)
+    {
+         std::transform(level.begin(),level.end(),level.begin(), ::toupper);
+         global_level_ = level == "DEBUG" ? LOG_LEVEL_DEBUG :
+                         level == "INFO" ? LOG_LEVEL_INFO :
+                         level == "WARN" ? LOG_LEVEL_WARN :
+                         level == "ERROR" ? LOG_LEVEL_ERROR :
+                         LOG_LEVEL_DEBUG;
+        return *this;
+    }
+    LogFilter& set_module_enabled(std::string& module)
+    {
+        std::transform(module.begin(),module.end(),module.begin(), ::toupper);
+        module_enabled_.insert(module); 
+        return *this;      
+    }
+
+    LogFilter& set_module_enabled(std::list<std::string>& modules)
+    {
+        for (auto& module_name : modules) 
+        {
+            std::transform(module_name.begin(), module_name.end(), module_name.begin(), ::toupper);
+            module_enabled_.insert(module_name);
+        }   
+        return *this;
+    }
+    int get_global_level() const
+    {
+        return global_level_;
+    }
+    void set_callback(LogCallback callback){
+        callback_=std::move(callback);
+    }
+    bool is_module_enabled(const std::string& module) const // 注意没有转换
+    {
+        return module_enabled_.find(module) != module_enabled_.end();
+    }
+    void printLog(const std::string& data)
+    {
+        assert(callback_);
+        callback_(data);
     }
 private:  
-    std::unordered_map<LogModule, bool> module_enabled_;
+    std::set<std::string> module_enabled_;
     int global_level_;
-    SyncLogCallback Synccallback_;
-    AsyncLogCallback Asynccallback_;
-    const bool is_async_;
+    LogCallback callback_;
 };
 
 extern LogFilter* g_log_filter;
 
+#ifndef NDEBUG
+    #define LOG_BASE(module, level, level_str, msg) do { \
+        if(g_log_filter){ \
+            if(g_log_filter->is_module_enabled(module) && (level >= g_log_filter->get_global_level())) { \
+                LogStream stream; \
+                stream << "[" << level_str << "] " \
+                    << "[" << module << "] " \
+                    << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
+                    << msg << "\n"; \
+                g_log_filter->printLog(stream.str()); \
+            } \
+        }\
+    } while(0)
+#else 
+    #define LOG_BASE(module, level, level_str, msg) do { \
+        if(g_log_filter){ \
+            { \
+                LogStream stream; \
+                stream << "[" << level_str << "] " \
+                    << "[" << module << "] " \
+                    << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
+                    << msg << "\n"; \
+                g_log_filter->printLog(stream.str()); \
+            } \
+        }\
+    } while(0)
+#endif  
 
-#define LOG_BASE(module, level, level_str, msg) do { \
-    if(g_log_filter){ \
-        if(g_log_filter->is_module_enabled(module) && (level >= g_log_filter->get_global_level())) { \
-            LogStream stream; \
-            stream << "[" << level_str << "] " \
-                << "[" << module_to_str(module) << "] " \
-                << "[" << __FILENAME__ << ":" << __LINE__ << "] " \
-                << msg << "\n"; \
-            g_log_filter->printLog(stream.str()); \
-        } \
-    }\
-} while(0)
-
-
-
-
-//#ifdef COUT
-    #define LOG_THREAD_DEBUG(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_THREAD_INFO(msg)  LOG_BASE(LogModule::THREAD, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_THREAD_WARN(msg)  LOG_BASE(LogModule::THREAD, LOG_LEVEL_WARN,  "WARN",  msg) 
-    #define LOG_THREAD_ERROR(msg)  LOG_BASE(LogModule::THREAD, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_LOCK_DEBUG(msg) LOG_BASE(LogModule::LOCK, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_LOCK_INFO(msg)  LOG_BASE(LogModule::LOCK, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_LOCK_WARN(msg)  LOG_BASE(LogModule::LOCK, LOG_LEVEL_WARN,  "WARN",  msg) 
-    #define LOG_LOCK_ERROR(msg)  LOG_BASE(LogModule::LOCK, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_SIGNAL_DEBUG(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_SIGNAL_INFO(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_SIGNAL_WARN(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_WARN,  "WARN",  msg)  
-    #define LOG_SIGNAL_ERROR(msg)  LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_SYSTEM_DEBUG(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_SYSTEM_INFO(msg)  LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_SYSTEM_WARN(msg)  LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_WARN,  "WARN",  msg)  
-    #define LOG_SYSTEM_ERROR(msg)  LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_CLIENT_DEBUG(msg) LOG_BASE(LogModule::CLIENT, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_CLIENT_INFO(msg)  LOG_BASE(LogModule::CLIENT, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_CLIENT_WARN(msg)  LOG_BASE(LogModule::CLIENT, LOG_LEVEL_WARN,  "WARN",  msg)  
-    #define LOG_CLIENT_ERROR(msg)  LOG_BASE(LogModule::CLIENT, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_TIME_DEBUG(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_TIME_INFO(msg)  LOG_BASE(LogModule::TIME, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_TIME_WARN(msg)  LOG_BASE(LogModule::TIME, LOG_LEVEL_WARN,  "WARN",  msg)
-    #define LOG_TIME_ERROR(msg)  LOG_BASE(LogModule::TIME, LOG_LEVEL_ERROR,  "ERROR",  msg)
-
-    #define LOG_MEMORY_DEBUG(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_DEBUG, "DEBUG", msg)
-    #define LOG_MEMORY_INFO(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_INFO,  "INFO",  msg)
-    #define LOG_MEMORY_WARN(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_WARN,  "WARN",  msg)
-    #define LOG_MEMORY_ERROR(msg)  LOG_BASE(LogModule::MEMORY, LOG_LEVEL_ERROR,  "ERROR",  msg)    
+ 
 
 
-    #define LOG_NULL_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg)
+
+
+#ifndef NIGNORE
+    #define IGNORE(msg) 
+#else 
+    #define IGNORE(msg) msg
+#endif 
+
+
+    #define LOG_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg)
     #define LOG_SYSFATAL(msg)       LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_ERROR, "SYSTEM", msg); \
                                     exit(1)        
 
-#define LOG_PRINT_ERRNO(save_errno) \
+#define LOG_ERRNO(save_errno) \
                         switch(save_errno){\
                         case EBADF:\
-                            LOG_NULL_WARN("非法的文件描述符");\
+                            LOG_WARN("非法的文件描述符");\
                             break;\
                          case ENOTSOCK:\
-                            LOG_NULL_WARN("FD不是套接字");\
+                            LOG_WARN("FD不是套接字");\
                             break;\
                         case EINVAL:\
-                            LOG_NULL_WARN("参数无效");\
+                            LOG_WARN("参数无效");\
                             break;\
                         case ENOPROTOOPT:\
-                            LOG_NULL_WARN("协议不支持该选项");\
+                            LOG_WARN("协议不支持该选项");\
                             break;\
                         case EPERM:\
-                            LOG_NULL_WARN("权限不足");\
+                            LOG_WARN("权限不足");\
                             break;\
                         case EFAULT:\
-                            LOG_NULL_WARN("地址非法");\
+                            LOG_WARN("地址非法");\
                             break;\
                         case EINTR:\
-                            LOG_NULL_WARN("系统调用被信号中断");\
+                            LOG_WARN("系统调用被信号中断");\
                             break;\
                         case EADDRINUSE:\
-                            LOG_NULL_WARN("地址已被占用");\
+                            LOG_WARN("地址已被占用");\
                             break;\
                         case EPIPE:\
-                            LOG_NULL_WARN("管道破裂");\
+                            LOG_WARN("管道破裂");\
                             break;\
                         default:\
-                            LOG_NULL_WARN("[errno] "<<errno);\
+                            LOG_WARN("[errno] "<<errno);\
                             break;\
                         }
 
 
-// #else
-//     #define LOG_THREAD_DEBUG(msg) 
-//     #define LOG_THREAD_INFO(msg)  
-//     #define LOG_THREAD_WARN(msg)  
-//     #define LOG_THREAD_ERROR(msg)  
 
-//     #define LOG_LOCK_DEBUG(msg) 
-//     #define LOG_LOCK_INFO(msg)  
-//     #define LOG_LOCK_WARN(msg)  
-//     #define LOG_LOCK_ERROR(msg)  
-
-//     #define LOG_SIGNAL_DEBUG(msg) 
-//     #define LOG_SIGNAL_INFO(msg)  
-//     #define LOG_SIGNAL_WARN(msg)  
-//     #define LOG_SIGNAL_ERROR(msg)  
-
-//     #define LOG_SYSTEM_DEBUG(msg) 
-//     #define LOG_SYSTEM_INFO(msg) 
-//     #define LOG_SYSTEM_WARN(msg)  
-//     #define LOG_SYSTEM_ERROR(msg)  
-
-//     #define LOG_CLIENT_DEBUG(msg) 
-//     #define LOG_CLIENT_INFO(msg)  
-//     #define LOG_CLIENT_WARN(msg)
-//     #define LOG_CLIENT_ERROR(msg)  
-
-//     #define LOG_TIME_DEBUG(msg) 
-//     #define LOG_TIME_INFO(msg)  
-//     #define LOG_TIME_WARN(msg)  
-//     #define LOG_TIME_ERROR(msg)  
-    
-//     #define LOG_MEMORY_ERROR(msg)
-//     #define LOG_MEMORY_WARN(msg)
-//     #define LOG_MEMORY_INFO(msg)
-//     #define LOG_MEMORY_DEBUG(msg)
-
-//     #define LOG_NULL_WARN(msg)
-    
-
-    
-// #endif
-
-
-
-
-
-
+//Appendfromhere:
+#ifndef NDEBUG
+#define LOG_THREAD_DEBUG(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_SIGNAL_DEBUG(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_SYSTEM_DEBUG(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_TCP_DEBUG(msg) LOG_BASE(LogModule::TCP, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_TIME_DEBUG(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_MEMORY_DEBUG(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_WARN_DEBUG(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_EVENT_DEBUG(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_DEFAULT_DEBUG(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#else
+#define LOG_THREAD_DEBUG(msg) 
+#define LOG_SIGNAL_DEBUG(msg) 
+#define LOG_SYSTEM_DEBUG(msg) 
+#define LOG_TCP_DEBUG(msg) 
+#define LOG_TIME_DEBUG(msg) 
+#define LOG_MEMORY_DEBUG(msg) 
+#define LOG_WARN_DEBUG(msg) 
+#define LOG_EVENT_DEBUG(msg) 
+#define LOG_DEFAULT_DEBUG(msg) 
+#endif
+#define LOG_THREAD_INFO(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_THREAD_WARN(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_THREAD_ERROR(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_SIGNAL_INFO(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_SIGNAL_WARN(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_SIGNAL_ERROR(msg) LOG_BASE(LogModule::SIGNAL, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_SYSTEM_INFO(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_SYSTEM_WARN(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_SYSTEM_ERROR(msg) LOG_BASE(LogModule::SYSTEM, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_TCP_INFO(msg) LOG_BASE(LogModule::TCP, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_TCP_WARN(msg) LOG_BASE(LogModule::TCP, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_TCP_ERROR(msg) LOG_BASE(LogModule::TCP, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_TIME_INFO(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_TIME_WARN(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_TIME_ERROR(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_MEMORY_INFO(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_MEMORY_WARN(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_MEMORY_ERROR(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_WARN_INFO(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_WARN_WARN(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_WARN_ERROR(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_EVENT_INFO(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_EVENT_WARN(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_EVENT_ERROR(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_DEFAULT_INFO(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_DEFAULT_WARN(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_DEFAULT_ERROR(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_ERROR, "INFO", msg)
 }
-#endif // LOG_H
+#endif

@@ -20,7 +20,7 @@ namespace yy
 class AsyncLog:noncopyable
 {
 public:
-    typedef RingBuffer<SharedString> Buffer;
+    typedef RingBuffer<std::string> Buffer;
     typedef std::unique_ptr<Buffer> BufferPtr;
     typedef std::vector<BufferPtr> BufferContainer;
     static AsyncLog& getInstance(const char* fileName,LTimeInterval flush_interval=10s,size_t BufferSize=20)
@@ -29,11 +29,11 @@ public:
         return log;
     }
     ~AsyncLog();
-    LogFilter* getFilter(){return &filter_;}
-    LogAppender* getAppender(){return &appender_;}
+    LogFilter& getFilter(){return filter_;}
+    LogAppender& getAppender(){return appender_;}
 private:
     AsyncLog(const char* fileName,LTimeInterval flush_interval=10s,size_t BufferSize=20);
-    void append(const SharedString& data);
+    void append(const std::string& data);
     void loop();
 
     size_t BufferSize_;

@@ -10,8 +10,8 @@ class SyncLog:noncopyable
 {
 public:
     typedef LogAppender::FlushInterval FlushInterval;
-    LogFilter* getFilter(){return &filter_;}
-    LogAppender* getAppender(){return &appender_;}
+    LogFilter& getFilter(){return filter_;}
+    LogAppender& getAppender(){return appender_;}
     static SyncLog& getInstance(const char* filename,FlushInterval flush_interval=10s)
     {
         static SyncLog instance(filename,flush_interval);
@@ -20,6 +20,7 @@ public:
     ~SyncLog();
 private:
     SyncLog(const char* filename,FlushInterval flush_interval=10s);
+    void append(const std::string& log);
     LogAppender appender_;
     LogFilter filter_;
 };

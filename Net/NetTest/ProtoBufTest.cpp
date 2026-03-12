@@ -65,8 +65,8 @@ private:
 // 客户端类
 class MyClient {
 public:
-    MyClient(const Address& addr) 
-        : client_(addr)
+    MyClient(const Address& addr,EventLoop* loop) 
+        : client_(addr,loop)
     {
         
         client_.setMessageCallBack([this](TcpConnectionPtr conn,string_view){
@@ -132,8 +132,8 @@ int main() {
     
     // 给服务器一点启动时间
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
-    MyClient client(Address(8080,true));
+    EventLoop loop2;
+    MyClient client(Address(8080,true),&loop);
     client.connect();
     
 

@@ -4,8 +4,7 @@
 #include "EventHandler.h"
 #include "sockets.h"
 #include "Poller.h"
-#define _NEED_SPECIFIC_POLLER_TYPE_
-#include "PollerType.h"
+#include "PollerSpecificType.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"

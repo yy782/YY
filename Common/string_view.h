@@ -3,6 +3,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+namespace yy
+{ 
 
 class string_view
 {
@@ -12,7 +14,12 @@ public:
     string_view(const char *d, size_t n) : pb_(d), pe_(d + n) {}
     string_view(const std::string &s) : pb_(s.data()), pe_(s.data() + s.size()) {}
     string_view(const char *s) : pb_(s), pe_(s + strlen(s)) {}
-
+    string_view& operator=(const std::string& s)
+    {
+        pb_ = s.data();
+        pe_ = s.data() + s.size();
+        return *this;
+    }
     const char *data() const { return pb_; }
     char* data() { return const_cast<char*>(pb_); }
     const char *begin() const { return pb_; }
@@ -140,5 +147,6 @@ inline std::vector<string_view> string_view::split(char ch) const
     if (pe_ != pb_)
         r.push_back(string_view(pb, pe_));
     return r;
+}
 }
 #endif

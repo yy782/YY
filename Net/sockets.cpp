@@ -110,7 +110,7 @@ int timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
     int ret=::timerfd_settime(fd,flags,&new_ts,NULL); 
     if(ret<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }  
     return ret;  
 }
@@ -119,7 +119,7 @@ void bindOrDie(int fd,const Address& addr)
 {
     if(::bind(fd,addr.getSockAddr(),addr.get_len())==-1)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
         LOG_SYSFATAL("sockets::bindOrDie");
     }
 
@@ -131,7 +131,7 @@ void listenOrDie(int fd,int queue_size)
     auto ret=::listen(fd,queue_size);
     if(ret<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
         LOG_SYSFATAL("sockets::listenOrDie");
     }
 }
@@ -140,7 +140,7 @@ int connect(int fd,const Address& addr)
     auto ret=::connect(fd,addr.getSockAddr(),addr.get_len());
     if(ret==-1)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return ret;
 }
@@ -168,7 +168,7 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
     // @brief muduo库选择accept4或accept来实现更好的兼容，我这里选择accept来向下兼容
     if(connfd==-1)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
         switch (errno)
         {
         case EINTR://被信号中断  
@@ -210,24 +210,24 @@ void setKeepAlive(int fd,bool on,int idleSeconds,
                          &optval,sizeof(optval));
     if(ret<0) 
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     if(!on)return;
     
     ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPIDLE,&idleSeconds,sizeof(idleSeconds));// @prief 探测开始前的等待时间
     if(ret<0) 
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }    
     ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPINTVL,&intervalSeconds,sizeof(intervalSeconds));// @prief 探测间隔时间
     if(ret<0) 
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     ret=::setsockopt(fd,IPPROTO_TCP,TCP_KEEPCNT,&maxProbes,sizeof(maxProbes));// @prief 探测次数
     if(ret<0) 
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 void reuse_addr(int fd,bool on)
@@ -238,7 +238,7 @@ void reuse_addr(int fd,bool on)
             &optval, static_cast<socklen_t>(sizeof optval));
     if(ret<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 void reuse_port(int fd,bool on)
@@ -248,26 +248,26 @@ void reuse_port(int fd,bool on)
                             &optval, static_cast<socklen_t>(sizeof optval)); 
     if(ret<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }                               
 }
 void set_nonblock(int fd){
     int flags=fcntl(fd,F_GETFL,0);
     if(flags==-1){
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     if(fcntl(fd,F_SETFL,flags|O_NONBLOCK)==-1){
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 void set_CloseOnExec(int fd)
 {
     int flags=fcntl(fd,F_GETFL,0);
     if(flags==-1){
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     if(fcntl(fd,F_SETFL,flags|FD_CLOEXEC)==-1){
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
 }
@@ -358,7 +358,7 @@ int sockfd_has_error(int fd)
     }
     else
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
         return -1;
     }
     assert(false&&"不可能执行到这");
@@ -370,21 +370,21 @@ void OnlyIpv6(int fd,bool ipv6_only)
     auto ret=::setsockopt(fd,SOL_IPV6,IPV6_V6ONLY,&optval,sizeof(optval));
     if(ret<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 } 
 void close(int fd)
 {
     if(::close(fd)<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 void shutdown(int fd,int how)
 {
     if(::shutdown(fd,how)<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 void daemonize(){
@@ -431,7 +431,7 @@ ssize_t read(int fd,void* buf,size_t len)
     auto n=::read(fd,buf,len);
     if(n<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return n;
 }
@@ -440,7 +440,7 @@ ssize_t write(int fd,const void* buf,size_t len)
     ssize_t n=::write(fd,buf,len);
     if(n<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return n;
 }
@@ -449,7 +449,7 @@ ssize_t recv(int fd,void* buf,size_t len,int flags)
     auto n=::recv(fd,buf,len,flags);
     if(n<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return n;
 }
@@ -458,7 +458,7 @@ ssize_t send(int fd,const void* buf,size_t len,int flags)
     auto n=::send(fd,buf,len,flags);
     if(n<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return n;
 }
@@ -489,7 +489,7 @@ ssize_t readET(int fd, void* buf, size_t len)
                 // 被信号中断，继续读取
                 continue;
             } else {
-                LOG_SYSTEM_ERROR("[read errno] " << errno);
+                LOG_ERRNO(errno);
                 // 如果已经读取了一些数据，返回已读取的字节数；否则返回-1
                 return (len - left) > 0 ? (len - left) : -1;
             }
@@ -529,7 +529,7 @@ ssize_t writeET(int fd, const void* buf, size_t len)
                 // 被信号中断，继续写入
                 continue;
             } else {
-                LOG_SYSTEM_ERROR("[write errno] " << errno);
+                LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
         } else {
@@ -560,7 +560,7 @@ ssize_t recvET(int fd, void* buf, size_t len, int flags)
             } else if (errno == EINTR) {
                 continue;
             } else {
-                LOG_SYSTEM_ERROR("[recv errno] " << errno);
+                LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
         } else if (n == 0) {
@@ -596,7 +596,7 @@ ssize_t sendET(int fd, const void* buf, size_t len, int flags)
             {
                 continue;
             } else {
-                LOG_SYSTEM_ERROR("[send errno] " << errno);
+                LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
         } else {
@@ -613,7 +613,7 @@ ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& 
     ssize_t n=::recvfrom(fd,buf,len,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
     if(n<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
     return n;
 }
@@ -635,7 +635,7 @@ ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage
             } else if (errno == EINTR) {
                 continue;
             } else {
-                LOG_SYSTEM_ERROR("[recvform errno] " << errno);
+                LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
         } else if (n == 0) 
@@ -658,7 +658,7 @@ ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& addres
     ssize_t n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
     if (n == -1) 
     {
-        LOG_PRINT_ERRNO(errno); 
+        LOG_ERRNO(errno); 
     }
     return n;
 }
@@ -681,7 +681,7 @@ ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& addr
                 continue;
             } else 
             {
-                LOG_SYSTEM_ERROR("[send errno] " << errno);
+                LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
         } else {

@@ -2,6 +2,7 @@
 #include "RingBuffer.h"
 #include "Types.h"
 #include "AsyncLog.h"
+#include "string_view.h"
 namespace yy
 {
 
@@ -11,14 +12,14 @@ Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
 SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
 BackstageBuffers_(),
 appender_(fileName,flush_interval),
-filter_(true)
+filter_()
 {
     g_log_filter=&filter_;
 
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.append(p,strlen(p));
 
-    filter_.setAsynccallback(std::bind(&AsyncLog::append,this,_1));
+    filter_.set_callback(std::bind(&AsyncLog::append,this,_1));
     thread_.run(std::bind(&AsyncLog::loop,this));
 }  
 AsyncLog::~AsyncLog()
@@ -32,9 +33,9 @@ AsyncLog::~AsyncLog()
     appender_.append(p,strlen(p));
     appender_.flush(); 
 }
-void AsyncLog::append(const SharedString& log)
+void AsyncLog::append(const std::string& log)
 {
-    assert(!log->empty());
+    assert(!log.empty());
     if(Receptionbuffer_->full())
     {
         BackstageLock_.lock();
@@ -75,12 +76,13 @@ void AsyncLog::loop()
         {
             Receptionbuffer_=std::make_unique<Buffer>(BufferSize_);
         }
+        std::string msg;
         for(auto& buffer:WriteBuffer)
         {
-            SharedString msg;
+            if(buffer==nullptr)continue;
             while(buffer->retrieve(msg))
             {
-                appender_.append(msg->c_str(),msg->size());
+                appender_.append(msg.data(),msg.size());
             }
         }
         WriteBuffer.clear();

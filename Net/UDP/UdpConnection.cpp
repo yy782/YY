@@ -88,7 +88,7 @@ void UdpConnection::sendTo(const std::string& s,const Address& dest)
 {
     if (closed_) 
     {
-        LOG_NULL_WARN("UDP connection closed");
+        LOG_WARN("UDP connection closed");
         return;
     }
 
@@ -164,7 +164,7 @@ void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest)
 
 void UdpConnection::handleError() 
 {
-    LOG_PRINT_ERRNO(errno);
+    LOG_ERRNO(errno);
     if (errorCallback_) 
     {
         errorCallback_(shared_from_this());

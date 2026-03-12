@@ -1,12 +1,30 @@
-
+//./Echo
+// cd programs/yy/build/bin
+#include <sys/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <iostream>
+#include <algorithm>
+#include <thread>
+#include <vector>
 #include "../net.h"
+#include "../../Common/SyncLog.h"
+#include "../ConfigCenter.h"
+
+
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::sockets;
-#include <algorithm>
 
-//./EchoServer
-// cd programs/yy/build/bin
+
+
+
 class EchoServer
 {
 public:
@@ -19,9 +37,6 @@ public:
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
         server_.getSignalHandler().addSign(SIGTERM,std::bind(&EchoServer::stop,this));
-
-
-        
     }
     void start()
     {
@@ -41,54 +56,10 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
-        conn->context<LTimeStamp>()=LTimeStamp::now();
-
-        std::weak_ptr<TcpConnection> weakConn=conn;
-        auto timer=std::make_shared<LTimer>(
-        [this,weakConn]()
-        {
-            if(auto c=weakConn.lock()) 
-            {   
-                checkAlive(c);                
-            }
-        },
-        5min,
-        FOREVER
-        );
-        server_.addTime(timer,false);
-        auto Htimer=std::make_shared<HTimer>(
-        [this,weakConn]()
-        {
-            if(auto c=weakConn.lock())
-            {
-                c->send("You had connected two min",26);
-                LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
-            }
-        },
-        120min,
-        1    
-        );
-        server_.addTime(Htimer,true);
-        conn->context<LTimerPtr>()=timer;
-    }
-    void checkAlive(TcpConnectionPtr conn)
-    {
-        
-        LTimeStamp& lastFulsh=conn->context<LTimeStamp>();
-        if((LTimeStamp::now()-lastFulsh)>LTimeInterval(5min))
-        {
-            conn->send("Close!",7);
-            conn->disconnect();
-            LTimerPtr timer=conn->context<LTimerPtr>();
-            timer->cancel();
-        }            
-        
-
     }
     void onMessage(TcpConnectionPtr conn)
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        conn->context<LTimeStamp>()=LTimeStamp::now();
 
         const char* last=buffer.findBorder("\n");
         std::string msg(buffer.peek(),last);
@@ -104,36 +75,60 @@ private:
     {
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
-        conn->context<LTimerPtr>()->cancel();
     }
     TcpServer server_;
 
 };
 
-int main(int argc,char* argv[])
+int main(int argc,char* argv[]) 
 {
-    auto& instance=SyncLog::getInstance("../../build/Log.log",10s);
-    instance.getFilter()->set_global_level(LOG_LEVEL_DEBUG);
-    instance.getFilter()->set_module_enabled(LogModule::SYSTEM,true);
-    instance.getFilter()->set_module_enabled(LogModule::SIGNAL,true);
-    instance.getFilter()->set_module_enabled(LogModule::TIME,true);
-    instance.getFilter()->set_module_enabled(LogModule::CLIENT,true);    
-    
+
     daemonize();
-    Address addr;
-    if(argc<2)
+        
+    Conf config;
+    int parse_result=config.parse("config.conf");
+    if(parse_result!=0)
     {
-        addr=Address("127.0.0.1",8080);
+        std::cerr<<"Failed to parse config.conf at line "<<parse_result<<std::endl;
+        return 1;
+    }
+    
+    int host=config.getInteger("server","host");
+    int port=config.getInteger("server","port");
+    int thread_nums=config.getInteger("server","threadnums");
+    
+    bool isAsync=config.getBoolean("log","isAsync");
+    std::string logLevel=config.get("log","logLevel");
+    std::string logPath=config.get("log","logPath");
+    std::list<std::string> modules=config.getStrings("log","modules");
+    
+    if(isAsync)
+    {
+        auto async_flush_interval=config.getDuration("AsyncLog","flush_interval");
+        int async_buffer_size=config.getInteger("AsyncLog","BufferSize");        
+        auto& instance=AsyncLog::getInstance(logPath.c_str(),async_flush_interval,async_buffer_size);
+        instance.getFilter().set_global_level(logLevel)
+                                .set_module_enabled(modules);
     }
     else
     {
-       addr=Address(std::stoi(argv[1]),true); 
+        auto sync_flush_interval=config.getDuration("SyncLog","flush_interval");
+        auto& instance=SyncLog::getInstance(logPath.c_str(),sync_flush_interval);
+        instance.getFilter().set_global_level(logLevel)
+                                .set_module_enabled(modules);
     }
+    LOG_SYSTEM_INFO("[PID] "<<getpid());
+    Address serverAddr(host,port);
+    
+    EventLoop loop;
+    EchoServer server(serverAddr,thread_nums,&loop);
+    server.start();
+    loop.loop();
+
     
 
+    
+    
 
-    LOG_SYSTEM_INFO("[PID] "<<getpid());   
-    EventLoop loop;
-    EchoServer server(addr,1,&loop);
-    server.start();
+    
 }

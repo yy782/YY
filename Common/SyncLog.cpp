@@ -8,13 +8,17 @@ LogFilter* g_log_filter=nullptr;
 
 SyncLog::SyncLog(const char* filename,FlushInterval flush_interval):
 appender_(filename,flush_interval),
-filter_(false)
+filter_()
 {
     g_log_filter=&filter_;
-    filter_. setSynccallback(std::bind(&LogAppender::append,std::ref(appender_),_1,_2));
+    filter_.set_callback(std::bind(&SyncLog::append,this,_1));
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.append(p,strlen(p));
 }  
+void SyncLog::append(const std::string& log)
+{
+    appender_.append(log.c_str(),log.size());
+}
 SyncLog::~SyncLog()
 {
     char p []="==================================== 日志结束 ==================================== \n";

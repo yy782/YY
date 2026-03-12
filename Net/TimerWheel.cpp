@@ -87,7 +87,9 @@ void TimerWheel::tick()
 
     ReadTimerfd();
 
-    LOG_TIME_DEBUG("tick!");
+    IGNORE(
+        LOG_TIME_DEBUG("tick!");
+    )
     auto tmp=slots_[cur_slot_];
     while(tmp){
         if(tmp->rotation>0){
@@ -126,7 +128,9 @@ void TimerWheel::ReadTimerfd()
     uint64_t howmany;
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
-        LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
+        IGNORE(
+            LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
+        )
     }
 }     
 }    

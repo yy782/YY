@@ -26,9 +26,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(COMMON_WARNING_OPTIONS
+    set(WARNING_OPTIONS
         -g -O0
         -std=c++17
+        -DNIGNORE
         -rdynamic
         -march=native
         -Wall
@@ -45,22 +46,14 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         -Wwrite-strings
 
     )
-    set(TEST_WARNING_OPTIONS
-        -g -O0
-        -Wno-error              # 不把警告当错误
-        -Wno-shadow             # 关闭变量遮蔽
-        -Wno-sign-compare       # 关闭符号不匹配
-        -Wno-pedantic           # 关闭pedantic警告
-        -Wno-unused-parameter   # 关闭未使用参数
-        -Wno-Wall               # 保留基础警告
-        -Wno-extra
-        -Wno-conversion           
-    )
+
+
 else()
-    set(COMMON_WARNING_OPTIONS
+    set(WARNING_OPTIONS
         -O2                     # 生产优化
         -std=c++17
         -march=native
+        -DNIGNORE
         -DNDEBUG
         -Wall
         -Wextra
@@ -68,16 +61,7 @@ else()
         -Wno-shadow
         -Wno-conversion    
     )
-    set(TEST_WARNING_OPTIONS
-        -O2                     # 生产优化
-        -std=c++17
-        -march=native
-        -Wall
-        -Wextra
-        -Wno-error              # 警告不升级为错误
-        -Wno-shadow
-        -Wno-conversion    
-    )
+
 endif()    
 
 add_subdirectory(Common)

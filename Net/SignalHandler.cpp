@@ -39,7 +39,9 @@ void SignalHandler::addSign(int sig,SigCallBack cb)
 }
 void SignalHandler::handle()
 {
-    LOG_SIGNAL_DEBUG("SignalHandler::handle()");
+    IGNORE(
+        LOG_SIGNAL_DEBUG("SignalHandler::handle()");
+    )
     struct signalfd_siginfo sig_info;
 
     int fd=handler_.get_fd();

@@ -77,7 +77,9 @@ void TimerQueue<PrecisionTag>::handlerRead()
 {
     ReadTimerfd();
 
-    LOG_TIME_DEBUG("TimerQueue handlerRead");
+    IGNORE(
+        LOG_TIME_DEBUG("TimerQueue handlerRead");
+    )
 
     std::vector<Entry> expired=getDueTasks(Time_Stamp::now());
     std::vector<Entry> NewTasks;
@@ -137,9 +139,10 @@ void TimerQueue<PrecisionTag>::ReadTimerfd()
     uint64_t howmany;
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
-        LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
+        IGNORE(
+            LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
+        )
     }
 } 
 }    
 }
-

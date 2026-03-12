@@ -28,7 +28,7 @@ void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
     ProtoBufOutputStream output_stream(&buf);
     if (!msg->SerializeToZeroCopyStream(&output_stream)) 
     {
-        LOG_NULL_WARN("Failed to serialize message");
+        LOG_WARN("Failed to serialize message");
         return;
     }
     
@@ -70,7 +70,7 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     
     // 2. 验证长度
     if (total_len>MAX_MESSAGE_SIZE||name_len>MAX_NAME_LENGTH) {
-        LOG_NULL_WARN("Invalid length: total="<<total_len<<" name="<<name_len);
+        LOG_WARN("Invalid length: total="<<total_len<<" name="<<name_len);
         return NULL;
     }
     
@@ -85,7 +85,7 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     Message* msg=createMessage(typeName);
     if(!msg) 
     {
-        LOG_NULL_WARN("Cannot create message for type: "<<typeName.c_str());
+        LOG_WARN("Cannot create message for type: "<<typeName.c_str());
         return NULL;
     }
     
@@ -102,7 +102,7 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     // 解析消息体
     if (!msg->ParseFromZeroCopyStream(&input_stream)) 
     {
-        LOG_NULL_WARN("Failed to parse protobuf message");
+        LOG_WARN("Failed to parse protobuf message");
         delete msg;
         return NULL;
     }
@@ -120,7 +120,7 @@ void ProtoMsgDispatcher::handle(TcpConnectionPtr con,Message* msg) {
     } 
     else 
     {
-        LOG_NULL_WARN("unknown message type :"<<msg->GetTypeName().c_str());
+        LOG_WARN("unknown message type :"<<msg->GetTypeName().c_str());
     }
     delete msg;
 }

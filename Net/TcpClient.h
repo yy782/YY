@@ -16,17 +16,16 @@ public:
     typedef TcpConnection::ConnectStatus Status;
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectCallBack;
 
-    TcpClient(const Address& serverAddr):
+    TcpClient(const Address& serverAddr,EventLoop* loop):
     serverAddr_(serverAddr),
-    loopThread_(),
-    connection_(std::make_shared<TcpConnection>(sockets::createTcpSocketOrDie(serverAddr.get_family()),serverAddr,loopThread_.getEventLoop()))
+    loop_(loop),
+    connection_(std::make_shared<TcpConnection>(sockets::createTcpSocketOrDie(serverAddr.get_family()),serverAddr,loop))
     {
-        loopThread_.getEventLoop()->addListen(connection_->getHandler());
+        loop_->addListen(connection_->getHandler());
     }
     ~TcpClient()
     {
         connection_->disconnect();
-        loopThread_.stop();
     }
     void connect()
     {
@@ -34,7 +33,6 @@ public:
         auto handler_=connection_->getHandler();
         handler_->setReading();
         handler_->setExcept();
-        loopThread_.run();
 
     }
     void disconnect()
@@ -63,7 +61,7 @@ public:
     Address getPeerAddr(){return serverAddr_;}
 private:
     Address serverAddr_;
-    EventLoopThread loopThread_;
+    EventLoop* loop_;
     TcpConnectionPtr connection_; // @brief 由于回调要TcpConnectionPtr,创建栈对象shared_from_this()会报错
 
 };

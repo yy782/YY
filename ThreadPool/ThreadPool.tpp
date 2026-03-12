@@ -54,7 +54,9 @@ max_threads_(std::max(max_threads,min_threads)),
 taskmanager(),
 workermanager(pool)
 {
-    LOG_THREAD_DEBUG("线程池启动");
+    IGNORE(
+        LOG_THREAD_DEBUG("线程池启动");
+    )
     for(size_t i=0;i<min_threads;++i){
         workermanager.add_worker();
         LOG_THREAD_INFO("工作线程:"<<"["<<i<<"]"<<"添加成功");
@@ -70,8 +72,12 @@ global_tasks(),
 monitor(this)
 {
  monitor.start();
-LOG_THREAD_INFO("监控线程启动成功");
-LOG_THREAD_INFO("线程池成功启动"); 
+IGNORE(
+    LOG_THREAD_INFO("监控线程启动成功");
+)
+IGNORE(
+    LOG_THREAD_INFO("线程池成功启动"); 
+)
 }
 
 template<class Strategy>
@@ -173,13 +179,17 @@ auto ThreadPool<Strategy>::dep_submit(F&& f,int& task_id,Args&&... args)//args�
 
 template<class Strategy>
 void ThreadPool<Strategy>::shutdown(){
-    LOG_THREAD_DEBUG("线程池关闭中...");
+    IGNORE(
+        LOG_THREAD_DEBUG("线程池关闭中...");
+    )
     running=false;
     monitor.stop();
     workermanager.shutdown();
     global_tasks.shutdown();
     taskmanager.shutdown();
-    LOG_THREAD_INFO("线程池成功关闭");
+    IGNORE(
+        LOG_THREAD_INFO("线程池成功关闭");
+    )
 }
 
 #pragma endregion
@@ -246,7 +256,9 @@ public:
                 auto idle_time=now-worker->get_last_active_time();
                 if(idle_time>10&&worker_count>monitor->get_min_threads()){
                     monitor->pool->workermanager.remove_worker(i);
-                    LOG_THREAD_INFO("移除空闲工作线程:"<<"["<<i<<"]");
+                    IGNORE(
+                        LOG_THREAD_INFO("移除空闲工作线程:"<<"["<<i<<"]");
+                    )
                 }
             }
         }
@@ -254,7 +266,9 @@ public:
         size_t global_task_size=monitor->pool->global_tasks.size();
         if(global_task_size>100&&worker_count<monitor->get_max_threads()){
             monitor->pool->workermanager.add_worker();
-            LOG_THREAD_INFO("添加工作线程");
+            IGNORE(
+                LOG_THREAD_INFO("添加工作线程");
+            )
         }    
     }
 };

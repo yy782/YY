@@ -35,7 +35,7 @@ Epoll::~Epoll()
 {
     if(::close(epollfd_)<0)
     {
-        LOG_PRINT_ERRNO(errno);
+        LOG_ERRNO(errno);
     }
 }
 TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
@@ -48,7 +48,7 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
     {
         if((save_errno==EAGAIN)||(save_errno==EWOULDBLOCK))
         {
-            LOG_PRINT_ERRNO(save_errno);
+            LOG_ERRNO(save_errno);
         }
         return timer;
     }
@@ -86,7 +86,9 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
 void Epoll::add_listen(EventHandler* handler)
 {
     assert(handler);
-    LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
+    IGNORE(
+        LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
+    )
 
     operator_epoll(EPOLL_CTL_ADD,handler);
 
@@ -126,7 +128,7 @@ void Epoll::operator_epoll(int operation,EventHandler* handler)
     {
             if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK))
             {
-                LOG_PRINT_ERRNO(errno);
+                LOG_ERRNO(errno);
             }
     }    
 }    
