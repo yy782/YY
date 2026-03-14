@@ -14,6 +14,7 @@ filter_()
     filter_.set_callback(std::bind(&SyncLog::append,this,_1));
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.append(p,strlen(p));
+    appender_.flush(); // 立即flush
 }  
 void SyncLog::append(const std::string& log)
 {

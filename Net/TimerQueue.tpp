@@ -28,7 +28,7 @@ handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),l
     }
 
     
-    loop->addListen(&handler_);
+    
 }
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::~TimerQueue()
@@ -77,7 +77,7 @@ void TimerQueue<PrecisionTag>::handlerRead()
 {
     ReadTimerfd();
 
-    IGNORE(
+    EXCLUDE_BEFORE_COMPILATION(
         LOG_TIME_DEBUG("TimerQueue handlerRead");
     )
 
@@ -139,7 +139,7 @@ void TimerQueue<PrecisionTag>::ReadTimerfd()
     uint64_t howmany;
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
         )
     }

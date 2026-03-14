@@ -47,7 +47,7 @@ UdpConnection::UdpConnection(EventLoop* loop, int fd, const Address& local):
     handler_.setReadCallBack([this](){handleRead();});
     handler_.setErrorCallBack([this](){handleError();});
     handler_.setReading();
-    loop_->addListen(&handler_);
+     
 }
 
 UdpConnection::~UdpConnection()
@@ -116,7 +116,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
         }
     });
     timerHandler_.setReading();
-    loop_->addListen(&timerHandler_);
+     
 }
 void UdpConnection::close() 
 {

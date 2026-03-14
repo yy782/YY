@@ -1,7 +1,7 @@
 #include "TcpConnection.h"
 #include "sockets.h"
 #include <vector>
-#include "EventLoop.h"
+
 namespace yy
 {
 namespace net
@@ -10,8 +10,9 @@ namespace net
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
 fd_(fd),
-handler_(fd,loop),
-Connstatus_(ConnectStatus::DisConnected)
+
+Connstatus_(ConnectStatus::DisConnected),
+handler_(fd,loop)
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
@@ -23,8 +24,8 @@ Connstatus_(ConnectStatus::DisConnected)
 TcpConnection::TcpConnection(int fd,const Address& addr):
 addr_(addr),
 fd_(fd),
-handler_(), // 监听的loop不确定，延迟初始化
-Connstatus_(ConnectStatus::DisConnected)
+Connstatus_(ConnectStatus::DisConnected),
+handler_() // 监听的loop不确定，延迟初始化
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
@@ -61,7 +62,10 @@ void TcpConnection::send(const char* message,size_t len)
     auto loop=handler_.get_loop();
 
     loop->submit([this,message,len](){
-        sendInLoop(message,len);
+         char* msg=new char[len];
+        std::copy(message,message+len,msg);
+        sendInLoop(msg,len);
+        delete[] msg;
     });        
     
 
@@ -76,15 +80,13 @@ void TcpConnection::sendOutput()
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
 
-    EventLoop* loop=handler_.get_loop();
-
     if(codec_)
     {
         codec_->encode(string_view(message,len),SendBuffer_);
         if(!handler_.isWriting())
         {
             handler_.setWriting();
-            loop->update_listen(&handler_);
+            
         }
     }
     else 
@@ -96,7 +98,7 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
             if(!handler_.isWriting())
             {
                 handler_.setWriting();
-                loop->update_listen(&handler_);
+                
             }
         }
         else if(n<0)
@@ -162,8 +164,8 @@ void TcpConnection::handleWrite()
         {
             if(handler_.isWriting())
             {
-                handler_.caneclWriting();
-                handler_.get_loop()->update_listen(&handler_);
+                handler_.cancelWriting();
+                
             }
             
         }

@@ -86,7 +86,7 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
 void Epoll::add_listen(EventHandler* handler)
 {
     assert(handler);
-    IGNORE(
+    EXCLUDE_BEFORE_COMPILATION(
         LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
     )
 
@@ -94,7 +94,6 @@ void Epoll::add_listen(EventHandler* handler)
 
     assert((handler->get_status()==New||
             handler->get_status()==Delete));
-    assert(has_handler(handler)); 
     assert(handlers_.find(handler->get_fd())==handlers_.end());
     handlers_[handler->get_fd()]=handler;
     handler->set_status(Added);

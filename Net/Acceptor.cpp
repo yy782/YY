@@ -23,7 +23,7 @@ handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_)
     handler_.setReading();
     handler_.set_name("Acceptor");
 
-    loop_->addListen(&handler_);
+
 }
 Acceptor::~Acceptor()
 {
@@ -42,8 +42,6 @@ void Acceptor::accept()
         fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
     }
     auto conn=TcpConnection::accept(fd,addr);
-
-    conn->getHandler()->set_name(addr.sockaddrToString());
     
     callback_(conn);
 }    

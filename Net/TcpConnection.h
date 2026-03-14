@@ -9,6 +9,7 @@
 #include "../Common/TimeStamp.h"
 #include "Codec.h"
 #include "AutoContext.h"
+#include "EventLoop.h"
 namespace yy
 {
 namespace net
@@ -45,6 +46,7 @@ public:
         sockets::connect(handler_.get_fd(),addr_);
         assert(Connstatus_==ConnectStatus::DisConnected);
         Connstatus_=ConnectStatus::Connected;
+
     }
     static TcpConnectionPtr accept(int fd,const Address& addr)// @note 服务端用这个接口
     {
@@ -61,11 +63,12 @@ public:
     void setReading()
     {
         handler_.setReading();
-    
+        
     }
     void setExcept()
     {
         handler_.setExcept();
+        
     }
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
     void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
@@ -139,7 +142,7 @@ private:
 
     Address addr_; // @prief 对端的地址
     const int fd_;
-    EventHandler handler_;
+    
     Buffer RecvBuffer_;
     BackpressureState RecvbpState_{BackpressureState::kNormal};
     BackpressureAfterSendCallBack BackpressureAfterSend_;
@@ -157,6 +160,7 @@ private:
     std::atomic<ConnectStatus> Connstatus_;
 
     CodecPtr codec_;
+    EventHandler handler_;
 };
 
 

@@ -24,7 +24,7 @@ handler_()
 
 
     assert(loop);
-    loop->addListen(&handler_);
+
 }  
 void SignalHandler::addSign(int sig,SigCallBack cb)
 {
@@ -39,7 +39,7 @@ void SignalHandler::addSign(int sig,SigCallBack cb)
 }
 void SignalHandler::handle()
 {
-    IGNORE(
+    EXCLUDE_BEFORE_COMPILATION(
         LOG_SIGNAL_DEBUG("SignalHandler::handle()");
     )
     struct signalfd_siginfo sig_info;

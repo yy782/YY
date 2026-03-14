@@ -57,7 +57,7 @@ void TaskManager::add_dependency(size_t task_id,size_t dep_task_id){
 
 #pragma region WorkerManager;
 void WorkerManager::Worker::run(IThreadPool* pool){
-    IGNORE(
+    EXCLUDE_BEFORE_COMPILATION(
         LOG_THREAD_INFO("[线程:"<<worker_id<<"]"<<"开始执行任务");
     )
         while(true){

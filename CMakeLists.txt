@@ -29,7 +29,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(WARNING_OPTIONS
         -g -O0
         -std=c++17
-        -DNIGNORE
+        -DNEXCLUDE_BEFORE_COMPILATION
         -rdynamic
         -march=native
         -Wall
@@ -53,7 +53,7 @@ else()
         -O2                     # 生产优化
         -std=c++17
         -march=native
-        -DNIGNORE
+        -DNEXCLUDE_BEFORE_COMPILATION
         -DNDEBUG
         -Wall
         -Wextra
@@ -74,19 +74,19 @@ add_subdirectory(Net)
 
 target_compile_options(common
     PRIVATE
-    ${COMMON_WARNING_OPTIONS}
+    ${WARNING_OPTIONS}
 )
 target_compile_options(memorypool
     PRIVATE
-    ${COMMON_WARNING_OPTIONS}
+    ${WARNING_OPTIONS}
 )
 target_compile_options(threadpool
     PRIVATE
-    ${COMMON_WARNING_OPTIONS}
+    ${WARNING_OPTIONS}
 )
 target_compile_options(net
     PRIVATE
-    ${COMMON_WARNING_OPTIONS}
+    ${WARNING_OPTIONS}
 )
 
 add_library(yy INTERFACE)

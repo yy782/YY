@@ -37,12 +37,7 @@ public:
         sockets::close(fd_);
     }
     EventHandler(int fd,EventLoop* loop);
-    void init(int fd,EventLoop* loop)
-    {
-        assert(!loop_);
-        loop_=loop;
-        fd_=fd;
-    }
+    void init(int fd,EventLoop* loop);
     int get_fd()const{return fd_;}
     EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}
@@ -62,12 +57,12 @@ public:
     bool isReading()const{return events_&EventType::ReadEvent;}
     bool isExcept()const{return events_&EventType::ExceptEvent;}
     bool isReadingAndExcept()const{return events_&(EventType::ReadEvent|EventType::ExceptEvent);}
-    void setReading(){events_.add_event(EventType::ReadEvent);}
-    void cancelReading(){events_.remove_event(EventType::ReadEvent);}
-    void setWriting(){events_.add_event(EventType::WriteEvent);}
-    void caneclWriting(){events_.remove_event(EventType::WriteEvent);}
-    void setExcept(){events_.add_event(EventType::ExceptEvent);}
-    void cancelExcept(){events_.remove_event(EventType::ExceptEvent);}
+    void setReading(){events_.add_event(EventType::ReadEvent);update();}
+    void cancelReading(){events_.remove_event(EventType::ReadEvent);update();}
+    void setWriting(){events_.add_event(EventType::WriteEvent);update();}
+    void cancelWriting(){events_.remove_event(EventType::WriteEvent);update();}
+    void setExcept(){events_.add_event(EventType::ExceptEvent);update();}
+    void cancelExcept(){events_.remove_event(EventType::ExceptEvent);update();}
     void setReadingAndExcept()
     {
         setExcept();
@@ -104,7 +99,7 @@ public:
     void removeListen();
 
 private:
-    
+    void update();
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
     int fd_;
     Event events_;

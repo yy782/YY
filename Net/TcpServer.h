@@ -63,7 +63,6 @@ public:
         }
     }
 
-    SignalHandler& getSignalHandler(){return signalHandler_;}
 
     void removeConnection(TcpConnectionPtr conn);
     
@@ -76,7 +75,6 @@ private:
     AcceptorPtr acceptor_;
     EventLoopThreadPool threadpool_;
     ConnectMap connects_;
-    SignalHandler signalHandler_;
 
     TimerQueue<LowPrecision> LTimerQueue_;
     TimerQueue<HighPrecision> HTimerQueue_;

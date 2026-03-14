@@ -1,4 +1,4 @@
-//./Echo
+//./EchoServer
 // cd programs/yy/build/bin
 #include <sys/socket.h>
 #include <stdio.h>
@@ -36,7 +36,6 @@ public:
         server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
-        server_.getSignalHandler().addSign(SIGTERM,std::bind(&EchoServer::stop,this));
     }
     void start()
     {
@@ -62,14 +61,14 @@ private:
         TcpBuffer& buffer=conn->getRecvBuffer();
 
         const char* last=buffer.findBorder("\n");
-        std::string msg(buffer.peek(),last);
+        string_view msg(buffer.peek(),last);
         if(msg=="bye\n") // @note 
         {
             return;
         }
 
         conn->send(msg.data(),msg.size());
-        LOG_SYSTEM_INFO("recv msg: "<<msg);
+        LOG_SYSTEM_INFO("recv msg: "<<msg.data());
     }
     void onClose(TcpConnectionPtr conn)
     {
@@ -80,22 +79,22 @@ private:
 
 };
 
-int main(int argc,char* argv[]) 
+int main() 
 {
 
-    daemonize();
-        
+   
     Conf config;
-    int parse_result=config.parse("config.conf");
+    int parse_result=config.parse("../../Net/NetTest/config.conf");
     if(parse_result!=0)
     {
         std::cerr<<"Failed to parse config.conf at line "<<parse_result<<std::endl;
         return 1;
-    }
+    }        
+
     
-    int host=config.getInteger("server","host");
-    int port=config.getInteger("server","port");
-    int thread_nums=config.getInteger("server","threadnums");
+    std::string host=config.get("server","host");
+    int port=static_cast<int>(config.getInteger("server","port"));
+    int thread_nums=static_cast<int>(config.getInteger("server","threadnums"));
     
     bool isAsync=config.getBoolean("log","isAsync");
     std::string logLevel=config.get("log","logLevel");
@@ -105,7 +104,7 @@ int main(int argc,char* argv[])
     if(isAsync)
     {
         auto async_flush_interval=config.getDuration("AsyncLog","flush_interval");
-        int async_buffer_size=config.getInteger("AsyncLog","BufferSize");        
+        size_t async_buffer_size=static_cast<size_t>(config.getInteger("AsyncLog","BufferSize"));        
         auto& instance=AsyncLog::getInstance(logPath.c_str(),async_flush_interval,async_buffer_size);
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
@@ -117,12 +116,21 @@ int main(int argc,char* argv[])
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }
-    LOG_SYSTEM_INFO("[PID] "<<getpid());
-    Address serverAddr(host,port);
+    daemonize(); // 目录被换了
+  
+    EXCLUDE_BEFORE_COMPILATION(
+        LOG_SYSTEM_INFO("[PID] "<<getpid());
+    )
+    Address serverAddr(host.c_str(),port);
     
     EventLoop loop;
     EchoServer server(serverAddr,thread_nums,&loop);
     server.start();
+    auto& signal_handler=SignalHandler::getInstance(&loop);
+    signal_handler.addSign(SIGINT,[&server,&loop](){
+        loop.quit();
+        server.stop();
+    });
     loop.loop();
 
     

@@ -23,7 +23,7 @@ public:
     off_t getWrittenBytes()const{return writtenBytes_;}
     const std::string& getName()const{return name_;}
     const std::string& getTyps()const{return type_;}
-    constexpr static size_t BUFFER_SIZE=64*1024;
+    constexpr static size_t BUFFER_SIZE=6;
 private:
     const std::string name_;
     const std::string type_; // @param 文件类型

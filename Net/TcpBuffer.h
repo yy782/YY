@@ -85,7 +85,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
 private:
     void move_write_index(size_t size);
     void move_read_index(size_t size);
-    void check_index_validity(const char* file, int line)const;
+    void check_index_validity()const;
     void ensure_appendable(size_t size);
 
     char* begin_write(){return begin()+write_index_;}

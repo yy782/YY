@@ -13,7 +13,7 @@ using namespace yy::net;
 class MyServer {
 public:
     MyServer(EventLoop* loop) 
-        : server_(Address(8080,true),2,loop), loop_(loop)
+        :loop_(loop) ,server_(Address(8080,true),2,loop)
     {
         dispatcher_.onMsg<demo::Student>(
             [this](TcpConnectionPtr conn, demo::Student* msg) {
@@ -21,8 +21,8 @@ public:
             }
         );
         
-        server_.setMessageCallBack([this](TcpConnectionPtr conn,string_view msg){
-            onMessage(conn, msg);
+        server_.setMessageCallBack([this](TcpConnectionPtr conn,string_view){
+            onMessage(conn);
         });
     }
     
@@ -32,7 +32,7 @@ public:
     }
     
 private:
-    void onMessage(TcpConnectionPtr conn,string_view msg) {
+    void onMessage(TcpConnectionPtr conn) {
         TcpBuffer& buf = conn->getRecvBuffer();
         while (ProtoMsgCodec::msgComplete(buf)) {
             Message* msg = ProtoMsgCodec::decode(buf);

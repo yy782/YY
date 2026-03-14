@@ -19,9 +19,14 @@ class SignalHandler:public noncopyable
 {
 public:
    typedef std::function<void()> SigCallBack;
-   SignalHandler(EventLoop* loop);    
+   static SignalHandler&  getInstance(EventLoop* loop)
+    {
+        static SignalHandler instance(loop);
+        return instance;
+    }
    void addSign(int sig,SigCallBack cb); 
 private:
+    SignalHandler(EventLoop* loop);
     void handle();
     sigset_t sigset_;
     EventHandler handler_;

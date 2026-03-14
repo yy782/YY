@@ -65,19 +65,19 @@ void TcpBuffer::ensureWritableBytes(size_t len)
         expend(len);
     }
     assert(get_writable_size() >= len&&"可写尺寸小于需写尺寸");
-    check_index_validity(__FILE__, __LINE__);
+    check_index_validity();
 }
 void TcpBuffer::hasWritten(size_t len)
 {
     assert(len<=get_writable_size());
     write_index_+=len;
-    check_index_validity(__FILE__, __LINE__);
+    check_index_validity();
 }
 void TcpBuffer::unwrite(size_t len)
 {
     assert(len<=get_readable_size());
     write_index_-=len;
-    check_index_validity(__FILE__, __LINE__);
+    check_index_validity();
 }
 void TcpBuffer::shrink(size_t reserve)
 {
@@ -85,17 +85,17 @@ void TcpBuffer::shrink(size_t reserve)
     buffer_.shrink_to_fit();
 }
 
-void TcpBuffer::check_index_validity(const char* file, int line)const
+void TcpBuffer::check_index_validity()const
 {
 #ifndef NDEBUG        
         auto read_index=std::to_string(read_index_);
         auto prepend_size=std::to_string(prepend_size_);
-        auto context=std::string(file)+":"+std::to_string(line);
-        auto check_read_ptr=context+" 可读指针是 "+read_index+" 预留大小是 "+prepend_size;
+    
+        auto check_read_ptr=" 可读指针是 "+read_index+" 预留大小是 "+prepend_size;
         assert(read_index_>=prepend_size_&&check_read_ptr.c_str());
         
         auto write_index=std::to_string(write_index_);
-        auto check_write_ptr=context+" 可写指针是 "+write_index+" 可读指针是 "+read_index;
+        auto check_write_ptr=" 可写指针是 "+write_index+" 可读指针是 "+read_index;
         assert(write_index_>=read_index_&&check_write_ptr.c_str());
 #endif    
 }
@@ -106,7 +106,7 @@ void TcpBuffer::ensure_appendable(size_t size)
         expend(size);
     }
     assert(get_writable_size()>=size&&"可写尺寸小于需写尺寸");
-    check_index_validity(__FILE__,__LINE__);
+    check_index_validity();
 }
 void TcpBuffer::move_read_index(size_t size)
 {
@@ -114,14 +114,14 @@ void TcpBuffer::move_read_index(size_t size)
     if(size<get_readable_size())
     {
         read_index_+=size;
-        check_index_validity(__FILE__, __LINE__);            
+        check_index_validity();            
     }
     else 
     {
-        check_index_validity(__FILE__, __LINE__);
+        check_index_validity();
         read_index_=prepend_size_;
         write_index_=prepend_size_;
-        check_index_validity(__FILE__, __LINE__);
+        check_index_validity();
     }
 }
 void TcpBuffer::move_write_index(size_t size)
@@ -131,7 +131,7 @@ void TcpBuffer::move_write_index(size_t size)
 }
 void TcpBuffer::expend(size_t size)
 {
-    check_index_validity(__FILE__, __LINE__);
+    check_index_validity();
     if(get_writable_size()+get_prependable_size()>size+prepend_size_)
     {
         //复用
@@ -142,7 +142,7 @@ void TcpBuffer::expend(size_t size)
         reuse_prependable_space();
         // @brief muduo没有选择进行优化，但是提出了建议。我选择进行优化
         buffer_.resize(write_index_+size);
-        check_index_validity(__FILE__, __LINE__);
+        check_index_validity();
     }
 }
 void TcpBuffer::reuse_prependable_space()
@@ -153,7 +153,7 @@ void TcpBuffer::reuse_prependable_space()
                 begin()+prepend_size_);
     read_index_=prepend_size_;
     write_index_=read_index_+readable;
-    check_index_validity(__FILE__, __LINE__);        
+    check_index_validity();        
 }    
 }
 

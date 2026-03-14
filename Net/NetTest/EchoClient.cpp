@@ -3,17 +3,23 @@
 #include "../net.h"
 using namespace yy;
 using namespace yy::net;
-
+// ./EchoClient 
 class EchoClient// stdout是线程不安全的
 {
 public:
     EchoClient(const Address& serverAddr,EventLoop* loop):
-    client_(serverAddr,loop)
+    client_(serverAddr,loop),
+    stdIn_(0,loop)
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
 
-
+        
+        
+        stdIn_.setReadCallBack([this](){handleRead();});
+        stdIn_.set_name("stdIn");
+        stdIn_.setReading();
+         
     }
     void send(const std::string& msg)
     {
@@ -52,6 +58,7 @@ public:
     bool isConnected(){return client_.isConnected();}
 private:
     TcpClient client_;
+    EventHandler stdIn_;
 };
 
 
@@ -66,10 +73,12 @@ int main(int argc,char* argv[])
     }
     else
     {
-        addr=Address("127.0.0.1",8888);
+        addr=Address("127.0.0.1",8080);
     }
     
     EventLoop client_loop;
     EchoClient client(addr,&client_loop);
     client.connect(); 
+
+    client_loop.loop();
 }

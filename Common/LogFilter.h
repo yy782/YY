@@ -237,10 +237,10 @@ extern LogFilter* g_log_filter;
 
 
 
-#ifndef NIGNORE
-    #define IGNORE(msg) 
+#ifdef NEXCLUDE_BEFORE_COMPILATION
+    #define EXCLUDE_BEFORE_COMPILATION(msg) msg
 #else 
-    #define IGNORE(msg) msg
+    #define EXCLUDE_BEFORE_COMPILATION(msg) 
 #endif 
 
 

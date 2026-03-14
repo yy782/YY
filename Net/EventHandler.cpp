@@ -13,8 +13,15 @@ revents_(EventType::NoneEvent),
 loop_(loop)
 {
     assert(loop_!=nullptr);
+    loop_->addListen(this);
 } 
-  
+void EventHandler::init(int fd,EventLoop* loop)
+{
+    assert(loop);
+    loop_=loop;
+    fd_=fd;
+    loop_->addListen(this); 
+}  
 void EventHandler::handler_revent()
 {
 
@@ -22,28 +29,28 @@ void EventHandler::handler_revent()
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接
         // 但是HupEvent和RdHupEvent的事件分界比较模糊?
-        IGNORE( 
+        EXCLUDE_BEFORE_COMPILATION( 
             LOG_EVENT_DEBUG(printName()<<" handler_revent HupEvent");
         )
         if(closeCallback_) closeCallback_();
     }  
     if(revents_&EventType::NvalEvent)
     {
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_EVENT_DEBUG(printName()<<" handler_revent NvalEvent");
         )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&EventType::ErrorEvent)
     {
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_EVENT_DEBUG(printName()<<" handler_revent ErrorEvent");
         )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&EventType::ExceptEvent)
     {
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_EVENT_DEBUG(printName()<<" handler_revent ExceptEvent");
         )
         if(exceptCallback_)
@@ -53,7 +60,7 @@ void EventHandler::handler_revent()
     }
     if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent)
     {
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_EVENT_DEBUG(printName()<<" handler_revent ReadEvent");
         )
         if(readCallback_)
@@ -63,11 +70,16 @@ void EventHandler::handler_revent()
     }
     if(revents_&EventType::WriteEvent)
     {
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_EVENT_DEBUG(printName()<<" handler_revent WriteEvent");
         )
         if(writeCallback_)writeCallback_();
     }
+}
+void EventHandler::update()
+{
+    assert(loop_);
+    loop_->update_listen(this);
 }
 void EventHandler::removeListen()
 {

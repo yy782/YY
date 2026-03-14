@@ -38,8 +38,7 @@ handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),l
     handler_.setReading();
 
     handler_.set_name("TimerWheel");
-
-    loop->addListen(&handler_);
+        
 }
 TimerWheel::~TimerWheel()
 {
@@ -87,7 +86,7 @@ void TimerWheel::tick()
 
     ReadTimerfd();
 
-    IGNORE(
+    EXCLUDE_BEFORE_COMPILATION(
         LOG_TIME_DEBUG("tick!");
     )
     auto tmp=slots_[cur_slot_];
@@ -128,7 +127,7 @@ void TimerWheel::ReadTimerfd()
     uint64_t howmany;
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
-        IGNORE(
+        EXCLUDE_BEFORE_COMPILATION(
             LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
         )
     }

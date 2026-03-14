@@ -47,9 +47,9 @@ std::chrono::duration<Rep, Period> Conf::getDuration(
     lower.reserve(valstr.size());
     for (char c : valstr) 
     {
-        if (!std::isspace(static_cast<unsigned char>(c))) 
+        if (!std::isspace(static_cast<char>(c))) 
         {
-            lower.push_back(std::tolower(static_cast<unsigned char>(c)));
+            lower.push_back(static_cast<char>(std::tolower(c)));
         }
     }
     

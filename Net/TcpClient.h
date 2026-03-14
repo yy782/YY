@@ -21,7 +21,7 @@ public:
     loop_(loop),
     connection_(std::make_shared<TcpConnection>(sockets::createTcpSocketOrDie(serverAddr.get_family()),serverAddr,loop))
     {
-        loop_->addListen(connection_->getHandler());
+        
     }
     ~TcpClient()
     {
@@ -30,9 +30,9 @@ public:
     void connect()
     {
         connection_->connect();
-        auto handler_=connection_->getHandler();
-        handler_->setReading();
-        handler_->setExcept();
+        EventHandler* handler_ = connection_->getHandler();
+        handler_->setReadingAndExcept();
+        
 
     }
     void disconnect()

@@ -8,7 +8,6 @@ TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
 loop_(loop),
 acceptor_(std::make_unique<Acceptor>(addr,loop_)),
 threadpool_(threadnum),
-signalHandler_(loop_),
 LTimerQueue_(loop_),
 HTimerQueue_(loop_),
 TimerWheel_(loop_)
@@ -30,7 +29,7 @@ void TcpServer::stop()
 void TcpServer::newConnection(TcpConnectionPtr conn)
 {
 
-    SconnectCallback_(conn);
+    
 
     assert(connects_.find(conn)==connects_.end());
     connects_.insert(conn);
@@ -40,9 +39,11 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
   
 
     conn->setName(conn->getAddr().sockaddrToString().c_str());
+    
     EventLoop* loop=threadpool_.getEventLoop();
     conn->getHandler()->init(conn->get_fd(),loop);
-    loop->addListen(conn->getHandler());
+    conn->setReading(); // 启用读事件监听
+    SconnectCallback_(conn);
 
 }
 

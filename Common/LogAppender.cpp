@@ -35,6 +35,7 @@ writtenBytes_(0)
         assert(fp_);
     }
     // @brief 替换掉标准库的默认缓冲区，默认缓冲区太小了
+    ::setvbuf(fp_, buffer_, _IOFBF, BUFFER_SIZE);
 }  
 BaseLogAppender::~BaseLogAppender()
 {

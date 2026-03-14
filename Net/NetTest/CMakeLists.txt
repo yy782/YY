@@ -61,7 +61,7 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     
     target_compile_options(${TEST_NAME}
         PRIVATE
-        ${TEST_WARNING_OPTIONS}
+        ${WARNING_OPTIONS}
     )
 
     

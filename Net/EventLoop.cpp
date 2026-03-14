@@ -39,14 +39,13 @@ wakeupHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
         uint64_t one=1;
         ssize_t n=sockets::readAuto(wakeupHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
-        status_=EventLoopStatus::Quit;
+        
         
         return;
     };
     wakeupHandler_.setReadCallBack(eventCallBack);
     wakeupHandler_.setReading();
     wakeupHandler_.set_name("wakeupHandler");
-    poller_.add_listen(&wakeupHandler_);
 }
 void EventLoop::loop()
 {
@@ -80,11 +79,14 @@ void EventLoop::quit()
 {
 
     assert(CheckeEventLoopStatus());
-    wakeup();
+    submit([this](){
+        status_=EventLoopStatus::Quit;
+    });
 }
 void EventLoop::submit(Functor cb)
 {
     FunctionList_.blockappend(std::move(cb));
+    wakeup();
 }
 void EventLoop::wakeup()
 {
