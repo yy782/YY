@@ -154,13 +154,14 @@ public:
         global_level_=level;
         return *this;
     }
-    LogFilter& set_global_level(std::string& level)
+    LogFilter& set_global_level(const std::string& level)
     {
-         std::transform(level.begin(),level.end(),level.begin(), ::toupper);
-         global_level_ = level == "DEBUG" ? LOG_LEVEL_DEBUG :
-                         level == "INFO" ? LOG_LEVEL_INFO :
-                         level == "WARN" ? LOG_LEVEL_WARN :
-                         level == "ERROR" ? LOG_LEVEL_ERROR :
+        std::string level_copy = level;
+        std::transform(level_copy.begin(), level_copy.end(), level_copy.begin(), ::toupper);
+        global_level_ = level_copy == "DEBUG" ? LOG_LEVEL_DEBUG :
+                         level_copy == "INFO" ? LOG_LEVEL_INFO :
+                         level_copy == "WARN" ? LOG_LEVEL_WARN :
+                         level_copy == "ERROR" ? LOG_LEVEL_ERROR :
                          LOG_LEVEL_DEBUG;
         return *this;
     }

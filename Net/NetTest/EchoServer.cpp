@@ -32,10 +32,12 @@ public:
     typedef TcpConnection::CharContainer CharContainer;
     EchoServer(const Address& addr,int thread_num,EventLoop* loop):
     server_(addr,thread_num,loop)
+    
     {
         server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
+        
     }
     void start()
     {
@@ -61,14 +63,20 @@ private:
         TcpBuffer& buffer=conn->getRecvBuffer();
 
         const char* last=buffer.findBorder("\n");
-        string_view msg(buffer.peek(),last);
-        if(msg=="bye\n") // @note 
+        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+        {
+            return;
+        }
+        string_view msg(buffer.peek(),last - buffer.peek());
+        if(msg=="bye") // @note 
         {
             return;
         }
 
         conn->send(msg.data(),msg.size());
         LOG_SYSTEM_INFO("recv msg: "<<msg.data());
+        // 消费掉缓冲区中的数据
+        buffer.consume(last - buffer.peek() + 1); // +1 是为了包含\n
     }
     void onClose(TcpConnectionPtr conn)
     {
@@ -116,7 +124,7 @@ int main()
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }
-    daemonize(); // 目录被换了
+    //daemonize(); // 目录被换了
   
     EXCLUDE_BEFORE_COMPILATION(
         LOG_SYSTEM_INFO("[PID] "<<getpid());
@@ -127,7 +135,7 @@ int main()
     EchoServer server(serverAddr,thread_nums,&loop);
     server.start();
     auto& signal_handler=SignalHandler::getInstance(&loop);
-    signal_handler.addSign(SIGINT,[&server,&loop](){
+    signal_handler.addSign(SIGTERM,[&server,&loop](){
         loop.quit();
         server.stop();
     });

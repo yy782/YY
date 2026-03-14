@@ -8,6 +8,7 @@ namespace yy
 
 
 AsyncLog::AsyncLog(const char* fileName,LTimeInterval flush_interval,size_t BufferSize):
+BufferSize_(BufferSize),
 Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
 SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
 BackstageBuffers_(),

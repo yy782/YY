@@ -38,19 +38,33 @@ public:
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
         const char* last=buffer.findBorder("\n",1);
+        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+        {
+            return;
+        }
         std::string msg(buffer.peek(),last);
         std::cout<<"recv:"<<msg<<std::endl;
+        buffer.consume(last-buffer.peek()+1);
     }
     void handleRead()
     {
         std::string line;
-        while(getline(std::cin,line))
+        if(getline(std::cin,line))
         {
             line+='\n';
-            client_.send(line.c_str(),line.size());
+            if(line=="quit\n")
+            {
+                client_.disconnect();
+                exit(0);
+            }
+            else 
+            {
+              client_.send(line.c_str(),line.size());  
+            }
+            
         }
     }
-    void handleClose(TcpConnectionPtr conn) // 对端关闭时的回调
+    void handleClose(TcpConnectionPtr conn) // 对端主动关闭时的回调
     {
         conn->send("bye\n",4);
         exit(0);

@@ -64,7 +64,7 @@ public:
     bool isInLoopThread();
     void submit(Functor cb);
 private:
-    void wakeup();
+  
     
     void doPendingFunctions();
     
@@ -77,7 +77,7 @@ private:
     Pid_t threadId_;
 
     int status_;
-    EventHandler wakeupHandler_;
+    EventHandler QuitHandler_;
     
 };
 }    

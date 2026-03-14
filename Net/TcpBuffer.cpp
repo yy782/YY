@@ -31,7 +31,7 @@ void TcpBuffer::appendImp(const char* data,size_t size)
 }
 void TcpBuffer::consume(size_t size)
 {
-    move_write_index(size);
+    move_read_index(size);
 }
 char* TcpBuffer::BeginWrite()
 {

@@ -61,14 +61,13 @@ void TcpConnection::send(const char* message,size_t len)
     if(Connstatus_!=ConnectStatus::Connected)return;
     auto loop=handler_.get_loop();
 
-    loop->submit([this,message,len](){
-         char* msg=new char[len];
-        std::copy(message,message+len,msg);
+    char* msg=new char[len];
+    std::copy(message,message+len,msg);
+    loop->submit([this,msg,len](){
+        
         sendInLoop(msg,len);
         delete[] msg;
     });        
-    
-
 }
 void TcpConnection::sendOutput()
 {

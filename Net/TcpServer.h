@@ -41,27 +41,7 @@ public:
     void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallback_=std::move(cb);}
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallback_=std::move(cb);}
 
-    template<class PrecisionTag>
-    void addTime(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count,bool is_persice,bool isHighPrecision=false);
-    template<class PrecisionTag>
-    void addTime(std::shared_ptr<Timer<PrecisionTag>> timer,bool is_persice)
-    {
-        if constexpr (std::is_same_v<PrecisionTag,HighPrecisionTag>)
-        {
-            HTimerQueue_.insert(timer);
-        }
-        else 
-        {
-            if(is_persice)
-            {
-                LTimerQueue_.insert(timer);
-            }
-            else
-            {
-                TimerWheel_.insert(timer);
-            }
-        }
-    }
+
 
 
     void removeConnection(TcpConnectionPtr conn);
@@ -76,9 +56,9 @@ private:
     EventLoopThreadPool threadpool_;
     ConnectMap connects_;
 
-    TimerQueue<LowPrecision> LTimerQueue_;
-    TimerQueue<HighPrecision> HTimerQueue_;
-    TimerWheel TimerWheel_;
+    // TimerQueue<LowPrecision> LTimerQueue_;
+    // TimerQueue<HighPrecision> HTimerQueue_;
+    // TimerWheel TimerWheel_;
 
 
     ServicesConnectCallBack SconnectCallback_;
@@ -86,17 +66,7 @@ private:
     ServicesCloseCallBack ScloseCallback_;
     ServicesErrorCallBack SerrorCallback_;
 }; 
-template<class PrecisionTag>
-void TcpServer::addTime(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count,bool is_persice,bool isHighPrecision)
-{
-    if(is_persice)
-        if(isHighPrecision)
-            HTimerQueue_.insert(std::move(cb),interval,execute_count);
-        else
-            LTimerQueue_.insert(std::move(cb),interval,execute_count);
-    else
-        TimerWheel_.insert(std::move(cb),interval,execute_count);
-}
+
 }    
 }
 

@@ -7,10 +7,7 @@ namespace net
 TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
 loop_(loop),
 acceptor_(std::make_unique<Acceptor>(addr,loop_)),
-threadpool_(threadnum),
-LTimerQueue_(loop_),
-HTimerQueue_(loop_),
-TimerWheel_(loop_)
+threadpool_(threadnum)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 
@@ -43,10 +40,9 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
     EventLoop* loop=threadpool_.getEventLoop();
     conn->getHandler()->init(conn->get_fd(),loop);
     conn->setReading(); // 启用读事件监听
-    SconnectCallback_(conn);
 
 }
-
+    
 void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
     assert(connects_.find(conn)!=connects_.end());

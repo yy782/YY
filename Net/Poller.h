@@ -25,7 +25,7 @@ public:
     
     typedef PollerHandlerList HandlerList;
     
-    TimeStamp<LowPrecision> poll(int timeout,HandlerList& handler)// @param timeout是毫秒为单位
+    void poll(int timeout,HandlerList& handler)// @param timeout是毫秒为单位
     {
         static_assert(has_poll_v<PollerTag>,"成员不存在");
         return static_cast<PollerTag*>(this).poll(timeout,handler);

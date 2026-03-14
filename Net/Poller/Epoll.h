@@ -11,7 +11,7 @@ class Epoll:public Poller<Epoll>
 public:
     Epoll();
     ~Epoll();
-    TimeStamp<LowPrecision> poll(int timeout,HandlerList& event_handlers);
+    void poll(int timeout,HandlerList& event_handlers);
     void add_listen(EventHandler* handler);
     void update_listen(EventHandler* handler);
     void remove_listen(EventHandler* handler);

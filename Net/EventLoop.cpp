@@ -32,20 +32,20 @@ EventLoop::EventLoop():
 poller_(),
 activeHandlers_(),
 status_(EventLoopStatus::Init),
-wakeupHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
+QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
     auto eventCallBack=[this]()->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::readAuto(wakeupHandler_.get_fd(),&one,sizeof one);
+        ssize_t n=sockets::readAuto(QuitHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         
         
         return;
     };
-    wakeupHandler_.setReadCallBack(eventCallBack);
-    wakeupHandler_.setReading();
-    wakeupHandler_.set_name("wakeupHandler");
+    QuitHandler_.setReadCallBack(eventCallBack);
+    QuitHandler_.setReading();
+    QuitHandler_.set_name("wakeupHandler");
 }
 void EventLoop::loop()
 {
@@ -81,18 +81,15 @@ void EventLoop::quit()
     assert(CheckeEventLoopStatus());
     submit([this](){
         status_=EventLoopStatus::Quit;
+        uint64_t one =1;
+        ssize_t n=sockets::writeAuto(QuitHandler_.get_fd(), &one, sizeof one);
+        assert(n==sizeof one);        
     });
 }
 void EventLoop::submit(Functor cb)
 {
     FunctionList_.blockappend(std::move(cb));
-    wakeup();
-}
-void EventLoop::wakeup()
-{
-    uint64_t one =1;
-    ssize_t n=sockets::writeAuto(wakeupHandler_.get_fd(), &one, sizeof one);
-    assert(n==sizeof one);
+    
 }
 void EventLoop::doPendingFunctions()
 {

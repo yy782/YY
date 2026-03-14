@@ -38,23 +38,24 @@ Epoll::~Epoll()
         LOG_ERRNO(errno);
     }
 }
-TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
+void Epoll::poll(int timeout,HandlerList& event_handlers)
 {
+
     auto ready_fds=::epoll_wait(epollfd_,&*events_.begin(),
                     static_cast<int>(events_.size()),timeout);
-    int save_errno=errno;
-    auto timer=TimeStamp<LowPrecision>::now();
+    
     if(ready_fds<0)
     {
-        if((save_errno==EAGAIN)||(save_errno==EWOULDBLOCK))
+        if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK)&&(errno!=EINTR))
+
         {
-            LOG_ERRNO(save_errno);
+            LOG_ERRNO(errno);
         }
-        return timer;
+        return;
     }
     else if(ready_fds==0)
     {
-        return timer;
+        return;
     }                
     else
     {
@@ -81,7 +82,7 @@ TimeStamp<LowPrecision> Epoll::poll(int timeout,HandlerList& event_handlers)
     {
         events_.resize(events_.size()*2);
     }
-    return timer;
+    return;
 }
 void Epoll::add_listen(EventHandler* handler)
 {
