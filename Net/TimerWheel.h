@@ -7,6 +7,7 @@
 #include <assert.h>
 #include "Timer.h"
 #include "EventHandler.h"
+#include <vector>
 namespace yy
 {
 namespace net
@@ -26,7 +27,7 @@ public:
     typedef std::shared_ptr<Node> NodePtr;
     typedef std::weak_ptr<Node> WeakNodePtr;  
     TimerWheel()=delete;
-    TimerWheel(EventLoop* loop);  
+    TimerWheel(EventLoop* loop,int maxSlots,int SI);  
     ~TimerWheel();
     void insert(TimerCallBack cb,LTimer::Time_Interval interval,int execute_count)
     {
@@ -38,10 +39,10 @@ public:
     
 private:
     void ReadTimerfd();
-    static const int MAX_SLOTS=4;
-    static const int SI=10;
+    const int maxSlots_;
+    const int SI_;
     int cur_slot_;
-    NodePtr slots_[MAX_SLOTS];
+    std::vector<NodePtr> slots_;
     EventHandler handler_;
 };
    

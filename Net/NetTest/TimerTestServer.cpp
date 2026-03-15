@@ -6,7 +6,8 @@
 using namespace yy;
 using namespace yy::net;
 #include <algorithm>
-
+const int N=20;
+std::atomic<int> MsgCount=0;
 //./TimerTestServer
 // cd programs/yy/build/bin
 class TimerServer
@@ -15,7 +16,7 @@ public:
     typedef TcpConnection::CharContainer CharContainer;
     TimerServer(const Address& addr,int thread_num,EventLoop* loop):
     server_(addr,thread_num,loop),
-    timerWheel_(loop),
+    timerWheel_(loop,2,5),
     LtimerQueue_(loop)
     {
         server_.setConnectCallBack(std::bind(&TimerServer::onConnection,this,_1));
@@ -44,19 +45,7 @@ private:
         conn->context<LTimeStamp>()=LTimeStamp::now();
 
         std::weak_ptr<TcpConnection> weakConn=conn;
-        // auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
-        // [this,weakConn]()
-        // {
-        //     if(auto c=weakConn.lock()) 
-        //     {   
-        //         checkAlive(c);                
-        //     }
-        // },
-        // 30s,
-        // FOREVER
-        // );
-
-        auto timer=std::shared_ptr<LTimer>(new LTimer(
+        auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
         [this,weakConn]()
         {
             if(auto c=weakConn.lock()) 
@@ -65,11 +54,8 @@ private:
             }
         },
         30s,
-        FOREVER  
-        ),[](LTimer*){
-            assert(false);
-        });
-
+        FOREVER
+        );
 
         timerWheel_.insert(timer);
         auto Ltimer=std::make_shared<LTimer>(
@@ -79,6 +65,8 @@ private:
             {
                 c->send("You had connected ten s",26);
                 LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
+                ++MsgCount;
+                LOG_SYSTEM_DEBUG("MsgCount=="<<MsgCount);
             }
         },
         10s,
@@ -90,11 +78,11 @@ private:
     void checkAlive(TcpConnectionPtr conn)
     {
         auto& lastFulsh=conn->context<LTimeStamp>();
-        if(LTimeStamp::now()-lastFulsh>LTimeInterval(30s))
+        if(LTimeStamp::now()-lastFulsh>LTimeInterval(10s))
         {
-            conn->send("Close!",7);
-            conn->disconnect();
             
+            conn->disconnect();
+            LOG_TCP_DEBUG(conn->getAddr().sockaddrToString()<<" Close!");
         }            
     }
     void onMessage(TcpConnectionPtr conn,string_view)

@@ -28,7 +28,7 @@ handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),l
     }
 
     
-    
+
 }
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::~TimerQueue()
@@ -44,21 +44,19 @@ void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,typename PTimer::Time_Int
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insert(TimerPtr timer)
 {
+
+    LOG_TIME_DEBUG(timers_.size());
+
     assert(timer!=nullptr);
     auto& when=timer->getTimerStamp();
     assert(when>Time_Stamp::now());
-    auto it=timers_.begin();
-    
-    if(it==timers_.end()||when<it->first)
-    {
-        modifyTimerfd(timer);
-    }
 #ifdef NDEBUG    
     timers_.insert(Entry(timer->getTimerStamp(),timer)); 
 #else
    auto result=timers_.insert(Entry(timer->getTimerStamp(),timer)); 
    assert(result.second);
 #endif 
+    modifyTimerfd();
 }
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::cancelTimer(PTimer* timer)
@@ -77,9 +75,7 @@ void TimerQueue<PrecisionTag>::handlerRead()
 {
     ReadTimerfd();
 
-    EXCLUDE_BEFORE_COMPILATION(
-        LOG_TIME_DEBUG("TimerQueue handlerRead");
-    )
+    LOG_TIME_DEBUG("TimerQueue handlerRead");
 
     std::vector<Entry> expired=getDueTasks(Time_Stamp::now());
     std::vector<Entry> NewTasks;
@@ -92,10 +88,10 @@ void TimerQueue<PrecisionTag>::handlerRead()
     
     timers_.insert(NewTasks.begin(),NewTasks.end());
 
-    if(timers_.size()!=0)modifyTimerfd(timers_.begin()->second);
+    modifyTimerfd();
 }
 template<typename PrecisionTag>
-void TimerQueue<PrecisionTag>::modifyTimerfd(const TimerPtr& timer)
+void TimerQueue<PrecisionTag>::modifyTimerfd()
 {
 /*
     struct timespec {
@@ -109,19 +105,29 @@ void TimerQueue<PrecisionTag>::modifyTimerfd(const TimerPtr& timer)
     };        
 */    
     
-    int fd=handler_.get_fd();
-    int ret=sockets::timerfd_settime(fd,0,*timer.get()); 
-    if (ret<0) // 简单的忽略
+    if(timers_.empty())
     {
-        timers_.erase(Entry(timer->getTimerStamp(),timer));
-        modifyTimerfd(timers_.begin()->second);
+        return;
     }
+    else 
+    {
+        auto timer=timers_.begin()->second;
+        int ret=sockets::timerfd_settime(handler_.get_fd(),0,*timer.get()); 
+        if (ret<0) // 简单的忽略
+        {
+            timers_.erase(Entry(timer->getTimerStamp(),timer));
+            modifyTimerfd();
+        }      
+    }
+
 }
 template<typename PrecisionTag>
 std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::getDueTasks(const Time_Stamp& now)
 {
     std::vector<Entry> expired;
     Entry sentry(now,TimerPtr());
+
+
     typename TimerList::iterator end=timers_.upper_bound(sentry);
     assert(end==timers_.end()||now<end->first);
     std::move(timers_.begin(),end,back_inserter(expired));
@@ -140,7 +146,7 @@ void TimerQueue<PrecisionTag>::ReadTimerfd()
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
+        LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
         )
     }
 } 

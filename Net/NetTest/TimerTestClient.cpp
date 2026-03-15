@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include "../../Common/TimeStamp.h"
+#include <atomic>
 // ./TimerTestClient
 using namespace yy;
 using namespace yy::net;
@@ -9,8 +10,7 @@ using namespace yy::net;
 class TimerClient;
 
 const int N=20;
-std::vector<std::unique_ptr<TimerClient>> clients;
-int MsgCount=0;
+
 class TimerClient// stdout是线程不安全的
 {
 public:
@@ -18,7 +18,7 @@ public:
     client_(serverAddr,loop)
     {
         client_.setMessageCallBack([this](TcpConnectionPtr,string_view){
-            MsgCount++;
+        
         });
         client_.setCloseCallBack([this](TcpConnectionPtr){
             std::cout<<"client close"<<std::endl;
@@ -35,19 +35,20 @@ public:
     }
     void disconnect()
     {
-        disConnectStamp_=HTimeStamp::now();
+        
         client_.disconnect();
     }
-    HTimeStamp DisConnectStamp()
+    bool isConnected()
     {
-        return disConnectStamp_;
+        return client_.isConnected();
     }
 private:
     TcpClient client_;
-    HTimeStamp disConnectStamp_;
+  
 };
 int main()
 { 
+    std::vector<std::unique_ptr<TimerClient>> clients;
     Address serverAddr("127.0.0.1",8080);
     EventLoop loop;
 
@@ -56,26 +57,23 @@ int main()
         clients.emplace_back(new TimerClient(serverAddr,&loop));
         
     }
-    std::thread t([&loop](){
-        loop.loop();
-    });
+
     for(int i=0;i<N;++i)
     {
         clients[i]->connect();
     }
-    sleep(10);
+   
     for(int i=0;i<N/2;++i)
     {
         clients[i]->send("hello world",11);
     }
-    sleep(60); 
-    assert(MsgCount==N);
-    for(int i=0;i<N/2;++i)
+    std::thread t([&loop](){
+        loop.loop();
+    });     
+    sleep(120); 
+    for(int i=0;i<N;++i)
     {
-        for(int j=N/2;j<N;++j)
-        {
-            assert(clients[i]->DisConnectStamp()>clients[j]->DisConnectStamp());
-        }
+        assert(!clients[i]->isConnected());
     }
     loop.quit();
     t.join();

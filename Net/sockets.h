@@ -61,13 +61,21 @@ void daemonize();
 }
 
 template<typename T>
-int yy::net::sockets::timerfd_settime(int fd,int flags,const Timer<T>& timer)
+int yy::net::sockets::timerfd_settime(int fd, int flags, const Timer<T>& timer)
 {
-    auto diff_us=timer.getTimeInterval().getTimePeriod().count();
+    // 先确认单位
+    auto duration = timer.getTimeInterval().getTimePeriod();
+    
+    // 转换为纳秒
+    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+    
     struct itimerspec new_ts{};
-    new_ts.it_value.tv_sec=diff_us/1000000;            
-    new_ts.it_value.tv_nsec=(diff_us%1000000)*1000; 
-    return sockets::timerfd_settime(fd,flags,new_ts); 
+    new_ts.it_value.tv_sec = ns / 1000000000;
+    new_ts.it_value.tv_nsec = ns % 1000000000;
+    
+  
+    
+    return sockets::timerfd_settime(fd, flags, new_ts);
 }
 
 #endif

@@ -8,7 +8,7 @@ namespace yy
 {
 namespace net
 {
-typedef TcpConnection::TcpConnectionPtr TcpConnectionPtr; 
+
 typedef TcpConnection::Buffer  Buffer; 
 typedef ::google::protobuf::Message Message;
 typedef ::google::protobuf::Descriptor Descriptor;

@@ -46,7 +46,7 @@ public:
 
 private:
     void ReadTimerfd();
-    void modifyTimerfd(const TimerPtr& timer);
+    void modifyTimerfd();
     std::vector<Entry> getDueTasks(const Time_Stamp& now); 
 
     EventHandler handler_;

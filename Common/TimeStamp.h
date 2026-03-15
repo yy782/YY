@@ -34,8 +34,19 @@ struct ClockTraits<HighPrecision>
     typedef std::chrono::high_resolution_clock Clock;
     typedef std::chrono::microseconds S;
 };
+template<typename PrecisionTag>
+class TimeStamp; 
+template<typename PrecisionTag>
+class TimeInterval;
 
-template<typename PrecisionTag=LowPrecisionTag>
+typedef TimeStamp<LowPrecision> LTimeStamp;
+typedef TimeStamp<HighPrecision> HTimeStamp;
+typedef TimeStamp<LowPrecision> LTimeStamp;
+typedef TimeStamp<HighPrecision> HTimeStamp;
+typedef TimeInterval<LowPrecision> LTimeInterval;
+typedef TimeInterval<HighPrecision> HTimeInterval;
+
+template<typename PrecisionTag>
 class TimeStamp:copyable
 {
 public:    
@@ -73,10 +84,7 @@ private:
     TimePoint time_point_;
 };
 
-typedef TimeStamp<LowPrecision> LTimeStamp;
-typedef TimeStamp<HighPrecision> HTimeStamp;
-
-template<typename PrecisionTag=LowPrecisionTag>
+template<typename PrecisionTag>
 class TimeInterval:copyable
 {
 public:
@@ -90,9 +98,6 @@ public:
     TimeInterval(long times):
     TimeInterval(TimePeriod(times))
     {}
-    // TimeInterval(size_t times):
-    // TimeInterval(TimePeriod(static_cast<long>(times)))
-    // {}    
         template<typename Rep, typename Period>
     TimeInterval(std::chrono::duration<Rep, Period> duration)
         : timePeriod_(std::chrono::duration_cast<TimePeriod>(duration))
@@ -104,10 +109,7 @@ private:
     TimePeriod timePeriod_;    
 };
 
-typedef TimeStamp<LowPrecision> LTimeStamp;
-typedef TimeStamp<HighPrecision> HTimeStamp;
-typedef TimeInterval<LowPrecision> LTimeInterval;
-typedef TimeInterval<HighPrecision> HTimeInterval;
+
 
 
 

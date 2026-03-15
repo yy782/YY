@@ -42,12 +42,14 @@ TcpConnection::~TcpConnection()
     }
     if(Connstatus_!=ConnectStatus::DisConnected)
     {
+       
         disconnect();
     }
 }
 void TcpConnection::disconnect()
 {
-    Connstatus_=ConnectStatus::DisConnected;
+  
+
     if(SendBuffer_.get_readable_size()==0)
     {
         EventLoop* loop=handler_.get_loop();
@@ -185,13 +187,16 @@ void TcpConnection::handleWrite()
 void TcpConnection::handleClose()
 {
 
+    assert(Connstatus_==ConnectStatus::Connected);
     auto loop=handler_.get_loop();
     assert(loop);
     loop->remove_listen(&handler_);
 
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
-    assert(Connstatus_==ConnectStatus::Connected);
+
     Connstatus_=ConnectStatus::DisConnected;
+
+    
 }
 void TcpConnection::handleError()   
 {
