@@ -41,6 +41,8 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
     conn->getHandler()->init(conn->get_fd(),loop);
     conn->setReading(); // 启用读事件监听
 
+    SconnectCallback_(conn);
+
 }
     
 void TcpServer::removeConnection(TcpConnectionPtr conn)

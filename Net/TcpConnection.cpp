@@ -40,6 +40,10 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
+    if(Connstatus_!=ConnectStatus::DisConnected)
+    {
+        disconnect();
+    }
 }
 void TcpConnection::disconnect()
 {
@@ -58,16 +62,16 @@ void TcpConnection::disconnectInLoop()
 }
 void TcpConnection::send(const char* message,size_t len)
 {
+    send(std::string(message,len));       
+}
+void TcpConnection::send(std::string&& message)
+{
     if(Connstatus_!=ConnectStatus::Connected)return;
     auto loop=handler_.get_loop();
-
-    char* msg=new char[len];
-    std::copy(message,message+len,msg);
-    loop->submit([this,msg,len](){
+    loop->submit([this,msg=std::move(message)](){
         
-        sendInLoop(msg,len);
-        delete[] msg;
-    });        
+        sendInLoop(msg.c_str(),msg.size());
+    });     
 }
 void TcpConnection::sendOutput()
 {
@@ -246,7 +250,7 @@ void TcpConnection::updateWaterMark()
 
 }
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
 {
     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
         return;
@@ -255,7 +259,7 @@ void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpCon
 }
 
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
 {
     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {
@@ -268,13 +272,13 @@ void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection
 }
 
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
+void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
 {
     return;
 }
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
         return;
@@ -283,7 +287,7 @@ void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpCon
 }
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {
@@ -296,13 +300,13 @@ void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection
 }
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr)
+void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
 {
     return;
 }
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn)
+void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnectionPtr conn)
 {
     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
     {

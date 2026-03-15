@@ -171,7 +171,14 @@ public:
         module_enabled_.insert(module); 
         return *this;      
     }
-
+    LogFilter& set_module_enabled(const std::string& module)
+    {
+        assert(std::all_of(module.begin(), module.end(),::isupper)&& 
+            "module must be uppercase");
+        
+        module_enabled_.insert(module);
+        return *this;
+    }
     LogFilter& set_module_enabled(std::list<std::string>& modules)
     {
         for (auto& module_name : modules) 

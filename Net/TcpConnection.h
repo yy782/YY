@@ -14,8 +14,8 @@ namespace yy
 {
 namespace net
 {
-
-    
+class TcpConnection;
+typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;    
 class TcpConnection:noncopyable,
                     public std::enable_shared_from_this<TcpConnection>
 {
@@ -23,7 +23,7 @@ public:
     typedef TcpBuffer Buffer;
     
     typedef Buffer::CharContainer CharContainer;
-    typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
+    
     typedef std::function<void(TcpConnectionPtr,string_view)> ServicesMessageCallBack;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
@@ -99,6 +99,7 @@ public:
     
     
     void send(const char* message,size_t len);
+    void send(std::string&& message);
     void sendOutput(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     template<typename T>
     T& context(){ return data_.context<T>();}
@@ -178,34 +179,34 @@ enum class BufferBackpressureStrategy
 
 // 主模板声明（必须有！）
 template<BufferBackpressureStrategy strategy>
-void handleAfterSend(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend(TcpConnectionPtr conn);
 
 // 特化声明
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn);
 
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn);
 
 template<>
-void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnectionPtr conn);
 
 // 主模板声明
 template<BufferBackpressureStrategy strategy>
-void handleAfterRecv(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv(TcpConnectionPtr conn);
 
 // 特化声明
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn);
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn);
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnectionPtr conn);
 
 template<>
-void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnection::TcpConnectionPtr conn);
+void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnectionPtr conn);
 }    
 }
 
