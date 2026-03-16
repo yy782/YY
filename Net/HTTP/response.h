@@ -1,11 +1,12 @@
 #ifndef _YY_NET_HTTPRESPONSE_H_
 #define  _YY_NET_HTTPRESPONSE_H_
-
+#include <memory>
+#include "../TcpConnection.h"
 namespace yy
 {
 namespace net
 {
-
+typedef TcpConnection::Buffer Buffer;
 struct response_header {
     char *key;
     char *value;
@@ -29,9 +30,9 @@ struct http_response {
     int keep_connected;
 };
 
-struct http_response *http_response_new();
+std::shared_ptr<struct http_response> http_response_new();
 
-void http_response_encode_buffer(struct http_response *http_response, struct buffer *buffer);
+void http_response_encode_buffer(std::shared_ptr<struct http_response> http_response,Buffer* buffer);
 }
 }
 #endif

@@ -25,7 +25,8 @@ MODULES = [
     "MEMORY",
     "WARN",
     "EVENT",
-    "DEFAULT",  # 保留默认模块
+    "HTTP",
+    "DEFAULT"  # 保留默认模块
 ]
 context = ""
 context +=f"#ifndef NDEBUG\n"

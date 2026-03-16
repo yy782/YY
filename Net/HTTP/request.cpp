@@ -1,43 +1,83 @@
+#include "request.h"
 
 
+namespace yy 
+{
+namespace net 
+{
 
-#ifndef HTTP_REQUEST_H
-#define HTTP_REQUEST_H
+std::shared_ptr<struct http_request> http_request_new() {
+    auto req=std::make_shared<struct http_request>();
+    
+    req->version = NULL;
+    req->method = NULL;
+    req->url = NULL;
+    req->current_state = REQUEST_STATUS;
+    req->request_headers = NULL;
+    req->request_headers_number = 0;
+    
+    return req;
+}
 
-struct request_header {
-    char *key;
-    char *value;
-};
 
-enum http_request_state {
-    REQUEST_STATUS,     // wait parse state
-    REQUEST_HEADERS,    // wait parse header
-    REQUEST_BODY,       // wait parse body
-    REQUEST_DONE        // parse done
-};
+// 重置请求对象
+void http_request_reset(std::shared_ptr<struct http_request> http_req) {
+    if (http_req == NULL) return;
+    
+    http_req=nullptr;
+    http_req->current_state = REQUEST_STATUS;
+}
 
-struct http_request {
-    char *version;
-    char *method;
-    char *url;
-    enum http_request_state current_state;
-    struct request_header *request_headers;
-    int request_headers_number;
-};
+// 添加请求头
+void http_request_add_header(std::shared_ptr<struct http_request> http_req, char *key, char *value) {
+    if (http_req == NULL || key == NULL || value == NULL) return;
+    
+    // 重新分配头部数组内存
+    struct request_header *new_headers = (struct request_header *)realloc(
+        http_req->request_headers, 
+        (http_req->request_headers_number + 1) * sizeof(struct request_header)
+    );
+    
+    if (new_headers == NULL) return;
+    
+    http_req->request_headers = new_headers;
+    
+    // 复制key和value
+    http_req->request_headers[http_req->request_headers_number].key = strdup(key);
+    http_req->request_headers[http_req->request_headers_number].value = strdup(value);
+    
+    http_req->request_headers_number++;
+}
 
-// init request obj
-struct http_request *http_request_new();
+// 获取请求头
+char *http_request_get_header(struct http_request *http_req, char *key) {
+    if (http_req == NULL || key == NULL) return NULL;
+    
+    for (int i = 0; i < http_req->request_headers_number; i++) {
+        if (strcasecmp(http_req->request_headers[i].key, key) == 0) {
+            return http_req->request_headers[i].value;
+        }
+    }
+    
+    return NULL;
+}
 
-void http_request_clear(struct http_request *http_re);
+// 获取当前请求状态
+enum http_request_state http_request_current_state(struct http_request *http_req) {
+    if (http_req == NULL) return REQUEST_DONE;
+    return http_req->current_state;
+}
 
-void http_request_reset(struct http_request *http_re);
-
-void http_request_add_header(struct http_request *http_re, char *key, char *value);
-
-char *http_request_get_header(struct http_request *http_re, char *key);
-
-enum http_request_state http_request_current_state(struct http_request *http_re);
-
-int http_request_close_connection(struct http_request *http_re);
-
-#endif
+// 检查是否应该关闭连接
+int http_request_close_connection(struct http_request *http_req) {
+    if (http_req == NULL) return 1; // 默认关闭
+    
+    char *connection = http_request_get_header(http_req, "Connection");
+    if (connection != NULL && strcasecmp(connection, "close") == 0) {
+        return 1; // 关闭连接
+    }
+    
+    return 0; // 保持连接
+}
+}
+}

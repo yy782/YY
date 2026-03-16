@@ -1,6 +1,6 @@
 #ifndef _YY_NET_HTTP_REQUEST_H
 #define _YY_NET_HTTP_REQUEST_H
-
+#include <memory>
 struct request_header 
 {
     char *key;
@@ -25,18 +25,19 @@ struct http_request {
 };
 
 // init request obj
-struct http_request *http_request_new();
 
-void http_request_clear(struct http_request *http_re);
+std::shared_ptr<struct http_request> http_request_new();
 
-void http_request_reset(struct http_request *http_re);
 
-void http_request_add_header(struct http_request *http_re, char *key, char *value);
 
-char *http_request_get_header(struct http_request *http_re, char *key);
+void http_request_reset(std::shared_ptr<struct http_request> http_req);
 
-enum http_request_state http_request_current_state(struct http_request *http_re);
+void http_request_add_header(std::shared_ptr<struct http_request> http_req, char *key, char *value);
 
-int http_request_close_connection(struct http_request *http_re);
+char *http_request_get_header(std::shared_ptr<struct http_request> http_req, char *key);
+
+enum http_request_state http_request_current_state(std::shared_ptr<struct http_request> http_req);
+
+int http_request_close_connection(std::shared_ptr<struct http_request> http_req);
 
 #endif

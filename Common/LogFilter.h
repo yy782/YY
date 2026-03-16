@@ -127,6 +127,8 @@ struct LogModule
     static inline const std::string MEMORY = "MEMORY";
     static inline const std::string EVENT = "EVENT";
     static inline const std::string WARN = "WARN";
+   
+    static inline const std::string HTTP = "HTTP";
     static inline const std::string DEFAULT = "DEFAULT";
 };
 
