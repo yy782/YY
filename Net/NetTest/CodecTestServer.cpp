@@ -16,15 +16,11 @@
 #include "../net.h"
 #include "../../Common/SyncLog.h"
 #include "../ConfigCenter.h"
-
-
+#include "../HTTP/http.h"
+#include "../Codec.h"
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::sockets;
-
-
-
-
 class EchoServer
 {
 public:
@@ -57,6 +53,7 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
+        
     }
     void onMessage(TcpConnectionPtr conn)
     {

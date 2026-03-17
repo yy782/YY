@@ -3,197 +3,414 @@
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::Http;
-int http_request(const char* buf,char* send,int n);//对外开放的唯一API,buf为客户数据，send是要发送的数据，n是send的数组大小
 
-static HttpRequest::Method get_method(const char* method);//将method转换成枚举类型
-static Version get_version(const char* version);//将version转换成枚举类型
-static const char* get_url(const char* url);//获取url
-static Connection get_conn(const char* conn);////将Connection转换成枚举类型
-static int parse_http_request(const char* buf,HttpRequest* req);//解析http请求,填充req结构体
 
-static void handle_http_route(HttpRequest& req,HttpResponse& res);//根据HTTP请求，处理回应的HTTP回应
-static void handle_index(HttpRequest& req,HttpResponse& res);//处理函数
-static void handle_login(HttpRequest& req,HttpResponse& res);//处理函数
-
-static const char* set_version(Version v);
-static const char* set_status(HttpResponse::Status s);
-static const char* set_conn(Connection c);
-static const char* set_len(int len);
-static const char* http_msg(HttpResponse& res,size_t n);//将res结构体数据转换为字符串，返回HTTP回应的字符串
-
-int http_request(const char* buf,char* send,int n){
-    HttpRequest q{};
-    int a=parse_http_request(buf,&q);
-    if(a==-1){
-        LOG_HTTP_DEBUG("[HTTP] HTTP不支持");
-        return a;
-    }
-    HttpResponse p{};
-    handle_http_route(q,p);
-    const char* msg=http_msg(p,n);
-    //LOG_HTTP_DEBUG("[HTTP] msg\n"<<msg);
-    strcpy(send, msg);
-    return strlen(send);
-}
-static HttpRequest::Method get_method(const char* method){//哈希表默认按 指针地址 哈希，而不是按 字符串内容 哈希，所以find()方法无效
-    static std::unordered_map<std::string,HttpRequest::Method> m={
-        {"GET",HttpRequest::Method::GET},
-        {"POST",HttpRequest::Method::POST},
-        {"PUT",HttpRequest::Method::PUT}
-    };
-    auto iter = m.find(std::string(method));
-    return iter != m.end() ? iter->second : HttpRequest::Method::UNKNOWN; 
+HttpMsg::HttpMsg() : complete_(false), contentLen_(0), scanned_(0) {
+    clear();
 }
 
-static Version get_version(const char* version){
-    static std::unordered_map<std::string,Version> m={
-      {"HTTP/1.0",Version::HTTP_1_0},
-      {"HTTP/1.1",Version::HTTP_1_1}  
-    };
-    auto iter = m.find(std::string(version));
-    return iter != m.end() ? iter->second : Version::UNKNOWN;    
+void HttpMsg::clear() {
+    headers_.clear();
+    version_ = "HTTP/1.1";
+    body_.clear();              // 修正：加下划线
+    bodyView_ = string_view();  // 修正：加下划线
+    complete_ = false;
+    contentLen_ = 0;
+    scanned_ = 0;
 }
 
-static const char* get_url(const char* url){
-    return url;
+std::string HttpMsg::getHeader(const std::string& name) {
+    auto it = headers_.find(name);
+    return it != headers_.end() ? it->second : "";
 }
 
-static Connection get_conn(const char* conn){
-    static std::unordered_map<std::string,Connection> m={
-        {"keep-alive",Connection::keep_alive},
-        {"close",Connection::close}
-    };
-    auto iter = m.find(std::string(conn));
-    return iter != m.end() ? iter->second : Connection::UNKNOWN;    
+string_view HttpMsg::getBody() {
+    return bodyView_.size() ? bodyView_ : string_view(body_);  // 修正：加下划线
 }
 
-static int parse_http_request(const char* buf, HttpRequest* req) {
-    if (buf==nullptr||req==nullptr) {
-        return -1;
-    }
-    char* saveptr=const_cast<char*>(buf);
-    char* method=strtok_r(const_cast<char*>(buf)," ",&saveptr);
-    if(!method){
-        return -1;
-    }
-    char* url=strtok_r(nullptr, " ",&saveptr);
-    if(!url){
-        return -1;
+size_t HttpMsg::getByte() const { return scanned_; }
+
+ParseResult HttpMsg::tryDecode_(string_view buf, bool copyBody, string_view* line1) {
+    if (complete_) {
+        return ParseResult::Complete;
     }
     
-    char* version=strtok_r(nullptr,"\r\n",&saveptr);
-    if(!version){
-        return -1;
-    }
-
-    req->method=get_method(method);
-    req->version=get_version(version);
-    req->url=get_url(url);
-
-    char* line=nullptr;
-    while((line=strtok_r(nullptr,"\r\n",&saveptr))!=nullptr) {
-        if(strlen(line)==0){
-            break;
+    // 解析头部
+    if (!contentLen_) {
+        const char* p = buf.data();
+        string_view headerSlice;
+        
+        // 查找头部结束标记 \r\n\r\n
+        while (buf.size() >= scanned_ + 4) {
+            if (p[scanned_] == '\r' && memcmp(p + scanned_, "\r\n\r\n", 4) == 0) {
+                headerSlice = string_view(p, p + scanned_);
+                break;
+            }
+            scanned_++;
         }
-        char* saveline=line;
-        char* key=strtok_r(line,":",&saveline);
-        if(!key)continue;
-        while(*saveline==' ')++saveline;
-        char* value=saveline;
-        if(!value)continue;
-        if(strcmp(key, "Host")==0){
-            LOG_HTTP_DEBUG("[HTTP] Host "<<value);
-            req->host=value;
-        }else if(strcmp(key,"Content-Length")==0){
-            LOG_HTTP_DEBUG("[HTTP] Content-Length "<<value);
-            req->content_length=atoi(value);
-        } else if(strcmp(key,"Connection")==0){
-            LOG_HTTP_DEBUG("[HTTP] Connection "<<value);
-            req->conn=get_conn(value);
+        
+        if (headerSlice.empty()) {
+            return ParseResult::NotComplete;
+        }
+        
+        // 解析请求行
+        *line1 = headerSlice.eatLine();
+        
+        // 解析头部字段
+        while (headerSlice.size()) {
+            headerSlice.eat(2);  // 跳过 \r\n
+            string_view line = headerSlice.eatLine();
+            string_view key = line.eatWord();
+            line.trimSpace();
+            
+            if (key.size() && line.size() && key.data()[key.size()-1] == ':') {
+                // 将key转为小写
+                std::string keyStr = key.sub(0, -1).toString();
+                for (char& c : keyStr) {
+                    c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+                }
+                headers_[keyStr] = line.toString();  // 修正：headers_ 加下划线
+            } else if (key.empty() && line.empty() && headerSlice.empty()) {
+                break;
+            } else {
+                LOG_HTTP_DEBUG("[HTTP] 格式错误");
+                return ParseResult::Error;
+            }
+        }
+        
+        scanned_ += 4;  // 跳过 \r\n\r\n
+        std::string contentLenStr = getHeader("content-length");
+        contentLen_ = contentLenStr.empty() ? 0 : static_cast<size_t>(atoll(contentLenStr.c_str()));
+        
+        // 检查是否需要100-continue
+        if (buf.size() < contentLen_ + scanned_ && !getHeader("expect").empty()) {
+            return ParseResult::Continue100;
         }
     }
-    req->body=saveptr?saveptr:nullptr;
-    return 1;
+    
+    // 解析body
+    if (!complete_ && buf.size() >= contentLen_ + scanned_) {
+        if (copyBody) {
+            body_.assign(buf.data() + scanned_, contentLen_);  // 修正：body_ 加下划线
+        } else {
+            bodyView_ = string_view(buf.data() + scanned_, contentLen_);  // 修正：bodyView_ 加下划线
+        }
+        complete_ = true;
+        scanned_ += contentLen_;
+    }
+    
+    return complete_ ? ParseResult::Complete : ParseResult::NotComplete;
 }
 
-static void handle_http_route(HttpRequest& req,HttpResponse& res){
-    static const HttpRoute route_table[]={
-        {"/",HttpRequest::Method::GET,handle_index},
-        {"/login",HttpRequest::Method::POST,handle_login}
+// ==================== HttpRequest 实现 ====================
+
+HttpRequest::HttpRequest() : method_(Method::UNKNOWN) {
+    clear();
+}
+
+std::string HttpRequest::getArg(const std::string& name) {
+    auto it = args_.find(name);
+    return it != args_.end() ? it->second : "";
+}
+
+int HttpRequest::encode(std::string& buf) {
+    size_t oldSize = buf.size();
+    char tmp[4096];
+    
+    // 请求行
+    snprintf(tmp, sizeof(tmp), "%s %s %s\r\n", 
+             methodToString(method_).c_str(), 
+             queryUrl_.empty() ? url_.c_str() : queryUrl_.c_str(),      
+             version_.c_str());
+    buf += tmp;
+    
+    // 头部
+    for (auto& h : headers_) {
+        buf += h.first + ": " + h.second + "\r\n";
+    }
+    
+    // 自动添加必要的头部
+    buf += "Connection: Keep-Alive\r\n";
+    snprintf(tmp, sizeof(tmp), "Content-Length: %zu\r\n", getBody().size());
+    buf += tmp;
+    buf += "\r\n";
+    
+    // body
+    string_view bodyView = getBody();
+    buf.append(bodyView.data(), bodyView.size());
+    
+    return static_cast<int>(buf.size() - oldSize);
+}
+
+ParseResult HttpRequest::tryDecode(string_view buf, bool copyBody) {
+    string_view line1;
+    ParseResult r = tryDecode_(buf, copyBody, &line1);
+    
+    if (line1.size()) {
+        string_view methodSlice = line1.eatWord();
+        string_view urlSlice = line1.eatWord();
+        string_view verSlice = line1.eatWord();
+        
+        method_ = stringToMethod(methodSlice.toString());
+        queryUrl_ = urlSlice.toString();
+        version_ = verSlice.toString();
+        
+        // 解析URL中的参数
+        parseUrlParams();
+    }
+    
+    return r;
+}
+
+void HttpRequest::clear() {
+    HttpMsg::clear();
+    method_ = Method::UNKNOWN;
+    url_.clear();
+    queryUrl_.clear();
+    args_.clear();
+}
+
+std::string HttpRequest::methodToString(Method m) {
+    static std::map<Method, std::string> m2s = {
+        {Method::GET, "GET"},
+        {Method::POST, "POST"},
+        {Method::PUT, "PUT"},
+        {Method::DELETE, "DELETE"},
+        {Method::HEAD, "HEAD"}
     };
-    static const int route_table_size=sizeof(route_table)/sizeof(HttpRoute);
-    for(int i=0;i<route_table_size;++i){
-        const HttpRoute& rt=route_table[i];
-        if(strcmp(req.url,rt.url)==0&&req.method==rt.method){
-            rt.handler(req,res);
+    auto it = m2s.find(m);
+    return it != m2s.end() ? it->second : "UNKNOWN";
+}
+
+HttpRequest::Method HttpRequest::stringToMethod(const std::string& s) {
+    static std::map<std::string, Method> s2m = {
+        {"GET", Method::GET},
+        {"POST", Method::POST},
+        {"PUT", Method::PUT},
+        {"DELETE", Method::DELETE},
+        {"HEAD", Method::HEAD}
+    };
+    auto it = s2m.find(s);
+    return it != s2m.end() ? it->second : Method::UNKNOWN;
+}
+
+void HttpRequest::parseUrlParams() {
+    size_t pos = queryUrl_.find('?');
+    if (pos != std::string::npos) {
+        url_ = queryUrl_.substr(0, pos);
+        std::string query = queryUrl_.substr(pos + 1);
+        
+        size_t start = 0;
+        while (start < query.size()) {
+            size_t eq = query.find('=', start);
+            if (eq == std::string::npos) break;
+            
+            size_t and_ = query.find('&', eq + 1);
+            if (and_ == std::string::npos) and_ = query.size();
+            
+            std::string key = query.substr(start, eq - start);
+            std::string value = query.substr(eq + 1, and_ - eq - 1);
+            args_[key] = value;
+            
+            start = and_ + 1;
+        }
+    } else {
+        url_ = queryUrl_;
+    }
+}
+
+// ==================== HttpResponse 实现 ====================
+
+HttpResponse::HttpResponse() : status_(Status::OK), statusMsg_("OK") {  
+    clear();
+}
+
+void HttpResponse::setStatus(Status st, const std::string& msg) {
+    status_ = st;
+    statusMsg_ = msg.empty() ? statusToString(st) : msg;
+}
+
+void HttpResponse::setNotFound() {
+    setStatus(Status::NOT_FOUND, "Not Found");
+    body_ = "404 Not Found";
+}
+
+int HttpResponse::encode(std::string& buf) {
+    size_t oldSize = buf.size();
+    char tmp[4096];
+    
+    // 状态行
+    snprintf(tmp, sizeof(tmp), "%s %d %s\r\n", 
+             version_.c_str(), static_cast<int>(status_), statusMsg_.c_str());
+    buf += tmp;
+    
+    // 头部
+    for (auto& h : headers_) {
+        buf += h.first + ": " + h.second + "\r\n";
+    }
+    
+    // 自动添加必要的头部
+    buf += "Connection: Keep-Alive\r\n";
+    snprintf(tmp, sizeof(tmp), "Content-Length: %zu\r\n", getBody().size());
+    buf += tmp;
+    buf += "\r\n";
+    
+    // body
+    string_view bodyView = getBody();
+    buf.append(bodyView.data(), bodyView.size());
+    
+    return static_cast<int>(buf.size() - oldSize);
+}
+
+ParseResult HttpResponse::tryDecode(string_view buf, bool copyBody) {
+    string_view line1;
+    ParseResult r = tryDecode_(buf, copyBody, &line1);
+    
+    if (line1.size()) {
+        version_ = line1.eatWord().toString();
+        status_ = static_cast<Status>(atoi(line1.eatWord().data()));
+        statusMsg_ = line1.trimSpace().toString();
+    }
+    
+    return r;
+}
+
+void HttpResponse::clear() {
+    HttpMsg::clear();
+    status_ = Status::OK;
+    statusMsg_ = "OK";
+}
+
+std::string HttpResponse::statusToString(Status s) {
+    static std::map<Status, std::string> s2s = {
+        {Status::OK, "OK"},
+        {Status::BAD_REQUEST, "Bad Request"},
+        {Status::NOT_FOUND, "Not Found"},
+        {Status::INTERNAL_ERROR, "Internal Server Error"}
+    };
+    auto it = s2s.find(s);
+    return it != s2s.end() ? it->second : "Unknown";
+}
+
+// ==================== HttpParser 实现 ====================
+
+HttpParser::HttpParser() : parseState_(ParseState::REQUEST_LINE) {}
+
+ParseResult HttpParser::parseRequest(const char* data, size_t len, bool copyBody) {
+    inputBuffer_.append(data, len);
+    ParseResult r = req_.tryDecode(string_view(inputBuffer_), copyBody);
+    
+    if (r == ParseResult::Complete) {
+        inputBuffer_.erase(0, req_.getByte());
+    } else if (r == ParseResult::Error) {
+        inputBuffer_.clear();
+    }
+    
+    return r;
+}
+
+std::string HttpParser::buildResponse(HttpResponse& resp) {
+    std::string buf;
+    resp.encode(buf);
+    return buf;
+}
+
+HttpRequest& HttpParser::getRequest() { return req_; }
+
+HttpResponse& HttpParser::getResponse() { return resp_; }
+
+void HttpParser::clear() {
+    req_.clear();
+    resp_.clear();
+    inputBuffer_.clear();
+    parseState_ = ParseState::REQUEST_LINE;
+}
+
+
+
+
+
+HttpRouter::HttpRouter() : defaultHandler_(defaultNotFoundHandler) {}
+
+void HttpRouter::route(const std::string& url, HttpRequest::Method method, HttpHandler handler) {
+    if (!handler) {
+        LOG_HTTP_DEBUG("[Router] 注册路由失败：handler为空");
+        return;
+    }
+    
+    // 检查是否已存在相同路由，如果存在则更新
+    for (auto& entry : routes_) {
+        if (entry.url_ == url && entry.method_ == method) {
+            LOG_HTTP_DEBUG("[Router] 更新路由: " << 
+                          HttpRequest::methodToString(method).c_str() << " " << url.c_str());
+            entry.handler_ = handler;
             return;
         }
     }
-    LOG_HTTP_DEBUG("[HTTP] 404 NOT FOUND");
+    
+    // 添加新路由 - 修正：使用参数 url 和 method，而不是成员变量
+    LOG_HTTP_DEBUG("[Router] 注册路由: " << 
+                   HttpRequest::methodToString(method).c_str() << " " << url.c_str());
+    routes_.push_back({url, method, handler});  // 修正：使用参数
 }
 
-static void handle_index(HttpRequest& req,HttpResponse& res){
-    res.conn=req.conn;
-    res.version=req.version;
-    res.body="Hello HTTP World";
-    res.status=HttpResponse::Status::OK;
-    res.content_length=strlen(res.body);
+void HttpRouter::get(const std::string& url, HttpHandler handler) {
+    route(url, HttpRequest::Method::GET, handler);
 }
 
-static void handle_login(HttpRequest& req,HttpResponse& res){
-    res.conn=req.conn;
-    res.version=req.version;
-    res.body="该功能未开放";
-    res.status=HttpResponse::Status::OK;
-    res.content_length=strlen(res.body);
+void HttpRouter::post(const std::string& url, HttpHandler handler) {
+    route(url, HttpRequest::Method::POST, handler);
 }
 
-static const char* set_version(Version v){
-    static std::unordered_map<Version,std::string> m={
-        {Version::HTTP_1_0,"HTTP/1.0"},
-        {Version::HTTP_1_1,"HTTP/1.1"}
-    };
-    auto iter=m.find(v);
-    return iter!=m.end()?iter->second.data():"UNKNOWN";
+void HttpRouter::put(const std::string& url, HttpHandler handler) {
+    route(url, HttpRequest::Method::PUT, handler);
 }
-static const char* set_status(HttpResponse::Status s){
-    static std::unordered_map<HttpResponse::Status,std::string> m={
-        {HttpResponse::Status::OK,"200 OK"},
-        {HttpResponse::Status::NOT_FOUND,"404 NOT_FOUND"}
-    };
-    auto iter=m.find(s);
-    return iter!=m.end()?iter->second.data():"UNKNOWN";    
+
+void HttpRouter::del(const std::string& url, HttpHandler handler) {
+    route(url, HttpRequest::Method::DELETE, handler);
 }
-static const char* set_conn(Connection c){
-    static std::unordered_map<Connection,std::string> m={
-        {Connection::keep_alive,"Conntecion: keep-alive"},
-        {Connection::close,"Conntecion: close"}
-    };
-    auto iter=m.find(c);
-    return iter!=m.end()?iter->second.data():"UNKNOWN";   
+
+void HttpRouter::head(const std::string& url, HttpHandler handler) {
+    route(url, HttpRequest::Method::HEAD, handler);
 }
-static const char* set_len(int len){
-    static std::string str;//static 解决局部变量销毁的野指针问题
-    str="Content-Length: "+std::to_string(len);
-    return str.data();
+
+void HttpRouter::setDefaultHandler(HttpHandler handler) {
+    if (handler) {
+        defaultHandler_ = handler;
+        LOG_HTTP_DEBUG("[Router] 设置默认处理器");
+    }
 }
-static const char* http_msg(HttpResponse& res,size_t n){
-    static std::string resp;
-    resp.clear();
-    const char* version=set_version(res.version);
-    const char* status=set_status(res.status);
-    const char* conn=set_conn(res.conn);
-    const char* len=set_len(res.content_length);
-    if(strlen(version)+strlen(status)+strlen(conn)+strlen(len)+strlen(res.body)>n)return "缓冲区不足";
-    resp+=version;
-    resp+=" ";
-    resp+=status;
-    resp+="\r\n";
-    resp+=conn;
-    resp+="\r\n";
-    resp+=len;
-    resp+="\r\n";
-    resp+="\r\n";
-    resp+=res.body;
-    return resp.c_str();
+
+bool HttpRouter::routeRequest(HttpRequest& req, HttpResponse& resp) const {
+    // 查找精确匹配的路由
+    for (const auto& entry : routes_) {
+        if (entry.url_ == req.url_ && entry.method_ == req.method_) {
+            LOG_HTTP_DEBUG("[Router] 匹配路由: " << 
+                          HttpRequest::methodToString(req.method_).c_str() << " " << req.url_.c_str());
+            entry.handler_(req, resp);
+            return true;
+        }
+    }
+    
+    // 未找到路由，使用默认处理器
+    defaultHandler_(req, resp);
+    return false;
+}
+
+void HttpRouter::clear() {
+    routes_.clear();
+    LOG_HTTP_DEBUG("[Router] 清空所有路由");
+}
+
+size_t HttpRouter::size() const {
+    return routes_.size();
+}
+
+void HttpRouter::defaultNotFoundHandler(HttpRequest& req, HttpResponse& resp) {
+    LOG_HTTP_DEBUG("[Router] 404 Not Found: " << 
+                   HttpRequest::methodToString(req.method_).c_str() << " " << 
+                   req.url_.c_str());
+    resp.setStatus(HttpResponse::Status::NOT_FOUND, "Not Found");
+    resp.body_ = "404 Not Found";
+    resp.headers_["Content-Type"] = "text/plain";  // 修正：headers_ 加下划线
 }
