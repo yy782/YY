@@ -7,7 +7,7 @@
 #include <memory>
 using namespace yy;
 using namespace yy::net;
-
+//./ProtoBufTest
 // 客户端类
 class MyClient {
 public:
@@ -15,8 +15,12 @@ public:
         : client_(addr,loop)
     {
         
-        client_.setMessageCallBack([this](TcpConnectionPtr conn,string_view){
+        client_.setMessageCallBack([this](TcpConnectionPtr conn){
             onMessage(conn);
+        });
+        client_.setCloseCallBack([this,loop](TcpConnectionPtr){
+            loop->quit();
+            exit(0);
         });
     }
     
@@ -46,15 +50,15 @@ private:
         TcpBuffer& buf = conn->getRecvBuffer();
         while (ProtoMsgCodec::msgComplete(buf)) 
         {
-            Message* msg = ProtoMsgCodec::decode(buf);
+            auto msg =std::unique_ptr<Message>(ProtoMsgCodec::decode(buf));
+            
             if (msg) {
                 if (msg->GetDescriptor() == demo::StudentResponse::descriptor()) {
                     demo::StudentResponse* resp = 
-                        dynamic_cast<demo::StudentResponse*>(msg);
+                        dynamic_cast<demo::StudentResponse*>(msg.get());
                     std::cout << "客户端收到服务器响应: " 
                               << resp->message() << std::endl;
                 }
-                delete msg;
             }
         }
     }

@@ -106,7 +106,7 @@ public:
 
     // 消费已解析的数据
     void consume() {
-        buffer_->retrieve(position_);
+        buffer_->consume(position_);
     }
 
 private:

@@ -42,14 +42,13 @@ public:
         TcpBuffer& buffer=conn->getRecvBuffer();
         string_view msg;
 
-        const char* last=buffer.findBorder("\n",1);
-        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+        int p=LineCodec::tryDecode(buffer.getReadView(),msg);
+        if(p<=0)
         {
             return;
         }
-        msg=string_view(buffer.peek(),last);
-           
         
+
         std::cout<<"recv:"<<msg.data()<<std::endl;
         buffer.consume(msg.size()+1); 
 
@@ -67,9 +66,9 @@ public:
             else 
             {
 
-                line+="\n";
-                client_.send(line.c_str(),line.size());  
-              
+                LineCodec::encode(string_view(line),client_.getSendBuffer());
+                client_.sendOutput();
+ 
               
             }
             

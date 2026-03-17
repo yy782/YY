@@ -13,14 +13,19 @@
 #include <algorithm>
 #include <thread>
 #include <vector>
-#include "../net.h"
+#include "../TcpServer.h"
+#include "../Codec.h"
 #include "../../Common/SyncLog.h"
 #include "../ConfigCenter.h"
-#include "../HTTP/http.h"
-#include "../Codec.h"
+#include "../../Common/AsyncLog.h"
+#include "../../Common/SyncLog.h"
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::sockets;
+
+
+
+
 class EchoServer
 {
 public:
@@ -53,18 +58,17 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
-        
     }
     void onMessage(TcpConnectionPtr conn)
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-
-        const char* last=buffer.findBorder("\n");
-        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
-        {
-            return;
-        }
-        string_view msg(buffer.peek(),last - buffer.peek());
+        string_view msg;
+ 
+        int p=LineCodec::tryDecode(buffer.getReadView(),msg);
+        if(p<=0)return;
+ 
+ 
+   
         if(msg=="bye") // @note 
         {
             return;
@@ -73,7 +77,7 @@ private:
         conn->send(msg.data(),msg.size());
         LOG_SYSTEM_INFO("recv msg: "<<msg.data());
         // 消费掉缓冲区中的数据
-        buffer.consume(last - buffer.peek() + 1); // +1 是为了包含\n
+        buffer.consume(msg.size()+ 1); // +1 是为了包含\n
     }
     void onClose(TcpConnectionPtr conn)
     {
@@ -100,7 +104,8 @@ int main()
     std::string host=config.get("server","host");
     int port=static_cast<int>(config.getInteger("server","port"));
     int thread_nums=static_cast<int>(config.getInteger("server","threadnums"));
-    
+
+
     bool isAsync=config.getBoolean("log","isAsync");
     std::string logLevel=config.get("log","logLevel");
     std::string logPath=config.get("log","logPath");

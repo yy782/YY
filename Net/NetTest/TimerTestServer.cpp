@@ -20,7 +20,7 @@ public:
     LtimerQueue_(loop)
     {
         server_.setConnectCallBack(std::bind(&TimerServer::onConnection,this,_1));
-        server_.setMessageCallBack(std::bind(&TimerServer::onMessage,this,_1,_2));
+        server_.setMessageCallBack(std::bind(&TimerServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&TimerServer::onClose,this,_1));
     }
     void start()
@@ -85,7 +85,7 @@ private:
             LOG_TCP_DEBUG(conn->getAddr().sockaddrToString()<<" Close!");
         }            
     }
-    void onMessage(TcpConnectionPtr conn,string_view)
+    void onMessage(TcpConnectionPtr conn)
     {
         conn->context<LTimeStamp>()=LTimeStamp::now();
 

@@ -116,6 +116,7 @@ void ProtoMsgDispatcher::handle(TcpConnectionPtr con,Message* msg) {
     auto p=protocbs_.find(msg->GetDescriptor());
     if(p!=protocbs_.end()) 
     {
+        assert(p->second);
         p->second(con, msg);
     } 
     else 

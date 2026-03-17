@@ -29,6 +29,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     void append(const char* data,size_t size);
     template<typename T>
     TcpBuffer& FluentAppend(T&& value);
+    TcpBuffer& FluentAppend(const char* data,size_t size);
     void consume(size_t size);
     char* BeginWrite();
     char* retrieve(size_t size);
@@ -36,6 +37,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     
     std::string retrieveAllToString();
     const char* peek()const {return begin()+read_index_;}
+    string_view getReadView()const{return string_view(peek(),get_readable_size()+1);}
     char* ModifyData(){return begin()+read_index_;}
 
     void shrink(size_t reserve);
@@ -108,18 +110,20 @@ private:
 template<typename T>
 void TcpBuffer::append(T&& value)
 {
-    appendImp(reinterpret_cast<const char*>(&value), sizeof(T));
-}
-template<typename T>
-TcpBuffer& TcpBuffer::FluentAppend(T&& value)
-{
-    static_assert(!std::is_same_v<T,size_t>);
-    if constexpr(std::is_same_v<T,string_view>)
+    using DecayedT = std::decay_t<T>;
+    static_assert(!std::is_same_v<DecayedT,std::string>);
+    if constexpr(std::is_same_v<DecayedT,string_view>)
     {
         appendImp(value.data(),value.size());
     }
     else
         appendImp(reinterpret_cast<const char*>(&value), sizeof(T));
+    
+}
+template<typename T>
+TcpBuffer& TcpBuffer::FluentAppend(T&& value)
+{
+    append(std::forward<T>(value));
     return *this;
 }
 }

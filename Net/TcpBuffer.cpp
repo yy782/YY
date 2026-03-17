@@ -23,6 +23,11 @@ void TcpBuffer::append(const char* data,size_t size)
 {
     appendImp(data,size);
 }
+TcpBuffer& TcpBuffer::FluentAppend(const char* data,size_t size)
+{
+    appendImp(data,size);
+    return *this;
+}
 void TcpBuffer::appendImp(const char* data,size_t size)
 {
     ensure_appendable(size);

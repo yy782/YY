@@ -6,15 +6,14 @@ namespace yy
 {
 namespace net
 {
-
-TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
-addr_(addr),
-fd_(fd),
-
-Connstatus_(ConnectStatus::DisConnected),
-handler_(fd,loop)
+TcpConnection::TcpConnection():
+Connstatus_(ConnectStatus::Connecting)
 {
-
+    
+}
+void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
+{
+    handler_.init(fd,loop);
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
     handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
@@ -24,7 +23,7 @@ handler_(fd,loop)
 TcpConnection::TcpConnection(int fd,const Address& addr):
 addr_(addr),
 fd_(fd),
-Connstatus_(ConnectStatus::DisConnected),
+Connstatus_(ConnectStatus::Connecting),
 handler_() // 监听的loop不确定，延迟初始化
 {
 
@@ -40,11 +39,7 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
-    if(Connstatus_!=ConnectStatus::DisConnected)
-    {
-       
-        disconnect();
-    }
+    disconnect();
 }
 void TcpConnection::disconnect()
 {
@@ -60,7 +55,11 @@ void TcpConnection::disconnect()
 }  
 void TcpConnection::disconnectInLoop()
 {
-    sockets::shutdown(handler_.get_fd(),SHUT_WR);   
+    if(Connstatus_==ConnectStatus::Connected)
+    {
+        Connstatus_=ConnectStatus::DisConnecting;
+        sockets::shutdown(handler_.get_fd(),SHUT_WR);         
+    }
 }
 void TcpConnection::send(const char* message,size_t len)
 {
@@ -85,32 +84,21 @@ void TcpConnection::sendOutput()
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
 
-    if(codec_)
+    ssize_t n=sockets::sendAuto(handler_.get_fd(),message,len,0);
+    if(n>=0&&n<static_cast<ssize_t>(len))
     {
-        codec_->encode(string_view(message,len),SendBuffer_);
+        SendBuffer_.append(message+n,len-n);
         if(!handler_.isWriting())
         {
             handler_.setWriting();
             
         }
     }
-    else 
+    else if(n<0)
     {
-        ssize_t n=sockets::sendAuto(handler_.get_fd(),message,len,0);
-        if(n>=0&&n<static_cast<ssize_t>(len))
-        {
-            SendBuffer_.append(message+n,len-n);
-            if(!handler_.isWriting())
-            {
-                handler_.setWriting();
-                
-            }
-        }
-        else if(n<0)
-        {
-            handleError();
-        }         
-    }
+        handleError();
+    }         
+    
 
 }
 void TcpConnection::handleRead()
@@ -122,24 +110,8 @@ void TcpConnection::handleRead()
     {
         RecvBuffer_.hasWritten(n);
         updateWaterMark();
-        string_view data(string_view(RecvBuffer_.peek(),RecvBuffer_.get_readable_size()));
-        string_view msg;
-        if(codec_)
-        {
-            int ret=codec_->tryDecode(data,msg);
-            if(ret>0)
-            {
-                SmessageCallBack_(shared_from_this(),msg);
-            }
-            else if(ret<0)
-            {
-                handleError();
-            }
-        }
-        else 
-        {
-          SmessageCallBack_(shared_from_this(),data);  
-        }
+        SmessageCallBack_(shared_from_this());  
+        
         handleBackpressureAfterRead();
     }  
     else if(n==0)
@@ -153,41 +125,44 @@ void TcpConnection::handleRead()
 }
 void TcpConnection::handleWrite()
 {
-    ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
-    auto fd=handler_.get_fd();
-    ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
-    if(n>0)
+    if(Connstatus_==ConnectStatus::Connecting)
     {
-        if(n==len)
-        {
-            if(Connstatus_==ConnectStatus::DisConnected)
-            {
-                sockets::shutdown(fd,SHUT_WR);
-            }
-        }
-        else 
-        {
-            if(handler_.isWriting())
-            {
-                handler_.cancelWriting();
-                
-            }
-            
-        }
-        SendBuffer_.hasWritten(n);
-        updateWaterMark();
-        handleBackpressureAfterSend();
+        Connstatus_=ConnectStatus::Connected;
     }
     else 
     {
-        handleError();
+        ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
+        auto fd=handler_.get_fd();
+        ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
+        if(n>0)
+        {
+            if(n==len)
+            {
+                if(Connstatus_==ConnectStatus::DisConnected)
+                {
+                    sockets::shutdown(fd,SHUT_WR);
+                }
+                if(handler_.isWriting())
+                {
+                    handler_.cancelWriting();
+                }
+            }
+            SendBuffer_.consume(n);
+            updateWaterMark();
+            handleBackpressureAfterSend();            
+        }
+        else 
+        {
+            handleError();
+        }        
     }
-    if(SwriteCompleteCallBack_)SwriteCompleteCallBack_(shared_from_this());
+
+
 }
 void TcpConnection::handleClose()
 {
 
-    assert(Connstatus_==ConnectStatus::Connected);
+    assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting);
     auto loop=handler_.get_loop();
     assert(loop);
     loop->remove_listen(&handler_);

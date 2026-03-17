@@ -40,8 +40,8 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
     EventLoop* loop=threadpool_.getEventLoop();
     conn->getHandler()->init(conn->get_fd(),loop);
     conn->setReading(); // 启用读事件监听
-
-    SconnectCallback_(conn);
+    
+    if(SconnectCallback_)SconnectCallback_(conn);
 
 }
     

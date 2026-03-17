@@ -9,24 +9,34 @@ namespace yy
 {
 namespace net
 {
-struct CodecBase 
-{
-    virtual int tryDecode(string_view data,string_view& msg)=0;
-    virtual void encode(string_view msg,TcpBuffer& buf)=0;
-    virtual CodecBase* clone()=0;
-    virtual ~CodecBase()=default;
-};
+// struct CodecBase 
+// {
+//     virtual int tryDecode(string_view data,string_view& msg)=0;
+//     virtual void encode(string_view msg,TcpBuffer& buf)=0;
+//     virtual CodecBase* clone()=0;
+//     virtual ~CodecBase()=default;
+// };
 
-struct LineCodec:public CodecBase 
+// struct LineCodec:public CodecBase 
+// {
+//     int tryDecode(string_view data,string_view& msg)override;
+//     void encode(string_view msg,TcpBuffer& buf)override;
+//     CodecBase* clone()override{return new LineCodec();}
+// };
+// struct LengthCodec:public CodecBase {
+//     int tryDecode(string_view data,string_view& msg)override;
+//     void encode(string_view msg,TcpBuffer& buf)override;
+//     CodecBase *clone()override{return new LengthCodec();}
+// };
+struct LineCodec
 {
-    int tryDecode(string_view data,string_view& msg)override;
-    void encode(string_view msg,TcpBuffer& buf)override;
-    CodecBase* clone()override{return new LineCodec();}
+    static int tryDecode(string_view data,string_view& msg);
+    static void encode(string_view msg,TcpBuffer& buf);
 };
-struct LengthCodec:public CodecBase {
-    int tryDecode(string_view data,string_view& msg)override;
-    void encode(string_view msg,TcpBuffer& buf)override;
-    CodecBase *clone()override{return new LengthCodec();}
+struct LengthCodec
+{
+    static int tryDecode(string_view data,string_view& msg);
+    static void encode(string_view msg,TcpBuffer& buf);
 };
 
 }

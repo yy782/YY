@@ -1,5 +1,5 @@
 
-
+//./ProtoBufTest
 
 #include <google/protobuf/io/zero_copy_stream.h>
 
@@ -8,6 +8,7 @@
 #include "student.pb.h"
 #include "../protobuf/ProtoMsg.h"
 #include <memory>
+#include <iostream>
 using namespace yy;
 using namespace yy::net;
 class MyServer {
@@ -21,8 +22,11 @@ public:
             }
         );
         
-        server_.setMessageCallBack([this](TcpConnectionPtr conn,string_view){
+        server_.setMessageCallBack([this](TcpConnectionPtr conn){
             onMessage(conn);
+        });
+        server_.setConnectCallBack([](TcpConnectionPtr){
+            std::cout<<"Connect!"<<std::endl;
         });
     }
     
@@ -37,6 +41,7 @@ public:
     
 private:
     void onMessage(TcpConnectionPtr conn) {
+        std::cout<<"onMessage "<<std::endl;
         TcpBuffer& buf = conn->getRecvBuffer();
         while (ProtoMsgCodec::msgComplete(buf)) {
             Message* msg = ProtoMsgCodec::decode(buf);
@@ -67,6 +72,8 @@ private:
 
 int main() {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    std::cout<<"[PID] "<<getpid()<<std::endl;
     EventLoop loop;
     MyServer server(&loop);
     auto& signal_handler=SignalHandler::getInstance(&loop);

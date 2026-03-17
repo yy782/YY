@@ -24,13 +24,13 @@ public:
     
     typedef Buffer::CharContainer CharContainer;
     
-    typedef std::function<void(TcpConnectionPtr,string_view)> ServicesMessageCallBack;
+    typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesCloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
 
-    typedef std::shared_ptr<CodecBase> CodecPtr;
+    //typedef std::shared_ptr<CodecBase> CodecPtr;
 
     typedef std::function<void(TcpConnectionPtr)> BackpressureAfterSendCallBack;
     typedef std::function<void(TcpConnectionPtr)> BackpressureAfterReadCallBack;
@@ -38,15 +38,14 @@ public:
 
 
 
-    TcpConnection(int fd,const Address& addr,EventLoop* loop);
+    TcpConnection();
     TcpConnection(int fd,const Address& addr); // 服务端的构造函数
+    void init(int fd,const Address& addr,EventLoop* loop);
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
-    void connect()
+    void ConnectSuccess()
     {
-        sockets::connect(handler_.get_fd(),addr_);
-        assert(Connstatus_==ConnectStatus::DisConnected);
+        assert( Connstatus_==ConnectStatus::Connecting);
         Connstatus_=ConnectStatus::Connected;
-
     }
     static TcpConnectionPtr accept(int fd,const Address& addr)// @note 服务端用这个接口
     {
@@ -88,10 +87,6 @@ public:
         sockets::setKeepAlive(handler_.get_fd(),on,idleSeconds,intervalSeconds,maxProbes);
     }
     void setName(const char* name){handler_.set_name(name);}
-    void setCodec(CodecPtr codec) 
-    {
-        codec_=codec;
-    }
 
     
     // @brief 这些是有多线程安全问题的
@@ -110,7 +105,9 @@ public:
 
     enum class ConnectStatus
     {
-        Connected=1,
+        Connecting,
+        Connected,
+        DisConnecting, 
         DisConnected
     };
     enum class BackpressureState
@@ -142,7 +139,7 @@ private:
 
 
     Address addr_; // @prief 对端的地址
-    const int fd_;
+    int fd_;
     
     Buffer RecvBuffer_;
     BackpressureState RecvbpState_{BackpressureState::kNormal};
@@ -160,7 +157,7 @@ private:
 
     std::atomic<ConnectStatus> Connstatus_;
 
-    CodecPtr codec_;
+    
     EventHandler handler_;
 };
 

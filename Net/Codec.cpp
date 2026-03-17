@@ -29,7 +29,7 @@ int LineCodec::tryDecode(string_view data,string_view& msg) {
 void LineCodec::encode(string_view msg, TcpBuffer& buf) 
 {
     buf.FluentAppend(msg)
-        .append("\r\n");
+        .append("\r\n",2);
 }
 
 int LengthCodec::tryDecode(string_view data, string_view &msg) 
@@ -51,7 +51,7 @@ int LengthCodec::tryDecode(string_view data, string_view &msg)
     return 0;
 }
 void LengthCodec::encode(string_view msg, TcpBuffer &buf) {
-    buf.FluentAppend("mBdT")
+    buf.FluentAppend("mBdT",4)
         .FluentAppend(::htonl(static_cast<uint32_t>(msg.size())))
         .append(msg);
 }

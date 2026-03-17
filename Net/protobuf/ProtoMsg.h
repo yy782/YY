@@ -39,6 +39,11 @@ struct ProtoMsgDispatcher
 
 inline bool ProtoMsgCodec::msgComplete(Buffer& buf) 
 {
+#ifndef NDEBUG
+    const uint32_t num=*reinterpret_cast<const uint32_t*>(buf.peek());
+    (void)num;
+#endif
+
     return buf.get_readable_size()>=4&&buf.get_readable_size()>=*reinterpret_cast<const uint32_t*>(buf.peek());
 }     
 }   

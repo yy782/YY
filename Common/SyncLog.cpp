@@ -19,6 +19,11 @@ filter_()
 void SyncLog::append(const std::string& log)
 {
     appender_.append(log.c_str(),log.size());
+
+#ifndef NDEBUG
+    appender_.flush();
+#endif    
+
 }
 SyncLog::~SyncLog()
 {

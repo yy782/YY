@@ -19,9 +19,10 @@ public:
     TcpClient(const Address& serverAddr,EventLoop* loop):
     serverAddr_(serverAddr),
     loop_(loop),
-    connection_(std::make_shared<TcpConnection>(sockets::createTcpSocketOrDie(serverAddr.get_family()),serverAddr,loop))
+    connection_(std::make_shared<TcpConnection>()),
+    ConnectHandler_(sockets::createTcpSocketOrDie(serverAddr.get_family()),loop)
     {
-        
+        ConnectHandler_.setWriteCallBack(std::bind(&TcpClient::connectEstablished,this));
     }
     ~TcpClient()
     {
@@ -32,8 +33,6 @@ public:
         connection_->connect();
         EventHandler* handler_ = connection_->getHandler();
         handler_->setReadingAndExcept();
-        
-
     }
     void disconnect()
     {
@@ -60,9 +59,12 @@ public:
 
     Address getPeerAddr(){return serverAddr_;}
 private:
+    void connectEstablished();
     Address serverAddr_;
     EventLoop* loop_;
     TcpConnectionPtr connection_; // @brief 由于回调要TcpConnectionPtr,创建栈对象shared_from_this()会报错
+
+    EventHandler ConnectHandler_;
 
 };
 }

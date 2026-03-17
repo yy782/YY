@@ -17,7 +17,7 @@ public:
     TimerClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setMessageCallBack([this](TcpConnectionPtr,string_view){
+        client_.setMessageCallBack([this](TcpConnectionPtr){
         
         });
         client_.setCloseCallBack([this](TcpConnectionPtr){
