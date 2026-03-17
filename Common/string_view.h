@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <ostream>
 namespace yy
 { 
 
@@ -14,6 +15,7 @@ public:
     string_view(const char *d, size_t n) : pb_(d), pe_(d + n) {}
     string_view(const std::string &s) : pb_(s.data()), pe_(s.data() + s.size()) {}
     string_view(const char *s) : pb_(s), pe_(s + strlen(s)) {}
+
     string_view& operator=(const std::string& s)
     {
         pb_ = s.data();

@@ -57,7 +57,7 @@ public:
     EventHandler* getHandler(){return &handler_;}    
     int get_fd()const{return fd_;}
     Address getAddr()const{return addr_;}
-
+    bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
     void setReading()
     {

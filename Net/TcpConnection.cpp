@@ -9,11 +9,12 @@ namespace net
 TcpConnection::TcpConnection():
 Connstatus_(ConnectStatus::Connecting)
 {
-    
+
 }
 void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
 {
     handler_.init(fd,loop);
+    addr_=addr;
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
     handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
@@ -125,37 +126,33 @@ void TcpConnection::handleRead()
 }
 void TcpConnection::handleWrite()
 {
-    if(Connstatus_==ConnectStatus::Connecting)
+
+    ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
+    auto fd=handler_.get_fd();
+    if(len==0)return;
+    ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
+    if(n>0)
     {
-        Connstatus_=ConnectStatus::Connected;
+        if(n==len)
+        {
+            if(Connstatus_==ConnectStatus::DisConnecting)
+            {
+                sockets::shutdown(fd,SHUT_WR);
+            }
+            if(handler_.isWriting())
+            {
+                handler_.cancelWriting();
+            }
+        }
+        SendBuffer_.consume(n);
+        updateWaterMark();
+        handleBackpressureAfterSend();            
     }
     else 
     {
-        ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
-        auto fd=handler_.get_fd();
-        ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
-        if(n>0)
-        {
-            if(n==len)
-            {
-                if(Connstatus_==ConnectStatus::DisConnected)
-                {
-                    sockets::shutdown(fd,SHUT_WR);
-                }
-                if(handler_.isWriting())
-                {
-                    handler_.cancelWriting();
-                }
-            }
-            SendBuffer_.consume(n);
-            updateWaterMark();
-            handleBackpressureAfterSend();            
-        }
-        else 
-        {
-            handleError();
-        }        
-    }
+        handleError();
+    }        
+    
 
 
 }

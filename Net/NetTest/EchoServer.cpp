@@ -80,7 +80,7 @@ private:
         }
 
         conn->send(msg.data(),msg.size());
-        LOG_SYSTEM_INFO("recv msg: "<<msg.data());
+        LOG_SYSTEM_INFO("recv msg: "<<msg);
         // 消费掉缓冲区中的数据
         buffer.consume(msg.size()+ 1); // +1 是为了包含\n
     }

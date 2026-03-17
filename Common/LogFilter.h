@@ -21,6 +21,7 @@
 #include <string>
 #include <list>
 #include <set>
+#include "string_view.h"
 namespace yy
 {
 
@@ -33,6 +34,10 @@ public:
     template<typename T>
     LogStream& operator<<(const T& val) {
         oss_ << val;
+        return *this;
+    }
+    LogStream& operator<<(const string_view& val) {
+        oss_.write(val.data(),val.size());
         return *this;
     }
     

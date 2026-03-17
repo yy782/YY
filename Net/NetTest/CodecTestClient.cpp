@@ -6,7 +6,7 @@
 using namespace yy;
 using namespace yy::net;
 
-// ./EchoClient 
+// ./CodecTestClient
 class EchoClient// stdout是线程不安全的
 {
 public:
@@ -79,7 +79,7 @@ public:
         conn->send("bye\n",4);
         exit(0);
     }
-    bool isConnected(){return client_.isConnected();}
+
 private:
     TcpClient client_;
     EventHandler stdIn_;

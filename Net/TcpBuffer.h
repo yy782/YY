@@ -83,7 +83,11 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
 
 
 
-
+    void clear()
+    {
+        read_index_=8;
+        write_index_=8;
+    }
 private:
     void move_write_index(size_t size);
     void move_read_index(size_t size);
