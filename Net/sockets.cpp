@@ -473,7 +473,7 @@ ssize_t send(int fd,const void* buf,size_t len,int flags)
  */
 ssize_t readET(int fd, void* buf, size_t len)
 {
-    if (len == 0) return 0;
+    assert(len);
     
     char* ptr = static_cast<char*>(buf);
     size_t left = len;
@@ -513,7 +513,7 @@ ssize_t readET(int fd, void* buf, size_t len)
  */
 ssize_t writeET(int fd, const void* buf, size_t len)
 {
-    if (len == 0) return 0;
+    assert(len);
     
     const char* ptr = static_cast<const char*>(buf);
     size_t left = len;
@@ -547,7 +547,7 @@ ssize_t writeET(int fd, const void* buf, size_t len)
  */
 ssize_t recvET(int fd, void* buf, size_t len, int flags)
 {
-    if (len == 0) return 0;
+    assert(len);
     
     char* ptr = static_cast<char*>(buf);
     size_t left = len;
@@ -556,7 +556,10 @@ ssize_t recvET(int fd, void* buf, size_t len, int flags)
         
         if (n == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return len - left;
+                if(len-left!=0)
+                    return len - left;
+                else 
+                    return -1; 
             } else if (errno == EINTR) {
                 continue;
             } else {
@@ -580,7 +583,7 @@ ssize_t recvET(int fd, void* buf, size_t len, int flags)
  */
 ssize_t sendET(int fd, const void* buf, size_t len, int flags)
 {
-    if (len == 0) return 0;
+    assert(len);
     
     const char* ptr = static_cast<const char*>(buf);
     size_t left = len;
@@ -620,7 +623,7 @@ ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& 
 ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
 {
     socklen_t size=sizeof(peerAddr);
-    if (len == 0) return 0;
+    assert(len);
     
     char* ptr = static_cast<char*>(buf);
     size_t left = len;
@@ -653,7 +656,7 @@ ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage
 ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address)
 {
     socklen_t address_len=address.get_len();
-    if (len == 0) return 0;
+    assert(len);
     
     ssize_t n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
     if (n == -1) 
@@ -665,7 +668,7 @@ ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& addres
 ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address)
 {
     socklen_t address_len=address.get_len();
-    if (len == 0) return 0;
+    assert(len);
     
     const char* ptr = static_cast<const char*>(buf);
     size_t left = len;

@@ -91,18 +91,16 @@ void Epoll::add_listen(EventHandler* handler)
         LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
     )
 
-    operator_epoll(EPOLL_CTL_ADD,handler);
-
     assert((handler->get_status()==New||
             handler->get_status()==Delete));
     assert(handlers_.find(handler->get_fd())==handlers_.end());
     handlers_[handler->get_fd()]=handler;
     handler->set_status(Added);
+    operator_epoll(EPOLL_CTL_ADD,handler);
 }
 void Epoll::update_listen(EventHandler* handler)
 {
     assert(handler);
-    assert(handler->get_status()==Added);
     
     assert(has_handler(handler));
 

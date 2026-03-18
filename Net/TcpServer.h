@@ -30,7 +30,7 @@ public:
     typedef std::unique_ptr<Acceptor> AcceptorPtr;
     typedef Acceptor::NewConnectCallBack ServicesConnectCallBack;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-    typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
+    typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::CharContainer CharContainer;
 
@@ -44,7 +44,7 @@ public:
 
 
 
-    void removeConnection(TcpConnectionPtr conn);
+    void removeConnection(TcpConnectionPtr conn,EventLoop* loop);
     
     
     void loop();

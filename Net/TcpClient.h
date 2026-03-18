@@ -74,7 +74,7 @@ class TcpClient : noncopyable
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectedCallback;
     typedef std::function<void(TcpClient*)> ServicesConnectFailCallback;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-    typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
+    typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::ConnectStatus Status;
     typedef TcpConnection::Buffer Buffer;

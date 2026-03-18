@@ -40,7 +40,7 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
-    disconnect();
+    
 }
 void TcpConnection::disconnect()
 {
@@ -59,7 +59,11 @@ void TcpConnection::disconnectInLoop()
     if(Connstatus_==ConnectStatus::Connected)
     {
         Connstatus_=ConnectStatus::DisConnecting;
-        sockets::shutdown(handler_.get_fd(),SHUT_WR);         
+        sockets::shutdown(handler_.get_fd(),SHUT_WR);   
+        if(handler_.isWriting())
+        {
+            handler_.cancelWriting();
+        }      
     }
 }
 void TcpConnection::send(const char* message,size_t len)
@@ -112,7 +116,7 @@ void TcpConnection::handleRead()
         RecvBuffer_.hasWritten(n);
         updateWaterMark();
         SmessageCallBack_(shared_from_this());  
-        
+
         handleBackpressureAfterRead();
     }  
     else if(n==0)
@@ -162,13 +166,15 @@ void TcpConnection::handleClose()
     assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting);
     auto loop=handler_.get_loop();
     assert(loop);
+    
+    handler_.disableAll();
     loop->remove_listen(&handler_);
 
-    if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
+    
 
     Connstatus_=ConnectStatus::DisConnected;
 
-    
+    if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
 }
 void TcpConnection::handleError()   
 {
@@ -179,7 +185,12 @@ void TcpConnection::handleError()
     else if (errno==ESHUTDOWN)
     {
         return;
+    }
+    else if(errno == EAGAIN || errno == EWOULDBLOCK)
+    {
+        return;
     } // sendOrrecv 函数的错误
+    
     else if(SerrorCallBack_)SerrorCallBack_(shared_from_this()); //也许业务层需要errno
     
 }

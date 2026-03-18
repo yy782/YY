@@ -30,26 +30,30 @@ void TcpServer::newConnection(TcpConnectionPtr conn)
 
     assert(connects_.find(conn)==connects_.end());
     connects_.insert(conn);
-    conn->setMessageCallBack(SmessageCallback_);
-    conn->setCloseCallBack(ScloseCallback_);
-    conn->setErrorCallBack(SerrorCallback_);
+
   
 
     conn->setName(conn->getAddr().sockaddrToString().c_str());
     
     EventLoop* loop=threadpool_.getEventLoop();
     conn->getHandler()->init(conn->get_fd(),loop);
-    conn->setReading(); // 启用读事件监听
-    
+        conn->setMessageCallBack(SmessageCallback_);
+    conn->setCloseCallBack([this,loop](TcpConnectionPtr con){
+        ScloseCallback_(con);
+        removeConnection(con,loop);
+    });
+    conn->setErrorCallBack(SerrorCallback_);
     if(SconnectCallback_)SconnectCallback_(conn);
 
 }
     
-void TcpServer::removeConnection(TcpConnectionPtr conn)
+void TcpServer::removeConnection(TcpConnectionPtr conn,EventLoop* loop)
 {
-    assert(connects_.find(conn)!=connects_.end());
-    connects_.erase(conn);
-    conn->disconnect();
+    loop->submit([this,&conn,loop](){
+        assert(connects_.find(conn)!=connects_.end());
+        connects_.erase(conn);
+    });
+
 }
 }    
 }

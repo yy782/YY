@@ -147,13 +147,13 @@ ParseResult HttpRequest::tryDecode(string_view buf, bool copyBody) {
     ParseResult r = tryDecode_(buf, copyBody, &line1);
     
     if (line1.size()) {
-        string_view methodSlice = line1.eatWord();
-        string_view urlSlice = line1.eatWord();
-        string_view verSlice = line1.eatWord();
+        string_view methodView = line1.eatWord();
+        string_view urlView = line1.eatWord();
+        string_view verView = line1.eatWord();
         
-        method_ = stringToMethod(methodSlice.toString());
-        queryUrl_ = urlSlice.toString();
-        version_ = verSlice.toString();
+        method_ = stringToMethod(methodView.toString());
+        queryUrl_ = urlView.toString();
+        version_ = verView.toString();
         
         // 解析URL中的参数
         parseUrlParams();
@@ -218,8 +218,6 @@ void HttpRequest::parseUrlParams() {
         url_ = queryUrl_;
     }
 }
-
-// ==================== HttpResponse 实现 ====================
 
 HttpResponse::HttpResponse() : status_(Status::OK), statusMsg_("OK") {  
     clear();
@@ -291,8 +289,6 @@ std::string HttpResponse::statusToString(Status s) {
     auto it = s2s.find(s);
     return it != s2s.end() ? it->second : "Unknown";
 }
-
-// ==================== HttpParser 实现 ====================
 
 HttpParser::HttpParser() : parseState_(ParseState::REQUEST_LINE) {}
 

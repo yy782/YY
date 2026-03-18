@@ -12,7 +12,7 @@ handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_)
 
     int fd=handler_.get_fd();
     sockets::set_CloseOnExec(fd);
-    sockets::reuse_addr(fd);
+    sockets::reuse_addr(fd);    
     sockets::reuse_port(fd); 
     if(addr.get_family()==AF_INET6)
     {

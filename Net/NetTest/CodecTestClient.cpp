@@ -5,28 +5,38 @@
 #include "../ConfigCenter.h"
 using namespace yy;
 using namespace yy::net;
-
+int MsgCount=0;
 // ./CodecTestClient
 class EchoClient// stdout是线程不安全的
 {
 public:
     EchoClient(const Address& serverAddr,EventLoop* loop):
-    client_(serverAddr,loop),
-    stdIn_(0,loop)
+    client_(serverAddr,loop)
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
+        client_.setConnectedCallback(bind(&EchoClient::handleConnected,this,_1));
 
-        
-        
-        stdIn_.setReadCallBack([this](){handleRead();});
-        stdIn_.set_name("stdIn");
-        stdIn_.setReading();
          
+    }
+    void handleConnected(TcpConnectionPtr /*conn*/)
+    {
+        std::cout<<"Connected to server"<<std::endl;
+        // 连接成功后发送消息
+        std::cout<<"Sending Hello 1"<<std::endl;
+        send("Hello 1");
+        std::cout<<"Sending Hello 2"<<std::endl;
+        send("Hello 2");
+        std::cout<<"Sending Hello 3"<<std::endl;
+        send("Hello 3");
+        std::cout<<"Sending Hello 4"<<std::endl;
+        send("Hello 4");
+        std::cout<<"All messages sent"<<std::endl;
     }
     void send(const std::string& msg)
     {
-        client_.send(msg.c_str(),msg.size());
+        LineCodec::encode(string_view(msg),client_.getSendBuffer());
+        client_.sendOutput();
     }
     void connect()
     {
@@ -41,38 +51,23 @@ public:
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
         string_view msg;
-
-        int p=LineCodec::tryDecode(buffer.getReadView(),msg);
-        if(p<=0)
+        int p=1;
+        while(p>0)
         {
-            return;
-        }
-        
-
-        std::cout<<"recv:"<<msg.data()<<std::endl;
-        buffer.consume(p); 
-
-    }
-    void handleRead()
-    {
-        std::string line;
-        if(getline(std::cin,line))
-        {
-            if(line=="quit")
+            p=LineCodec::tryDecode(buffer.getReadView(),msg);
+            if(p<=0)
             {
-                client_.disconnect();
-                exit(0);
+                return;
             }
-            else 
+            std::cout<<"recv:"<<std::string(msg.data(),msg.size())<<std::endl;
+            buffer.consume(p); 
+            ++MsgCount;
+            if(MsgCount==4)
             {
-
-                LineCodec::encode(string_view(line),client_.getSendBuffer());
-                client_.sendOutput();
- 
-              
+                disconnect();
             }
-            
         }
+
     }
     void handleClose(TcpConnectionPtr conn) // 对端主动关闭时的回调
     {
@@ -82,25 +77,13 @@ public:
 
 private:
     TcpClient client_;
-    EventHandler stdIn_;
+    
 };
 
 
 int main()
 {
-
-    Conf config;
-    int parse_result=config.parse("../../Net/NetTest/config.conf");
-    if(parse_result!=0)
-    {
-        std::cerr<<"Failed to parse config.conf at line "<<parse_result<<std::endl;
-        return 1;
-    }
-    
-    
-    std::string host=config.get("server","host");
-    int port=static_cast<int>(config.getInteger("server","port"));
-    Address addr(host.c_str(),port);
+    Address addr(8080,true);
     EventLoop client_loop;
     EchoClient client(addr,&client_loop);
     client.connect(); 
