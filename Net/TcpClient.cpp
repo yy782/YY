@@ -16,6 +16,7 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
 {
   ConnectHandler_.setWriteCallBack(
       std::bind(&TcpClient::newConnection, this));
+  ConnectHandler_.set_name("ClientConnectHandler");    
 }
 
 TcpClient::~TcpClient()
@@ -26,23 +27,23 @@ TcpClient::~TcpClient()
 
 void TcpClient::connect()
 {
-  
-  int ret=sockets::connect(fd_,addr_);
-  if(ret<0)
-  {
-    switch (errno)
-    {
-        case 0:
-        case EINPROGRESS:
-        case EINTR:
-        case EISCONN:
-            break;
-        default:
-            if(connectFailCallback_)connectFailCallback_(this);
-            break;
-    }   
-  }
-  ConnectHandler_.setWriting(); 
+    loop_->submit([this](){
+        
+        int ret=sockets::connect(fd_,addr_);
+        int save_errno=(ret==0)?0:errno;
+        switch (save_errno)
+        {
+            case 0:
+            case EINPROGRESS:
+            case EINTR:
+            case EISCONN:
+                ConnectHandler_.setWriting();
+                break;
+            default:
+                if(connectFailCallback_)connectFailCallback_(this);
+                break;
+        }   
+    });
 }
 
 void TcpClient::disconnect()
@@ -66,6 +67,7 @@ void TcpClient::newConnection()
     }
     else 
     {
+        ConnectHandler_.removeListen();
         connection_->init(dup(fd_),addr_,loop_);
         connection_->ConnectSuccess();
         connection_->setReading();
@@ -74,7 +76,6 @@ void TcpClient::newConnection()
             connectedCallback_(connection_);
         }
     }
-    ConnectHandler_.cancelWriting();
 }
 
 

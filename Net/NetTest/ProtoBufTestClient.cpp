@@ -1,20 +1,21 @@
 #include <google/protobuf/io/zero_copy_stream.h>
 
 #include "../TcpClient.h"
-
+#include "../EventLoopThread.h"
 #include "student.pb.h"
 #include "../protobuf/ProtoMsg.h"
 #include <memory>
 using namespace yy;
 using namespace yy::net;
-//./ProtoBufTest
+//./ProtoBufTestClient
 // 客户端类
 class MyClient {
 public:
-    MyClient(const Address& addr,EventLoop* loop) 
-        : client_(addr,loop)
+    MyClient(const Address& addr,EventLoopThread* thread) 
+        : client_(addr,thread->getEventLoop()),
+        thread_(thread)
     {
-        
+        auto loop=thread->getEventLoop();
         client_.setMessageCallBack([this](TcpConnectionPtr conn){
             onMessage(conn);
         });
@@ -22,15 +23,21 @@ public:
             loop->quit();
             exit(0);
         });
+        client_.setConnectedCallback([this](TcpConnectionPtr){
+            this->sendStudent();
+        });
+        client_.setConnectFailCallback([this,loop](TcpClient* /*client*/){
+            std::cout << "连接失败！" << std::endl;
+            loop->quit();
+            exit(1);
+        });
     }
     
     void connect() 
     {
         client_.connect();
-        sendStudent();
-    }
     
-private:
+    }
     void sendStudent() 
     {
         demo::Student student;
@@ -42,7 +49,9 @@ private:
         client_.sendOutput();
         
         std::cout << "客户端发送Student消息: " << student.name() << std::endl;
-    }
+    }    
+private:
+
     
     void onMessage(TcpConnectionPtr conn) 
     {
@@ -58,20 +67,32 @@ private:
                         dynamic_cast<demo::StudentResponse*>(msg.get());
                     std::cout << "客户端收到服务器响应: " 
                               << resp->message() << std::endl;
+                    Exit();          
                 }
             }
         }
     }
+    void Exit()
+    {
+        thread_->stop(); // 保证thread_先构析
+        exit(0);
+    }
     TcpClient client_;
+    EventLoopThread* thread_;
 };
 
 int main()
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
-    EventLoop loop;
-    MyClient client(Address(8080,true),&loop);
+    EventLoopThread thread;
+    MyClient client(Address(8080,true),&thread);
+    
+    thread.run();
     client.connect();
-    loop.loop();
+    
+    // 主线程睡眠一段时间，让EventLoop线程有时间处理连接
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    
     google::protobuf::ShutdownProtobufLibrary();
     return 0;
 }

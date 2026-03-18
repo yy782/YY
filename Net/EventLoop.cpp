@@ -47,6 +47,10 @@ QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
     QuitHandler_.setReading();
     QuitHandler_.set_name("wakeupHandler");
 }
+bool EventLoop::isQuit()
+{
+    return status_&EventLoopStatus::Quit;
+}
 void EventLoop::loop()
 {
     status_&=~EventLoopStatus::Init;
@@ -88,6 +92,7 @@ void EventLoop::quit()
 }
 void EventLoop::submit(Functor cb)
 {
+    assert(cb);
     FunctionList_.blockappend(std::move(cb));
     
 }

@@ -1,5 +1,5 @@
 
-//./ProtoBufTest
+//./ProtoBufTestServer
 
 #include <google/protobuf/io/zero_copy_stream.h>
 
@@ -25,8 +25,9 @@ public:
         server_.setMessageCallBack([this](TcpConnectionPtr conn){
             onMessage(conn);
         });
-        server_.setConnectCallBack([](TcpConnectionPtr){
+        server_.setConnectCallBack([](TcpConnectionPtr conn){
             std::cout<<"Connect!"<<std::endl;
+            conn->setReading();
         });
     }
     
@@ -73,22 +74,12 @@ private:
 int main() {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    std::cout<<"[PID] "<<getpid()<<std::endl;
+   
     EventLoop loop;
     MyServer server(&loop);
-    auto& signal_handler=SignalHandler::getInstance(&loop);
-    signal_handler.addSign(SIGTERM,[&server,&loop](){
-        loop.quit();
-        server.stop();
-    });
     server.start();
     loop.loop();
 
-   
-
-    
-
-    
     google::protobuf::ShutdownProtobufLibrary();
     return 0;
 }

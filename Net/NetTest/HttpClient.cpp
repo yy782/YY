@@ -5,7 +5,8 @@
 #include <iostream>
 using namespace yy;
 using namespace yy::net;
-
+// ./HttpClient
+int MsgCount=0;
 class HTTPClient {
 public:
     typedef std::function<void(const Http::HttpResponse&)> ResponseCallback;
@@ -170,11 +171,17 @@ private:
                     // 重置响应解析器
                     response_.clear();
                 }
+                ++MsgCount;
+                if(MsgCount==2)
+                {
+                    client_.disconnect();
+                }
             }            
         }
 
+
     }
-    
+
 
     
     TcpClient client_;
@@ -192,7 +199,7 @@ int main() {
             client.get("/user?name=Tom", [](const Http::HttpResponse& resp) {
                     std::cout << "Response: " << resp.body_ << std::endl;
             });
-            sleep(1);
+      
 
             std::map<std::string, std::string> headers;
             headers["Content-Type"] = "application/json";
@@ -200,8 +207,8 @@ int main() {
                     headers, [](const Http::HttpResponse& resp) {
                     std::cout << "POST Response: " << resp.body_ << std::endl;
             });
-            sleep(1);
-            client.disconnect();
+            
+           
     });
     
     client.setCloseCallback([&]() {

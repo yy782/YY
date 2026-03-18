@@ -28,7 +28,7 @@ public:
     ~EventLoop()=default;
     void loop();
     void quit();
-
+    bool isQuit();
     
 
     

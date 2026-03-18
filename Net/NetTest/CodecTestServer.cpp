@@ -24,21 +24,21 @@ using namespace yy::net;
 using namespace yy::net::sockets;
 
 // 注意端口复用，导致调试有问题
-//
+//  ./CodecTestServer
 
-class EchoServer
+class CodecTestServer
 {
 public:
 
     typedef TcpConnection::CharContainer CharContainer;
-    EchoServer(const Address& addr,int thread_num,EventLoop* loop):
+    CodecTestServer(const Address& addr,int thread_num,EventLoop* loop):
     server_(addr,thread_num,loop),
     loop_(loop)
     
     {
-        server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
-        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
-        server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
+        server_.setConnectCallBack(std::bind(&CodecTestServer::onConnection,this,_1));
+        server_.setMessageCallBack(std::bind(&CodecTestServer::onMessage,this,_1));
+        server_.setCloseCallBack(std::bind(&CodecTestServer::onClose,this,_1));
         
     }
     void start()
@@ -49,7 +49,7 @@ public:
     {
         server_.stop();
     }
-    ~EchoServer()
+    ~CodecTestServer()
     {
         LOG_SYSTEM_INFO("server stop!");
     }
@@ -122,7 +122,7 @@ int main()
     Address serverAddr(8080,true);
     
     EventLoop loop;
-    EchoServer server(serverAddr,1,&loop);
+    CodecTestServer server(serverAddr,1,&loop);
     server.start();
     loop.loop();
 }

@@ -15,7 +15,17 @@ public:
     typedef EventLoop::Functor Functor;
     EventLoopThread():
     loop_()
-    {}
+    {
+        
+    }
+    ~EventLoopThread()
+    {
+        thread_.join();
+        if(!loop_.isQuit())
+        {
+            loop_.quit();
+        }
+    }
     void run()
     {
         //assert(loop_);

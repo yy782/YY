@@ -7,15 +7,15 @@ using namespace yy;
 using namespace yy::net;
 int MsgCount=0;
 // ./CodecTestClient
-class EchoClient// stdout是线程不安全的
+class CodecTestClient// stdout是线程不安全的
 {
 public:
-    EchoClient(const Address& serverAddr,EventLoop* loop):
+    CodecTestClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
-        client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
-        client_.setConnectedCallback(bind(&EchoClient::handleConnected,this,_1));
+        client_.setMessageCallBack(bind(&CodecTestClient::handleMessage,this,_1));
+        client_.setCloseCallBack(bind(&CodecTestClient::handleClose,this,_1));
+        client_.setConnectedCallback(bind(&CodecTestClient::handleConnected,this,_1));
 
          
     }
@@ -85,7 +85,7 @@ int main()
 {
     Address addr(8080,true);
     EventLoop client_loop;
-    EchoClient client(addr,&client_loop);
+    CodecTestClient client(addr,&client_loop);
     client.connect(); 
 
     client_loop.loop();

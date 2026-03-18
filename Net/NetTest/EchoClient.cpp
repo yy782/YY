@@ -107,5 +107,5 @@ int main()
     EchoClient client(addr,&client_loop);
     client.connect(); 
 
-    client_loop.loop();
+    client_loop.loop(); // 应该让loop在其他线程先connect运行，这里简略了
 }
