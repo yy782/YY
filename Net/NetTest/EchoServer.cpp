@@ -64,25 +64,28 @@ private:
         TcpBuffer& buffer=conn->getRecvBuffer();
         string_view msg;
 
-
-        const char* last=buffer.findBorder("\n");
-        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+        while(true)
         {
-            return;
-        }
-        msg=string_view(buffer.peek(),last);
-        
- 
-   
-        if(msg=="bye") // @note 
-        {
-            return;
+            const char* last=buffer.findBorder("\n");
+            if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+            {
+                return;
+            }
+            msg=string_view(buffer.peek(),last);
+            
+    
+    
+            if(msg=="bye") // @note 
+            {
+                return;
+            }
+
+            conn->send(msg.data(),msg.size());
+            LOG_SYSTEM_INFO("recv msg: "<<msg);
+            // 消费掉缓冲区中的数据
+            buffer.consume(msg.size()+ 1); // +1 是为了包含\n            
         }
 
-        conn->send(msg.data(),msg.size());
-        LOG_SYSTEM_INFO("recv msg: "<<msg);
-        // 消费掉缓冲区中的数据
-        buffer.consume(msg.size()+ 1); // +1 是为了包含\n
     }
     void onClose(TcpConnectionPtr conn)
     {

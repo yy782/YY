@@ -41,18 +41,19 @@ public:
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
         string_view msg;
-
-        const char* last=buffer.findBorder("\n",1);
-        if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+        while(true)
         {
-            return;
+            const char* last=buffer.findBorder("\n",1);
+            if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+            {
+                return;
+            }
+            msg=string_view(buffer.peek(),last);
+            
+            
+            std::cout<<"recv:"<<msg.data()<<std::endl;
+            buffer.consume(msg.size()+1);             
         }
-        msg=string_view(buffer.peek(),last);
-           
-        
-        std::cout<<"recv:"<<msg.data()<<std::endl;
-        buffer.consume(msg.size()+1); 
-
     }
     void handleRead()
     {
