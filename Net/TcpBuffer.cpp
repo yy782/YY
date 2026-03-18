@@ -23,6 +23,7 @@ void TcpBuffer::append(const char* data,size_t size)
 {
     appendImp(data,size);
 }
+
 TcpBuffer& TcpBuffer::FluentAppend(const char* data,size_t size)
 {
     appendImp(data,size);

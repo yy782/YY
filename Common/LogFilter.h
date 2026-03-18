@@ -21,60 +21,100 @@
 #include <string>
 #include <list>
 #include <set>
-#include "string_view.h"
 namespace yy
 {
 
 class LogStream 
 {
 public:
-    LogStream() = default;
-    
-    // 使用模板统一处理所有可以通过ostringstream输出的类型
-    template<typename T>
-    LogStream& operator<<(const T& val) {
-        oss_ << val;
-        return *this;
-    }
-    LogStream& operator<<(const string_view& val) {
-        oss_.write(val.data(),val.size());
+    LogStream() : oss_(std::string()) {}
+    LogStream& operator<<(short val) {
+        oss_ += std::to_string(val);
         return *this;
     }
     
-    // 特化bool类型输出为true/false
+    LogStream& operator<<(unsigned short val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(int val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned int val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned long val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long long val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(unsigned long long val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(float val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(double val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
+    LogStream& operator<<(long double val) {
+        oss_ += std::to_string(val);
+        return *this;
+    }
+    
     LogStream& operator<<(bool val) {
-        oss_ << (val ? "true" : "false");
+        oss_ += val ? "true" : "false"; 
         return *this;
     }
     
-    // 特化const char*以处理空指针
+    LogStream& operator<<(char val) {
+        oss_ += val;
+        return *this;
+    }
+    
     LogStream& operator<<(const char* val) {
-        if (val == nullptr) {
-            oss_ << "(null)";
-        } else {
-            oss_ << val;
-        }
+        assert(val);
+        oss_ += val;
+        
         return *this;
     }
     
-    // 特化char*以处理非const指针
-    LogStream& operator<<(char* val) {
-        return operator<<(const_cast<const char*>(val));
+    LogStream& operator<<(const std::string& val) {
+        oss_ += val;
+        return *this;
     }
     
-    // 获取当前字符串内容
-    std::string str() const {
-        return oss_.str();
+    LogStream& operator<<(const std::string_view& val) {
+        oss_ += std::string(val);   
+        return *this;
     }
-    
-    // 清空流内容
-    void clear() {
-        oss_.str("");
-        oss_.clear();
+    std::string str() const{
+        return oss_;
     }
 
 private:
-    std::ostringstream oss_;
+    std::string oss_;
 };
 
 struct LogModule 
@@ -87,8 +127,6 @@ struct LogModule
     static inline const std::string MEMORY = "MEMORY";
     static inline const std::string EVENT = "EVENT";
     static inline const std::string WARN = "WARN";
-   
-    static inline const std::string HTTP = "HTTP";
     static inline const std::string DEFAULT = "DEFAULT";
 };
 
@@ -116,14 +154,13 @@ public:
         global_level_=level;
         return *this;
     }
-    LogFilter& set_global_level(const std::string& level)
+    LogFilter& set_global_level(std::string& level)
     {
-        std::string level_copy = level;
-        std::transform(level_copy.begin(), level_copy.end(), level_copy.begin(), ::toupper);
-        global_level_ = level_copy == "DEBUG" ? LOG_LEVEL_DEBUG :
-                         level_copy == "INFO" ? LOG_LEVEL_INFO :
-                         level_copy == "WARN" ? LOG_LEVEL_WARN :
-                         level_copy == "ERROR" ? LOG_LEVEL_ERROR :
+         std::transform(level.begin(),level.end(),level.begin(), ::toupper);
+         global_level_ = level == "DEBUG" ? LOG_LEVEL_DEBUG :
+                         level == "INFO" ? LOG_LEVEL_INFO :
+                         level == "WARN" ? LOG_LEVEL_WARN :
+                         level == "ERROR" ? LOG_LEVEL_ERROR :
                          LOG_LEVEL_DEBUG;
         return *this;
     }
@@ -133,14 +170,7 @@ public:
         module_enabled_.insert(module); 
         return *this;      
     }
-    LogFilter& set_module_enabled(const std::string& module)
-    {
-        assert(std::all_of(module.begin(), module.end(),::isupper)&& 
-            "module must be uppercase");
-        
-        module_enabled_.insert(module);
-        return *this;
-    }
+
     LogFilter& set_module_enabled(std::list<std::string>& modules)
     {
         for (auto& module_name : modules) 
@@ -264,7 +294,6 @@ extern LogFilter* g_log_filter;
 #define LOG_MEMORY_DEBUG(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_WARN_DEBUG(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_EVENT_DEBUG(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_DEBUG, "DEBUG", msg)
-#define LOG_HTTP_DEBUG(msg) LOG_BASE(LogModule::HTTP, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_DEFAULT_DEBUG(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #else
 #define LOG_THREAD_DEBUG(msg) 
@@ -275,7 +304,6 @@ extern LogFilter* g_log_filter;
 #define LOG_MEMORY_DEBUG(msg) 
 #define LOG_WARN_DEBUG(msg) 
 #define LOG_EVENT_DEBUG(msg) 
-#define LOG_HTTP_DEBUG(msg) 
 #define LOG_DEFAULT_DEBUG(msg) 
 #endif
 #define LOG_THREAD_INFO(msg) LOG_BASE(LogModule::THREAD, LOG_LEVEL_INFO, "INFO", msg)
@@ -302,9 +330,6 @@ extern LogFilter* g_log_filter;
 #define LOG_EVENT_INFO(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_INFO, "INFO", msg)
 #define LOG_EVENT_WARN(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_WARN, "INFO", msg)
 #define LOG_EVENT_ERROR(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_ERROR, "INFO", msg)
-#define LOG_HTTP_INFO(msg) LOG_BASE(LogModule::HTTP, LOG_LEVEL_INFO, "INFO", msg)
-#define LOG_HTTP_WARN(msg) LOG_BASE(LogModule::HTTP, LOG_LEVEL_WARN, "INFO", msg)
-#define LOG_HTTP_ERROR(msg) LOG_BASE(LogModule::HTTP, LOG_LEVEL_ERROR, "INFO", msg)
 #define LOG_DEFAULT_INFO(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_INFO, "INFO", msg)
 #define LOG_DEFAULT_WARN(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_WARN, "INFO", msg)
 #define LOG_DEFAULT_ERROR(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_ERROR, "INFO", msg)

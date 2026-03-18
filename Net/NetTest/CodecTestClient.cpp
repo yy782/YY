@@ -50,7 +50,7 @@ public:
         
 
         std::cout<<"recv:"<<msg.data()<<std::endl;
-        buffer.consume(msg.size()+1); 
+        buffer.consume(p); 
 
     }
     void handleRead()
