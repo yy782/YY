@@ -1,6 +1,7 @@
 #include "TcpBuffer.h"
 #include <assert.h>
-
+#include <sys/uio.h>
+#include "sockets.h"
 namespace yy
 {
 namespace net
@@ -28,6 +29,33 @@ TcpBuffer& TcpBuffer::FluentAppend(const char* data,size_t size)
 {
     appendImp(data,size);
     return *this;
+}
+ssize_t TcpBuffer::appendFormFd(int fd)
+{
+    char extrabuf[65536];
+    struct iovec vec[2];
+    const size_t writable=get_writable_size();
+    vec[0].iov_base=begin_write();
+    vec[0].iov_len=writable;
+    vec[1].iov_base=extrabuf;
+    vec[1].iov_len=sizeof extrabuf;
+
+    const int iovcnt = (writable < sizeof extrabuf) ? 2 : 1;
+    const ssize_t n = sockets::readvAuto(fd, vec, iovcnt);
+    if(n>0)
+    {
+        if(static_cast<size_t>(n)<=get_writable_size())
+        {
+            move_write_index(n);
+        }
+        else 
+        {
+            write_index_=buffer_.size();
+            append(extrabuf, n - writable);
+        }
+    }
+    return n;
+
 }
 void TcpBuffer::appendImp(const char* data,size_t size)
 {

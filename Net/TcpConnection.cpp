@@ -11,21 +11,21 @@ Connstatus_(ConnectStatus::Connecting)
 {
 
 }
-void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
-{
-    handler_.init(fd,loop);
-    addr_=addr;
-    handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
-    handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
-    handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
-    handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
-    handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
-}
-TcpConnection::TcpConnection(int fd,const Address& addr):
+// void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
+// {
+//     handler_.init(fd,loop);
+//     addr_=addr;
+//     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
+//     handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
+//     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
+//     handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
+//     handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
+// }
+TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
 fd_(fd),
 Connstatus_(ConnectStatus::Connecting),
-handler_() // 监听的loop不确定，延迟初始化
+handler_(fd,loop) // 监听的loop不确定，延迟初始化
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
@@ -110,10 +110,10 @@ void TcpConnection::handleRead()
 {
     assert(SmessageCallBack_);
      
-    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),0);
+    //auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),0);
+    auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
     if(n>0)
     {
-        RecvBuffer_.hasWritten(n);
         updateWaterMark();
         SmessageCallBack_(shared_from_this());  
 
@@ -167,7 +167,7 @@ void TcpConnection::handleClose()
     auto loop=handler_.get_loop();
     assert(loop);
     
-    handler_.disableAll();
+    handler_.disableAll(); // 防止close后有handlewrite
     loop->remove_listen(&handler_);
 
     

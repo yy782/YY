@@ -19,7 +19,7 @@ namespace yy
 namespace net
 {
 
-typedef Acceptor::TcpConnectionPtr TcpConnectionPtr;
+
 
 class TcpServer:public noncopyable
 {
@@ -28,7 +28,7 @@ public:
     typedef std::set<TcpConnectionPtr> ConnectMap;
     //typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
     typedef std::unique_ptr<Acceptor> AcceptorPtr;
-    typedef Acceptor::NewConnectCallBack ServicesConnectCallBack;
+    typedef std::function<void(TcpConnectionPtr)>  ServicesConnectCallBack;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
@@ -50,7 +50,7 @@ public:
     void loop();
     void stop();
 private:
-    void newConnection(TcpConnectionPtr conn);
+    void newConnection(int fd,const Address& addr);
     EventLoop* loop_;
     AcceptorPtr acceptor_;
     EventLoopThreadPool threadpool_;

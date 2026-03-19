@@ -6,7 +6,7 @@
 #include "Poller.h"
 #include "PollerSpecificType.h"
 #include "../Common/noncopyable.h"
-#include "../Common/TimeStamp.h"
+#include "TimerQueue.h"
 #include "../Common/locker.h"
 
 #include <queue>
@@ -24,14 +24,12 @@ public:
     typedef Thread::Pid_t Pid_t;
     typedef std::function<void()> Functor;
     typedef RingBuffer<Functor> FunctionList;
+     
     EventLoop();
     ~EventLoop()=default;
     void loop();
     void quit();
     bool isQuit();
-    
-
-    
     void addListen(EventHandler* handler)
     {
         assert(handler);
@@ -61,8 +59,18 @@ public:
     {
         threadId_=pid;
     }
+    
     bool isInLoopThread();
     void submit(Functor cb);
+    template<class PrecisionTag>
+    void runTimer(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
+    {
+        submit([this,std::move(cb),std::move(interval),execute_count](){
+            assert(isInLoopThread());
+            thread_local static TimerQueue<PrecisionTag> queue(this);
+            queue.insert(std::move(cb),std::move(interval),execute_count);
+        });
+    }
 private:
   
     

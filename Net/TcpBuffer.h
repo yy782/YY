@@ -28,6 +28,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     void append(T&& value);
     void append(const char* data,size_t size);
     void append(const char*){assert(false&&"请指明长度");}
+    ssize_t appendFormFd(int fd);
     template<typename T>
     TcpBuffer& FluentAppend(T&& value);
     TcpBuffer& FluentAppend(const char* data,size_t size);
@@ -132,6 +133,7 @@ TcpBuffer& TcpBuffer::FluentAppend(T&& value)
     append(std::forward<T>(value));
     return *this;
 }
+
 }
 }
 #endif

@@ -39,14 +39,18 @@ template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count)
 {
     auto timer=std::make_shared<PTimer>(std::move(cb),interval,execute_count);
-   insert(timer);
+    insertInLoop(timer);
 }
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insert(TimerPtr timer)
 {
-
+    insertInLoop(timer);
+}
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::insertInLoop(TimerPtr timer)
+{
     LOG_TIME_DEBUG(timers_.size());
-
+    assert(handler_.get_loop()->isInLoopThread());
     assert(timer!=nullptr);
     auto& when=timer->getTimerStamp();
     assert(when>Time_Stamp::now());
@@ -59,20 +63,26 @@ void TimerQueue<PrecisionTag>::insert(TimerPtr timer)
     modifyTimerfd();
 }
 template<typename PrecisionTag>
-void TimerQueue<PrecisionTag>::cancelTimer(PTimer* timer)
+void TimerQueue<PrecisionTag>::cancelTimer(TimerPtr timer)
 {
+    cancelTimerInLoop(timer);
+}  
+template<typename PrecisionTag>
+void TimerQueue<PrecisionTag>::cancelTimerInLoop(TimerPtr timer)
+{
+    assert(handler_.get_loop()->isInLoopThread());
     assert(timer);
 #ifdef NDEBUG
     timers_.erase(Entry(timer->getTimerStamp(),timer));
 #else
     size_t n1=timers_.erase(Entry(timer->getTimerStamp(),timer));
     assert(n1==1);
-#endif
-}  
-
+#endif    
+}
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::handlerRead()
 {
+    assert(handler_.get_loop()->isInLoopThread());
     ReadTimerfd();
 
     LOG_TIME_DEBUG("TimerQueue handlerRead");
@@ -104,7 +114,7 @@ void TimerQueue<PrecisionTag>::modifyTimerfd()
         struct timespec it_value;    // 首次超时时间（一次性/周期性定时器都需要）
     };        
 */    
-    
+    assert(handler_.get_loop()->isInLoopThread());
     if(timers_.empty())
     {
         return;
@@ -124,6 +134,7 @@ void TimerQueue<PrecisionTag>::modifyTimerfd()
 template<typename PrecisionTag>
 std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::getDueTasks(const Time_Stamp& now)
 {
+    assert(handler_.get_loop()->isInLoopThread());
     std::vector<Entry> expired;
     Entry sentry(now,TimerPtr());
 
@@ -142,6 +153,7 @@ std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::ReadTimerfd()
 {
+    assert(handler_.get_loop()->isInLoopThread());
     uint64_t howmany;
     ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){

@@ -1,5 +1,5 @@
 #include "TcpServer.h"
-
+#include <memory>
 namespace yy
 {
 namespace net
@@ -11,7 +11,7 @@ threadpool_(threadnum)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 
-    acceptor_->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1));
+    acceptor_->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1,_2));
     acceptor_->listen();    
 }   
 
@@ -23,21 +23,19 @@ void TcpServer::stop()
 {
     threadpool_.stop();
 }
-void TcpServer::newConnection(TcpConnectionPtr conn)
+void TcpServer::newConnection(int fd,const Address& addr)
 {
 
     
 
-    assert(connects_.find(conn)==connects_.end());
+    EventLoop* loop=threadpool_.getEventLoop();
+    TcpConnectionPtr conn=TcpConnection::accept(fd,addr,loop);
     connects_.insert(conn);
-
-  
-
     conn->setName(conn->getAddr().sockaddrToString().c_str());
     
-    EventLoop* loop=threadpool_.getEventLoop();
-    conn->getHandler()->init(conn->get_fd(),loop);
-        conn->setMessageCallBack(SmessageCallback_);
+    
+   
+    conn->setMessageCallBack(SmessageCallback_);
     conn->setCloseCallBack([this,loop](TcpConnectionPtr con){
         ScloseCallback_(con);
         removeConnection(con,loop);

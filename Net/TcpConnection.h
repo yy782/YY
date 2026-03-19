@@ -38,18 +38,18 @@ public:
 
 
 
-    TcpConnection();
-    TcpConnection(int fd,const Address& addr); // 服务端的构造函数
-    void init(int fd,const Address& addr,EventLoop* loop);
+    TcpConnection()=delete;
+    TcpConnection(int fd,const Address& addr,EventLoop* loop); // 服务端的构造函数
+    //void init(int fd,const Address& addr,EventLoop* loop);
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     void ConnectSuccess()
     {
         assert( Connstatus_==ConnectStatus::Connecting);
         Connstatus_=ConnectStatus::Connected;
     }
-    static TcpConnectionPtr accept(int fd,const Address& addr)// @note 服务端用这个接口
+    static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop)//@note 服务端用这个接口
     {
-        auto conn=std::make_shared<TcpConnection>(fd,addr);
+        auto conn=std::make_shared<TcpConnection>(fd,addr,loop);
         conn->Connstatus_=ConnectStatus::Connected;
         return conn;
     }

@@ -1,5 +1,5 @@
 #include "Acceptor.h"
-#include "TcpConnection.h"
+
 namespace yy
 {
 namespace net
@@ -7,9 +7,10 @@ namespace net
 Acceptor::Acceptor(const Address& addr,EventLoop* loop):
 addr_(addr),
 loop_(loop),
-handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_)
+handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_),
+idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
 {
-
+    assert(idleFd_>=0);
     int fd=handler_.get_fd();
     sockets::set_CloseOnExec(fd);
     sockets::reuse_addr(fd);    
@@ -27,7 +28,8 @@ handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_)
 }
 Acceptor::~Acceptor()
 {
-    
+  handler_.disableAll();
+  handler_.removeListen();
 }
 void Acceptor::accept()
 {
@@ -41,9 +43,22 @@ void Acceptor::accept()
     {
         fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
     }
-    auto conn=TcpConnection::accept(fd,addr);
+    if(fd>0)
+    {
+        assert(callback_);
+        callback_(fd,addr);
+    }
+    else 
+    {
+        if (errno == EMFILE)
+        {
+            close(idleFd_);
+            idleFd_=sockets::acceptAutoOrDie(fd,addr,true);
+            close(idleFd_);
+            idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
+        }
+    } 
     
-    callback_(conn);
 }    
 }    
 }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../Common/LogFilter.h"
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include "PollerType.h"
 namespace yy
 {
@@ -272,7 +273,15 @@ void set_CloseOnExec(int fd)
     // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
 }
 
-
+ssize_t readvAuto(int fd, const iovec* iovec, int count)
+{
+    int ret=::readv(fd,iovec,count);
+    if(ret<0)
+    {
+        LOG_ERRNO(errno);
+    }
+    return ret;
+}
 ssize_t readAuto(int fd,void* buf,size_t len)
 {
     if constexpr (std::is_same_v<PollerType,Epoll>)

@@ -17,16 +17,18 @@ class TcpConnection;
 class Acceptor:noncopyable
 {
 public:
-    typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
-    typedef std::function<void(TcpConnectionPtr)> NewConnectCallBack;
+    
+    typedef std::function<void(int fd,const Address&)> NewConnectCallBack;
     Acceptor(const Address& addr,EventLoop* loop);
     ~Acceptor();
     int get_fd()const{return handler_.get_fd();}
     void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
     void listen()
     {
-        sockets::listenOrDie(handler_.get_fd());
         handler_.setReading();
+        loop_->submit([this](){
+            sockets::listenOrDie(handler_.get_fd());
+        });
     }
 private:
     void accept();
@@ -34,6 +36,7 @@ private:
     EventLoop* loop_;
     EventHandler handler_;
     NewConnectCallBack callback_;
+    int idleFd_;
 };
 
 }  

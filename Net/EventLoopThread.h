@@ -16,7 +16,7 @@ public:
     EventLoopThread():
     loop_()
     {
-        
+
     }
     ~EventLoopThread()
     {
@@ -46,6 +46,65 @@ private:
     Thread thread_;
     EventLoop loop_;
 };
+
+// class EventLoopThread : public noncopyable {
+// public:
+//     typedef EventLoop::Functor Functor;
+
+//     EventLoopThread() : loop_(nullptr) {}
+
+//     ~EventLoopThread() {
+//         if (loop_ != nullptr) {
+//             loop_->quit();      // 通知子线程退出
+//         }
+//         thread_.join();          // 等待子线程结束
+//         // loop_ 被子线程自己销毁，不需要我们 delete
+//     }
+
+//     // 启动线程，返回在线程中创建的 EventLoop 指针
+//     EventLoop* startLoop() {
+//         thread_.run([this]() mutable {
+//             EventLoop loop;           // ✅ 在子线程中创建 loop
+//             loop.setPid_t(thread_.getId());
+
+//             {
+//                 std::lock_guard<std::mutex> lock(mutex_);
+//                 loop_ = &loop;         // 将地址传给主线程
+//                 cond_.notify_one();    // 通知主线程 loop 已创建
+//             }
+
+//             loop.loop();               // 进入事件循环
+
+//             {
+//                 std::lock_guard<std::mutex> lock(mutex_);
+//                 loop_ = nullptr;        // 清理，表示 loop 已销毁
+//             }
+//         });
+
+//         // 等待子线程创建好 loop
+//         {
+//             std::unique_lock<std::mutex> lock(mutex_);
+//             cond_.wait(lock, [this] { return loop_ != nullptr; });
+//         }
+
+//         return loop_;  // 返回子线程创建的 loop 指针
+//     }
+
+//     void stop() {
+//         if (loop_ != nullptr) {
+//             loop_->quit();  // 通知退出
+//         }
+//         thread_.join();     // 等待线程结束
+//     }
+
+// private:
+//     Thread thread_;
+//     EventLoop* loop_;                // 改为指针，指向子线程的 loop
+//     std::mutex mutex_;               // 保护 loop_ 的互斥锁
+//     std::condition_variable cond_;    // 用于同步
+// };
+
+
 }    
 }
 

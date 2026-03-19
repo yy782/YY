@@ -45,6 +45,7 @@ void reuse_port(int fd,bool on=true);
 //void set_nonblock(int fd);
 void set_CloseOnExec(int fd); // 这些报错极为罕见，选择不检查
 ssize_t readAuto(int fd,void* buf,size_t len);
+ssize_t readvAuto(int fd, const iovec* iovec, int count);
 ssize_t writeAuto(int fd,const void* buf,size_t len); //SIGPIPE信号
 ssize_t recvAuto(int fd,void* buf,size_t len,int flags);// 除了这个，其他对ET模式处理可能有点问题
 ssize_t sendAuto(int fd,const void* buf,size_t len,int flags);

@@ -35,12 +35,12 @@ public:
     //typedef std::set<std::pair<TimerPtr,int64_t>> QuerySet;// @brief int64_t是定时器的身份ID,靠TimerPtr(通过原始元素地址)比较，无法保证键唯一性
     // @note muduo库由于受限于C++11标准，std::set不支持异构查找,选择用裸指针存储，我们使用的是C++17标准，选择完善他
 
-    TimerQueue()=default;
+    TimerQueue()=delete;
     TimerQueue(EventLoop* loop);
     ~TimerQueue();
     void insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count);
     void insert(TimerPtr timer);
-    void cancelTimer(PTimer* timer);
+    void cancelTimer(TimerPtr timer);
     void handlerRead();
 
 
@@ -49,6 +49,8 @@ private:
     void modifyTimerfd();
     std::vector<Entry> getDueTasks(const Time_Stamp& now); 
 
+    void insertInLoop(TimerPtr timer);
+    void cancelTimerInLoop(TimerPtr timer);
     EventHandler handler_;
     TimerList timers_;
     //QuerySet querySet_;
