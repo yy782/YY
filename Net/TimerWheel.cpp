@@ -23,6 +23,7 @@ maxSlots_(maxSlots),
 SI_(SI),
 cur_slot_(0),
 slots_(maxSlots),
+loop_(loop),
 handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
 {
     for(int i=0;i<maxSlots_;++i)
@@ -73,14 +74,16 @@ void TimerWheel::insert(LTimerPtr timer)
     node->time_slot=ts;        
 
     LOG_TIME_DEBUG("node rotation:"<<rotation<<" time_slot:"<<ts);
+    loop_->submit([this,ts,node](){ // this会在cb()前构析吗？
+        if(!slots_[ts]){
+            slots_[ts]=node;
+        }else{
+            node->next=slots_[ts];
+            slots_[ts]->prev=node;
+            slots_[ts]=node;
+        } 
+    });
 
-    if(!slots_[ts]){
-        slots_[ts]=node;
-    }else{
-        node->next=slots_[ts];
-        slots_[ts]->prev=node;
-        slots_[ts]=node;
-    } 
     
     
 

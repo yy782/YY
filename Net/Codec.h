@@ -4,39 +4,39 @@
 #include <google/protobuf/message.h>
 #include "TcpBuffer.h"
 #include "../Common/noncopyable.h"
-#include "string_view.h"
+#include "../Common/stringPiece.h"
 namespace yy
 {
 namespace net
 {
 // struct CodecBase 
 // {
-//     virtual int tryDecode(string_view data,string_view& msg)=0;
-//     virtual void encode(string_view msg,TcpBuffer& buf)=0;
+//     virtual int tryDecode(stringPiece data,stringPiece& msg)=0;
+//     virtual void encode(stringPiece msg,TcpBuffer& buf)=0;
 //     virtual CodecBase* clone()=0;
 //     virtual ~CodecBase()=default;
 // };
 
 // struct LineCodec:public CodecBase 
 // {
-//     int tryDecode(string_view data,string_view& msg)override;
-//     void encode(string_view msg,TcpBuffer& buf)override;
+//     int tryDecode(stringPiece data,stringPiece& msg)override;
+//     void encode(stringPiece msg,TcpBuffer& buf)override;
 //     CodecBase* clone()override{return new LineCodec();}
 // };
 // struct LengthCodec:public CodecBase {
-//     int tryDecode(string_view data,string_view& msg)override;
-//     void encode(string_view msg,TcpBuffer& buf)override;
+//     int tryDecode(stringPiece data,stringPiece& msg)override;
+//     void encode(stringPiece msg,TcpBuffer& buf)override;
 //     CodecBase *clone()override{return new LengthCodec();}
 // };
 struct LineCodec
 {
-    static int tryDecode(string_view data,string_view& msg);
-    static void encode(string_view msg,TcpBuffer& buf);
+    static int tryDecode(stringPiece data,stringPiece& msg);
+    static void encode(stringPiece msg,TcpBuffer& buf);
 };
 struct LengthCodec
 {
-    static int tryDecode(string_view data,string_view& msg);
-    static void encode(string_view msg,TcpBuffer& buf);
+    static int tryDecode(stringPiece data,stringPiece& msg);
+    static void encode(stringPiece msg,TcpBuffer& buf);
 };
 
 }

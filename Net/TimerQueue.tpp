@@ -49,8 +49,9 @@ void TimerQueue<PrecisionTag>::insert(TimerPtr timer)
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insertInLoop(TimerPtr timer)
 {
-    LOG_TIME_DEBUG(timers_.size());
     assert(handler_.get_loop()->isInLoopThread());
+    LOG_TIME_DEBUG(timers_.size());
+    
     assert(timer!=nullptr);
     auto& when=timer->getTimerStamp();
     assert(when>Time_Stamp::now());

@@ -21,7 +21,7 @@
 #include <string>
 #include <list>
 #include <set>
-#include "string_view.h"
+#include "stringPiece.h"
 namespace yy
 {
 
@@ -36,7 +36,7 @@ public:
         oss_ << val;
         return *this;
     }
-    LogStream& operator<<(const string_view& val) {
+    LogStream& operator<<(const stringPiece& val) {
         oss_.write(val.data(),val.size());
         return *this;
     }

@@ -7,16 +7,16 @@
 namespace yy
 { 
 
-class string_view
+class stringPiece
 {
 public:
-    string_view() : pb_("") { pe_ = pb_; }
-    string_view(const char *b, const char *e) : pb_(b), pe_(e) {}
-    string_view(const char *d, size_t n) : pb_(d), pe_(d + n) {}
-    string_view(const std::string &s) : pb_(s.data()), pe_(s.data() + s.size()) {}
-    string_view(const char *s) : pb_(s), pe_(s + strlen(s)) {}
+    stringPiece() : pb_("") { pe_ = pb_; }
+    stringPiece(const char *b, const char *e) : pb_(b), pe_(e) {}
+    stringPiece(const char *d, size_t n) : pb_(d), pe_(d + n) {}
+    stringPiece(const std::string &s) : pb_(s.data()), pe_(s.data() + s.size()) {}
+    stringPiece(const char *s) : pb_(s), pe_(s + strlen(s)) {}
 
-    string_view& operator=(const std::string& s)
+    stringPiece& operator=(const std::string& s)
     {
         pb_ = s.data();
         pe_ = s.data() + s.size();
@@ -34,42 +34,42 @@ public:
     void clear() { pe_ = pb_ = ""; }
 
     // return the eated data
-    string_view eatWord();
-    string_view eatLine();
-    string_view eat(int sz)
+    stringPiece eatWord();
+    stringPiece eatLine();
+    stringPiece eat(int sz)
     {
-        string_view s(pb_, sz);
+        stringPiece s(pb_, sz);
         pb_ += sz;
         return s;
     }
-    string_view sub(int boff, int eoff = 0) const
+    stringPiece sub(int boff, int eoff = 0) const
     {
-        string_view s(*this);
+        stringPiece s(*this);
         s.pb_ += boff;
         s.pe_ += eoff;
         return s;
     }
-    string_view &trimSpace();
+    stringPiece &trimSpace();
 
     inline char operator[](size_t n) const { return pb_[n]; }
 
     std::string toString() const { return std::string(pb_, pe_); }
     // Three-way comparison.  Returns value:
-    int compare(const string_view &b) const;
+    int compare(const stringPiece &b) const;
 
     // Return true if "x" is a prefix of "*this"
-    bool starts_with(const string_view &x) const { return (size() >= x.size() && memcmp(pb_, x.pb_, x.size()) == 0); }
+    bool starts_with(const stringPiece &x) const { return (size() >= x.size() && memcmp(pb_, x.pb_, x.size()) == 0); }
 
-    bool end_with(const string_view &x) const { return (size() >= x.size() && memcmp(pe_ - x.size(), x.pb_, x.size()) == 0); }
+    bool end_with(const stringPiece &x) const { return (size() >= x.size() && memcmp(pe_ - x.size(), x.pb_, x.size()) == 0); }
     operator std::string() const { return std::string(pb_, pe_); }
-    std::vector<string_view> split(char ch) const;
+    std::vector<stringPiece> split(char ch) const;
 
 private:
     const char *pb_;
     const char *pe_;
 };
 
-inline string_view string_view::eatWord()
+inline stringPiece stringPiece::eatWord()
 {
     const char *b = pb_;
     while (b < pe_ && isspace(*b))
@@ -82,20 +82,20 @@ inline string_view string_view::eatWord()
         e++;
     }
     pb_ = e;
-    return string_view(b, e - b);
+    return stringPiece(b, e - b);
 }
 
-inline string_view string_view::eatLine()
+inline stringPiece stringPiece::eatLine()
 {
     const char *p = pb_;
     while (pb_ < pe_ && *pb_ != '\n' && *pb_ != '\r')
     {
         pb_++;
     }
-    return string_view(p, pb_ - p);
+    return stringPiece(p, pb_ - p);
 }
 
-inline string_view &string_view::trimSpace()
+inline stringPiece &stringPiece::trimSpace()
 {
     while (pb_ < pe_ && isspace(*pb_))
         pb_++;
@@ -104,22 +104,22 @@ inline string_view &string_view::trimSpace()
     return *this;
 }
 
-inline bool operator<(const string_view &x, const string_view &y)
+inline bool operator<(const stringPiece &x, const stringPiece &y)
 {
     return x.compare(y) < 0;
 }
 
-inline bool operator==(const string_view &x, const string_view &y)
+inline bool operator==(const stringPiece &x, const stringPiece &y)
 {
     return ((x.size() == y.size()) && (memcmp(x.data(), y.data(), x.size()) == 0));
 }
 
-inline bool operator!=(const string_view &x, const string_view &y)
+inline bool operator!=(const stringPiece &x, const stringPiece &y)
 {
     return !(x == y);
 }
 
-inline int string_view::compare(const string_view &b) const
+inline int stringPiece::compare(const stringPiece &b) const
 {
     size_t sz = size(), bsz = b.size();
     const size_t min_len = (sz < bsz) ? sz : bsz;
@@ -134,20 +134,20 @@ inline int string_view::compare(const string_view &b) const
     return r;
 }
 
-inline std::vector<string_view> string_view::split(char ch) const
+inline std::vector<stringPiece> stringPiece::split(char ch) const
 {
-    std::vector<string_view> r;
+    std::vector<stringPiece> r;
     const char *pb = pb_;
     for (const char *p = pb_; p < pe_; p++)
     {
         if (*p == ch)
         {
-            r.push_back(string_view(pb, p));
+            r.push_back(stringPiece(pb, p));
             pb = p + 1;
         }
     }
     if (pe_ != pb_)
-        r.push_back(string_view(pb, pe_));
+        r.push_back(stringPiece(pb, pe_));
     return r;
 }
 }

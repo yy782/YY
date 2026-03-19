@@ -42,15 +42,15 @@ public:
     void insert(TimerPtr timer);
     void cancelTimer(TimerPtr timer);
     void handlerRead();
-
+    void insertInLoop(TimerPtr timer);
+    void cancelTimerInLoop(TimerPtr timer);
 
 private:
     void ReadTimerfd();
     void modifyTimerfd();
     std::vector<Entry> getDueTasks(const Time_Stamp& now); 
 
-    void insertInLoop(TimerPtr timer);
-    void cancelTimerInLoop(TimerPtr timer);
+
     EventHandler handler_;
     TimerList timers_;
     //QuerySet querySet_;

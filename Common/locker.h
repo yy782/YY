@@ -107,9 +107,7 @@ public:
     Thread()=default;
     //void setFunctor(Functor cb){functor_=std::move(cb);}
     ~Thread(){ // @note 这是最后的保证，但是尽量在类的构析函数调用join()接口，而不是等他自然构析
-        if(joinable()){
-            join();
-        }
+        assert(!joinable()); // 要求上层必须自己join,清理资源 
     }
     void run(Functor cb){
         thread_=std::thread([func=std::move(cb)](){try{

@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string>
 #include "noncopyable.h"
-#include "string_view.h"
+#include "../Common/stringPiece.h"
 #include <cstring>
 #include <assert.h>
 namespace yy
@@ -40,7 +40,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     
     std::string retrieveAllToString();
     const char* peek()const {return begin()+read_index_;}
-    string_view getReadView()const{return string_view(peek(),get_readable_size()+1);}
+    stringPiece getReadView()const{return stringPiece(peek(),get_readable_size()+1);}
     char* ModifyData(){return begin()+read_index_;}
 
     void shrink(size_t reserve);
@@ -119,7 +119,7 @@ void TcpBuffer::append(T&& value)
 {
     using DecayedT = std::decay_t<T>;
     static_assert(!std::is_same_v<DecayedT,std::string>);
-    if constexpr(std::is_same_v<DecayedT,string_view>)
+    if constexpr(std::is_same_v<DecayedT,stringPiece>)
     {
         appendImp(value.data(),value.size());
     }

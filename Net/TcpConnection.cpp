@@ -6,24 +6,10 @@ namespace yy
 {
 namespace net
 {
-TcpConnection::TcpConnection():
-Connstatus_(ConnectStatus::Connecting)
-{
 
-}
-// void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
-// {
-//     handler_.init(fd,loop);
-//     addr_=addr;
-//     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
-//     handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
-//     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
-//     handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
-//     handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
-// }
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
-fd_(fd),
+loop_(loop),
 Connstatus_(ConnectStatus::Connecting),
 handler_(fd,loop) // 监听的loop不确定，延迟初始化
 {
@@ -48,14 +34,15 @@ void TcpConnection::disconnect()
 
     if(SendBuffer_.get_readable_size()==0)
     {
-        EventLoop* loop=handler_.get_loop();
-        loop->submit([this](){
+        
+        loop_->submit([this](){
             disconnectInLoop();
         });
     }
 }  
 void TcpConnection::disconnectInLoop()
 {
+    assert(loop_->isInLoopThread());
     if(Connstatus_==ConnectStatus::Connected)
     {
         Connstatus_=ConnectStatus::DisConnecting;
@@ -73,22 +60,24 @@ void TcpConnection::send(const char* message,size_t len)
 void TcpConnection::send(std::string&& message)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
-    auto loop=handler_.get_loop();
-    loop->submit([this,msg=std::move(message)](){
+    
+    loop_->submit([this,msg=std::move(message)](){
         
         sendInLoop(msg.c_str(),msg.size());
     });     
 }
 void TcpConnection::sendOutput()
 {
-    if(!handler_.isWriting())
-    {
-        handler_.setWriting();
-    }
+    loop_->submit([this](){
+        if(!handler_.isWriting())
+        {
+            handler_.setWriting();
+        }        
+    });
 }
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
-
+    assert(loop_->isInLoopThread());
     ssize_t n=sockets::sendAuto(handler_.get_fd(),message,len,0);
     if(n>=0&&n<static_cast<ssize_t>(len))
     {
@@ -162,13 +151,12 @@ void TcpConnection::handleWrite()
 }
 void TcpConnection::handleClose()
 {
-
+    assert(loop_->isInLoopThread());
     assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting);
-    auto loop=handler_.get_loop();
-    assert(loop);
+
     
     handler_.disableAll(); // 防止close后有handlewrite
-    loop->remove_listen(&handler_);
+    loop_->remove_listen(&handler_);
 
     
 

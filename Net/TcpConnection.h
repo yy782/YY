@@ -55,19 +55,22 @@ public:
     }
 
     EventHandler* getHandler(){return &handler_;}    
-    int get_fd()const{return fd_;}
+    int get_fd()const{return handler_.get_fd();}
     Address getAddr()const{return addr_;}
     bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
     void setReading()
     {
-        handler_.setReading();
-        
+        handler_.get_loop()->submit([this](){
+            handler_.setReading();
+        });
     }
     void setExcept()
     {
-        handler_.setExcept();
-        
+       
+        handler_.get_loop()->submit([this](){
+          handler_.setExcept();
+        });
     }
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
     void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
@@ -139,8 +142,7 @@ private:
 
 
     Address addr_; // @prief 对端的地址
-    int fd_;
-    
+    EventLoop* loop_;
     Buffer RecvBuffer_;
     BackpressureState RecvbpState_{BackpressureState::kNormal};
     BackpressureAfterSendCallBack BackpressureAfterSend_;

@@ -43,6 +43,7 @@ private:
     const int SI_;
     int cur_slot_;
     std::vector<NodePtr> slots_;
+    EventLoop* loop_;
     EventHandler handler_;
 };
    
