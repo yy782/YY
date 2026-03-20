@@ -52,6 +52,10 @@ public:
     Address getAddr()const{return addr_;}
     bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
+    template<int context,typename Return,typename... Args>
+    Return ConText(Args&&... args) = delete;
+
+
     void setReading()
     {
         handler_.get_loop()->submit([this](){
