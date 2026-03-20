@@ -28,7 +28,7 @@ public:
     typedef std::set<TcpConnectionPtr> ConnectMap;
     //typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
     typedef std::unique_ptr<Acceptor> AcceptorPtr;
-    typedef std::function<void(TcpConnectionPtr)>  ServicesConnectCallBack;
+    typedef TcpConnection::ServicesConnectionCallBack ServicesConnectCallBack;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;

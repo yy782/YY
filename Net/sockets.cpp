@@ -107,13 +107,8 @@ int timerfd_settime(int fd,int flags,const struct timespec* interval,const struc
     return timerfd_settime(fd,flags,NewValue);
 }
 int timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
-{
-    int ret=::timerfd_settime(fd,flags,&new_ts,NULL); 
-    if(ret<0)
-    {
-        LOG_ERRNO(errno);
-    }  
-    return ret;  
+{ 
+    return ::timerfd_settime(fd,flags,&new_ts,NULL);
 }
 
 void bindOrDie(int fd,const Address& addr)
@@ -138,13 +133,52 @@ void listenOrDie(int fd,int queue_size)
 }
 int connect(int fd,const Address& addr)
 {
-    auto ret=::connect(fd,addr.getSockAddr(),addr.get_len());
-    if(ret==-1)
-    {
-        LOG_ERRNO(errno);
-    }
-    return ret;
+    return ::connect(fd,addr.getSockAddr(),addr.get_len());
 }
+struct sockaddr_in6 sockets::getLocalAddr(int sockfd)
+{
+    struct sockaddr_in6 localaddr;
+    memZero(&localaddr, sizeof localaddr);
+    socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
+    if (::getsockname(sockfd,reinterpret_cast<struct sockaddr*>(&localaddr), &addrlen) < 0)
+    {
+        LOG_WARN("sockets::getLocalAddr");
+    }
+    return localaddr;
+}
+
+struct sockaddr_in6 sockets::getPeerAddr(int sockfd)
+{
+    struct sockaddr_in6 peeraddr;
+    memZero(&peeraddr, sizeof peeraddr);
+    socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
+    if (::getpeername(sockfd, reinterpret_cast<struct sockaddr*>(&peeraddr), &addrlen) < 0)
+    {
+        LOG_WARN("sockets::getPeerAddr");
+    }
+    return peeraddr;
+}
+bool sockets::isSelfConnect(int sockfd)
+{
+    struct sockaddr_in6 localaddr = getLocalAddr(sockfd);
+    struct sockaddr_in6 peeraddr = getPeerAddr(sockfd);
+    if (localaddr.sin6_family == AF_INET)
+    {
+        const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(&localaddr);
+        const struct sockaddr_in* raddr4 = reinterpret_cast<struct sockaddr_in*>(&peeraddr);
+        return laddr4->sin_port == raddr4->sin_port
+            && laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
+    }
+    else if (localaddr.sin6_family == AF_INET6)
+    {
+        return localaddr.sin6_port == peeraddr.sin6_port
+            && memcmp(&localaddr.sin6_addr, &peeraddr.sin6_addr, sizeof localaddr.sin6_addr) == 0;
+    }
+    else
+    {
+        return false;
+    }
+    }
 int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
 {
     int connfd=-1;
@@ -437,21 +471,12 @@ void daemonize(){
 
 ssize_t read(int fd,void* buf,size_t len)
 {
-    auto n=::read(fd,buf,len);
-    if(n<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return n;
+    return ::read(fd,buf,len);
 }
 ssize_t write(int fd,const void* buf,size_t len)
 {
-    ssize_t n=::write(fd,buf,len);
-    if(n<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return n;
+    return ::write(fd,buf,len);
+
 }
 ssize_t recv(int fd,void* buf,size_t len,int flags)
 {
@@ -513,13 +538,9 @@ ssize_t readET(int fd, void* buf, size_t len)
         }
     }
     
-    return len;  // 完全读取了len字节
+    return len;  
 }
 
-/**
- * ET模式下的write函数 - recvn风格
- * 特点：内部循环，尽可能写入数据，遇到EAGAIN返回已写入字节数
- */
 ssize_t writeET(int fd, const void* buf, size_t len)
 {
     assert(len);

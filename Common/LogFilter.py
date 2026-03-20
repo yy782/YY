@@ -23,7 +23,7 @@ MODULES = [
     "TCP",
     "TIME",
     "MEMORY",
-    "WARN",
+    
     "EVENT",
     "HTTP",
     "DEFAULT"  # 保留默认模块

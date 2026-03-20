@@ -5,79 +5,299 @@ namespace yy
 {
 namespace net 
 {
+struct TcpClient::Connector:noncopyable
+{   
+    enum State 
+    { 
+        kDisconnected, 
+        kConnecting, 
+        kConnected 
+    };
+    static const LTimeInterval kInitRetryDelayMs;
+    static const LTimeInterval kMaxRetryDelayMs;
 
-TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
-    fd_(sockets::createTcpSocketOrDie(serverAddr.get_family())),
-    addr_(serverAddr),
+    Connector(EventLoop* loop, const Address& serverAddr, TcpClient* client): 
     loop_(loop),
-    connection_(std::make_shared<TcpConnection>()),
-    ConnectHandler_(fd_,loop_),
-    retry_(false)
-{
-  ConnectHandler_.setWriteCallBack(
-      std::bind(&TcpClient::newConnection, this));
-  ConnectHandler_.set_name("ClientConnectHandler");    
-}
+    serverAddr_(serverAddr),
+    client_(client),
+    state_(kDisconnected),
+    retryDelayMs_(kInitRetryDelayMs),
+    connect_(false) 
+    {
+    }
 
-TcpClient::~TcpClient()
-{
+    ~Connector() 
+    {
+        stop();
+    }
 
+    void start() 
+    {
+        connect_=true;
+        loop_->submit(std::bind(&Connector::startInLoop,this));
+    }
 
-}
+    void stop() 
+    {
+        connect_ = false;
+        loop_->submit(std::bind(&Connector::stopInLoop,this));
+    }
 
-void TcpClient::connect()
-{
-    loop_->submit([this](){
-        
-        int ret=sockets::connect(fd_,addr_);
-        int save_errno=(ret==0)?0:errno;
-        switch (save_errno)
-        {
+    void restart() 
+    {
+        state_=State::kDisconnected;
+        retryDelayMs_ = kInitRetryDelayMs;
+        startInLoop();
+    }
+
+private:
+    void startInLoop() 
+    {
+        assert(loop_->isInLoopThread());
+        if (!connect_ || state_ != kDisconnected) return;
+        connectInLoop();
+    }
+
+    void connectInLoop() 
+    {
+        assert(loop_->isInLoopThread());
+        assert(state_ == kDisconnected);
+        int fd = sockets::createTcpSocketOrDie(serverAddr_.get_family());
+        int ret = sockets::connect(fd, serverAddr_);
+        int savedErrno = (ret == 0) ? 0 : errno;
+        switch (savedErrno) {
             case 0:
             case EINPROGRESS:
             case EINTR:
             case EISCONN:
-                ConnectHandler_.setWriting();
+                connecting(fd);
+                break;
+            case EAGAIN:
+            case EADDRINUSE:
+            case EADDRNOTAVAIL:
+            case ECONNREFUSED:
+            case ENETUNREACH:
+                retry(fd);
                 break;
             default:
-                if(connectFailCallback_)connectFailCallback_(this);
+                LOG_ERRNO(savedErrno);
+                sockets::close(fd);
+                client_->connectFail();
                 break;
-        }   
-    });
-}
+        }
+    }
 
-void TcpClient::disconnect()
-{
-  connection_->disconnect();
-}
+    void connecting(int fd) 
+    {
+        state_=State::kConnecting;
 
+        handler_=std::make_unique<EventHandler>(fd,loop_);
+        handler_->setWriteCallBack(std::bind(&Connector::handleWrite,this));
+        handler_->setErrorCallBack(std::bind(&Connector::handleError,this));
+        handler_->set_name("ConnectorHandler");
+        handler_->setWriting();
+    }
 
+    void handleWrite() {
+        assert(loop_->isInLoopThread());
+        if(state_==kConnecting) 
+        {
+            int sockfd=handler_->get_fd();
+            int err = sockets::sockfd_has_error(sockfd);
+            if (err!=0) 
+            {
+                LOG_WARN("Connector::handleWrite - SO_ERROR = "<<err);
+                retry(sockfd);
+                return;
+            }
+            if (sockets::isSelfConnect(sockfd)) 
+            {
+                LOG_WARN("Connector::handleWrite - Self connect");
+                retry(sockfd);
+                return;
+            }
+            state_=kConnected;
+            client_->newConnection(::dup(sockfd));
+            resetHandler();
+        }
+    }
 
-void TcpClient::newConnection()
-{
+    void handleError() {
+        assert(loop_->isInLoopThread());
+
+        if (state_ == kConnecting) 
+        {
+            int socketfd=handler_->get_fd();
+            int err = sockets::sockfd_has_error(socketfd);
+            LOG_WARN("Connector::handleError - Self connect"<<err);
+            retry(socketfd);
+        }
+    }
+    void retry(int sockfd) 
+    {
+        if(sockfd >= 0) 
+        {
+            sockets::close(sockfd);
+        }
+        state_=kDisconnected;
+        if (connect_&&client_->retry()) 
+        {
+            EXCLUDE_BEFORE_COMPILATION( 
+                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.toIpPort()<<" in "<<
+                retryDelayMs_<<" ms");
+            )
+            loop_->runTimer<LowPrecision>([this](){
+                startInLoop();
+            },retryDelayMs_,1);
+
+            // 指数退避
+            LTimeInterval NextretryDelayMs=2ms*retryDelayMs_;
+            retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
+        } 
+        else 
+        {
+            client_->connectFail();
+        }
+    }
+
+    void stopInLoop() 
+    {
+        assert(loop_->isInLoopThread());
+        if (state_ == kConnecting) 
+        {
+            state_=kDisconnected;
+            resetHandler();
+        }
+    }
+
+    void resetHandler() 
+    {
+        if(handler_) 
+        {
+            handler_->removeListen();
+            handler_.reset();
+        }
+    }
 
   
-    int err = sockets::sockfd_has_error(fd_);
-    if (err!=0) // 有错误
-    {
-        if (connectFailCallback_)
-        {
-            connectFailCallback_(this);
-        }
-    }
-    else 
-    {
-        ConnectHandler_.removeListen();
-        connection_->init(dup(fd_),addr_,loop_);
-        connection_->ConnectSuccess();
-        connection_->setReading();
-        if (connectedCallback_)
-        {
-            connectedCallback_(connection_);
-        }
+
+    EventLoop* loop_;
+    Address serverAddr_;
+    TcpClient* client_;  
+    State state_;
+    std::unique_ptr<EventHandler> handler_;
+    LTimeInterval retryDelayMs_;
+    bool connect_;  
+};
+
+const LTimeInterval TcpClient::Connector::kInitRetryDelayMs=500ms;
+const LTimeInterval TcpClient::Connector::kMaxRetryDelayMs=30*1000ms;
+
+TcpClient::TcpClient(EventLoop* loop, const Address& serverAddr): 
+    loop_(loop),
+    serverAddr_(serverAddr),
+    retry_(false),
+    connector_(std::make_unique<Connector>(loop, serverAddr, this)) 
+{
+}
+
+TcpClient::~TcpClient() 
+{
+    connector_->stop();
+    if (connection_) {
+        connection_->disconnect();
     }
 }
 
+void TcpClient::connect() 
+{
+    connector_->start();
+}
+
+void TcpClient::disconnect() {
+    if (connection_) {
+        connection_->disconnect();
+    }
+}
+
+void TcpClient::stop() {
+    retry_ = false;
+    connector_->stop();
+    if (connection_) {
+        connection_->disconnect();
+    }
+}
+
+bool TcpClient::isConnected() const {
+    return connection_ && connection_->isConnected();
+}
+
+bool TcpClient::isConnecting() const {
+    return connection_ && connection_->isConnecting();
+}
+
+void TcpClient::send(const std::string& message) {
+    send(message.data(), message.size());
+}
+
+void TcpClient::send(const char* data, size_t len) {
+    if (connection_ && connection_->isConnected()) {
+        connection_->send(data, len);
+    } else {
+        LOG_WARN("TcpClient::send - not connected, message discarded");
+    }
+}
+
+void TcpClient::sendOutput()
+{
+    if (connection_ && connection_->isConnected()) {
+        connection_->sendOutput();
+    } else {
+        LOG_WARN("TcpClient::send - not connected, buffer discarded");
+    }
+}
+
+void TcpClient::newConnection(int sockfd) {
+    assert(loop_->isInLoopThread());
+    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_);
+    connection_->setConnectCallBack(SconnectionCallback_);
+    connection_->setMessageCallBack(SmessageCallback_);
+    connection_->setErrorCallBack(SerrorCallback_);
+    connection_->setCloseCallBack(std::bind(&TcpClient::removeConnection, 
+                                            this,connection_));
+    connection_->setReading();
+    connection_->setExcept();
+    connection_->ConnectSuccess();
+}
+
+void TcpClient::removeConnection(const TcpConnectionPtr& conn) {
+    assert(loop_->isInLoopThread());
+    assert(conn == connection_);
+
+    // 先调用用户回调
+    if (ScloseCallback_) {
+        ScloseCallback_(conn);      
+    }
+
+    // 清理连接
+    connection_.reset();
+
+    // 如果需要自动重连
+    if (retry_) {
+        EXCLUDE_BEFORE_COMPILATION(
+            LOG_CLIENT_INFO("Connection lost, will reconnect");
+        )
+        connector_->restart();
+    }
+}
+
+void TcpClient::connectFail() {
+    assert(loop_->isInLoopThread());
+
+    if (SconnectFailCallback_) {
+        SconnectFailCallback_(this);            
+    }
+}
 
 
 

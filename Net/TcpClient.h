@@ -20,122 +20,118 @@ namespace net
 //     TcpClient(const Address& serverAddr,EventLoop* loop):
 //     serverAddr_(serverAddr),
 //     loop_(loop),
-//     connection_(std::make_shared<TcpConnection>()),
+//     conn_(std::make_shared<TcpConnection>()),
 //     ConnectHandler_(sockets::createTcpSocketOrDie(serverAddr.get_family()),loop)
 //     {
 //         ConnectHandler_.setWriteCallBack(std::bind(&TcpClient::connectEstablished,this));
 //     }
 //     ~TcpClient()
 //     {
-//         connection_->disconnect();
+//         conn_->disconnect();
 //     }
 //     void connect()
 //     {
-//         connection_->connect();
-//         EventHandler* handler_ = connection_->getHandler();
+//         conn_->connect();
+//         EventHandler* handler_ = conn_->getHandler();
 //         handler_->setReadingAndExcept();
 //     }
 //     void disconnect()
 //     {
 
 
-//         connection_->disconnect();
+//         conn_->disconnect();
         
 //     }
 //     void send(const char* msg,size_t len)
 //     {
-//         connection_->send(msg,len);
+//         conn_->send(msg,len);
 //     }
 //     void sendOutput()
 //     {
-//         connection_->sendOutput();
+//         conn_->sendOutput();
 //     }
     
-//     bool isConnected(){return connection_->isConnected();}
-//     void setMessageCallBack(ServicesMessageCallBack callback){ connection_->setMessageCallBack(std::move(callback));}
-//     void setCloseCallBack(ServicesCloseCallBack callback){ connection_->setCloseCallBack(std::move(callback));}
-//     void setErrorCallBack(ServicesErrorCallBack callback){ connection_->setErrorCallBack(std::move(callback));}
-//     TcpBuffer& getSendBuffer(){return connection_->getSendBuffer();}
-//     TcpBuffer& getRecvBuffer(){return connection_->getRecvBuffer();}
+//     bool isConnected(){return conn_->isConnected();}
+//     void setMessageCallBack(ServicesMessageCallBack callback){ conn_->setMessageCallBack(std::move(callback));}
+//     void setCloseCallBack(ServicesCloseCallBack callback){ conn_->setCloseCallBack(std::move(callback));}
+//     void setErrorCallBack(ServicesErrorCallBack callback){ conn_->setErrorCallBack(std::move(callback));}
+//     TcpBuffer& getSendBuffer(){return conn_->getSendBuffer();}
+//     TcpBuffer& getRecvBuffer(){return conn_->getRecvBuffer();}
 
 //     Address getPeerAddr(){return serverAddr_;}
 // private:
 //     void connectEstablished();
 //     Address serverAddr_;
 //     EventLoop* loop_;
-//     TcpConnectionPtr connection_; // @brief 由于回调要TcpConnectionPtr,创建栈对象shared_from_this()会报错
+//     TcpConnectionPtr conn_; // @brief 由于回调要TcpConnectionPtr,创建栈对象shared_from_this()会报错
 
 //     EventHandler ConnectHandler_;
 
 // };
-class TcpClient : noncopyable
-{
- public:
-    typedef std::function<void(TcpConnectionPtr)> ServicesConnectedCallback;
+class TcpClient : noncopyable {
+public:
+    typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
     typedef std::function<void(TcpClient*)> ServicesConnectFailCallback;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-    typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
+    typedef TcpConnection::CloseCallBack ServicesCloseCallback;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
-    typedef TcpConnection::ConnectStatus Status;
     typedef TcpConnection::Buffer Buffer;
-    typedef std::function<void(TcpConnectionPtr)> ServicesConnectCallBack;
-    TcpClient(const Address& serverAddr,EventLoop* loop);
-    ~TcpClient();  
+
+    TcpClient(EventLoop* loop, const Address& serverAddr);
+    ~TcpClient();
+
+    // 连接控制
     void connect();
     void disconnect();
+    void stop();  // 完全停止，不再重连
 
-    EventLoop* getLoop() const { return loop_; }
+    // 重连控制
+    void enableRetry() { retry_ = true; }
+    void disableRetry() { retry_ = false; }
     bool retry() const { return retry_; }
 
-    bool isConnecting(){return connection_->isConnecting();}
-    bool isConnected(){return connection_->isConnected();}
-    void enableRetry() { retry_ = true; }
-    void setConnectedCallback(ServicesConnectedCallback callback){ connectedCallback_=std::move(callback);}
-    void setConnectFailCallback(ServicesConnectFailCallback callback){ connectFailCallback_=std::move(callback);}
-    void setMessageCallBack(ServicesMessageCallBack callback){ connection_->setMessageCallBack(std::move(callback));}
-    void setCloseCallBack(ServicesCloseCallBack callback){ connection_->setCloseCallBack(std::move(callback));}
-    void setErrorCallBack(ServicesErrorCallBack callback){ connection_->setErrorCallBack(std::move(callback));}
-    Buffer& getSendBuffer(){return connection_->getSendBuffer();}
-    Buffer& getRecvBuffer(){return connection_->getRecvBuffer();}
-    Address getPeerAddr(){return addr_;}
-    void send(const char* message,size_t len)
-    {
-        send(std::string(message,len));        
-    }
-    void send(std::string&& message)
-    {
-        if(isConnecting())
-        {
-            connection_->getSendBuffer().append(message.c_str(),message.size());
-           
-        }
-        else 
-        {
-            connection_->send(std::forward<std::string>(message));
-        }
-        
-    }
-    void sendOutput()
-    {connection_->sendOutput();}    
+    // 状态查询
+    bool isConnected() const;
+    bool isConnecting() const;
 
-    private:
-  
-    void newConnection();
+    // 回调设置
+    void setConnectionCallback(ServicesConnectionCallBack cb) { SconnectionCallback_ = std::move(cb); }
+    void setConnectFailCallback(ServicesConnectFailCallback cb) { SconnectFailCallback_ = std::move(cb); }
+    void setMessageCallback(ServicesMessageCallBack cb) { SmessageCallback_ = std::move(cb); }
+    void setCloseCallback(ServicesCloseCallback cb) { ScloseCallback_ = std::move(cb); }
+    void setErrorCallback(ServicesErrorCallBack cb) {SerrorCallback_ = std::move(cb); }
 
+    // 发送数据
+    void send(const std::string& message);
+    void send(const char* data, size_t len);
+    void sendOutput();
 
-    const int fd_;
-    const Address& addr_;
+    // 获取连接
+    TcpConnectionPtr connection() const { return connection_; }
+    EventLoop* getLoop() const { return loop_; }
+    const Address& serverAddress() const { return serverAddr_; }
+
+private:
+    // Pimpl: 隐藏所有连接细节
+    struct Connector;
+    std::unique_ptr<Connector> connector_;
+
     EventLoop* loop_;
+    Address serverAddr_;
+    std::atomic<bool> retry_;
     TcpConnectionPtr connection_;
-    EventHandler ConnectHandler_;
-    std::atomic<bool> retry_;   // atomic
-  
 
-   ServicesConnectedCallback connectedCallback_;
-   ServicesConnectFailCallback connectFailCallback_;
-    // always in loop thread
-  
-    
+    // 回调函数
+    ServicesConnectionCallBack SconnectionCallback_;
+    ServicesConnectFailCallback SconnectFailCallback_;
+    ServicesMessageCallBack SmessageCallback_;
+    ServicesCloseCallback ScloseCallback_;
+    ServicesErrorCallBack SerrorCallback_;
+
+    // 内部函数
+    void newConnection(int sockfd);
+    void removeConnection(const TcpConnectionPtr& conn);
+    void connectFail();
 };
 }
 }

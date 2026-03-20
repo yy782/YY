@@ -27,7 +27,7 @@ int createTimerFdOrDie(clockid_t clock_id,int flags);
 int setSignalOrDie(int fd,sigset_t* sigset,int flags);
 void bindOrDie(int fd,const Address& addr);
 void listenOrDie(int fd,int queue_size=SOMAXCONN);
-
+bool isSelfConnect(int sockfd);
 int timerfd_settime(int fd,int flags,const struct timespec* interval,const struct timespec* value);
 int timerfd_settime(int fd,int flags,const struct itimerspec& new_ts);
 template<typename T>

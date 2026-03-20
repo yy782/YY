@@ -23,15 +23,12 @@ public:
     typedef TcpBuffer Buffer;
     
     typedef Buffer::CharContainer CharContainer;
-    
+    typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
+    typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
-    typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
-
-    //typedef std::shared_ptr<CodecBase> CodecPtr;
-
     typedef std::function<void(TcpConnectionPtr)> BackpressureAfterSendCallBack;
     typedef std::function<void(TcpConnectionPtr)> BackpressureAfterReadCallBack;
     typedef AutoContext ServicesData;
@@ -40,20 +37,16 @@ public:
 
     TcpConnection()=delete;
     TcpConnection(int fd,const Address& addr,EventLoop* loop); // 服务端的构造函数
-    //void init(int fd,const Address& addr,EventLoop* loop);
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     void ConnectSuccess()
     {
-        assert( Connstatus_==ConnectStatus::Connecting);
+        assert(Connstatus_==ConnectStatus::Connecting);
         Connstatus_=ConnectStatus::Connected;
+        if(SconnectCallback_)
+        {
+            SconnectCallback_(shared_from_this());
+        }
     }
-    static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop)//@note 服务端用这个接口
-    {
-        auto conn=std::make_shared<TcpConnection>(fd,addr,loop);
-        conn->Connstatus_=ConnectStatus::Connected;
-        return conn;
-    }
-
     EventHandler* getHandler(){return &handler_;}    
     int get_fd()const{return handler_.get_fd();}
     Address getAddr()const{return addr_;}
@@ -72,6 +65,7 @@ public:
           handler_.setExcept();
         });
     }
+    void setConnectCallBack(ServicesConnectionCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
     void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
     void setCloseCallBack(CloseCallBack cb){ScloseCallBack_=std::move(cb);} // @brief 这是对端关闭的回调
@@ -150,9 +144,10 @@ private:
     BackpressureState SendbpState_{BackpressureState::kNormal};
     BackpressureAfterReadCallBack BackpressureAfterRead_;
 
+    ServicesConnectionCallBack SconnectCallback_;
     ServicesMessageCallBack SmessageCallBack_;
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
-    CloseCallBack ScloseCallBack_; // @brief 这是对端选择断开连接时的回调
+    CloseCallBack ScloseCallBack_; 
     ServicesErrorCallBack SerrorCallBack_;
     ServicesExceptCallBack SexceptCallBack_;
     ServicesData data_;

@@ -7,7 +7,7 @@ namespace net
 TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
 loop_(loop),
 acceptor_(std::make_unique<Acceptor>(addr,loop_)),
-threadpool_(threadnum)
+threadpool_(loop,threadnum)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 
@@ -29,7 +29,7 @@ void TcpServer::newConnection(int fd,const Address& addr)
     
 
     EventLoop* loop=threadpool_.getEventLoop();
-    TcpConnectionPtr conn=TcpConnection::accept(fd,addr,loop);
+    TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop);
     connects_.insert(conn);
     conn->setName(conn->getAddr().sockaddrToString().c_str());
     
@@ -41,8 +41,8 @@ void TcpServer::newConnection(int fd,const Address& addr)
         removeConnection(con,loop);
     });
     conn->setErrorCallBack(SerrorCallback_);
-    if(SconnectCallback_)SconnectCallback_(conn);
-
+    conn->setConnectCallBack(SconnectCallback_);
+    conn->ConnectSuccess();
 }
     
 void TcpServer::removeConnection(TcpConnectionPtr conn,EventLoop* loop)

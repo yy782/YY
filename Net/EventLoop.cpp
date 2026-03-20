@@ -101,7 +101,7 @@ void EventLoop::doPendingFunctions()
 {
     status_|=EventLoopStatus::PendingFunctions;
     assert(CheckeEventLoopStatus());
-    while(!FunctionList_.empty())
+    while(!FunctionList_.empty()) // task持续不断，饥饿?
     {
         Functor cb;
         FunctionList_.retrieve(cb);
