@@ -102,11 +102,10 @@ public:
     void setErrorCallback(ServicesErrorCallBack cb) {SerrorCallback_ = std::move(cb); }
 
     // 发送数据
-    void send(const std::string& message);
+    void send(std::string&& message);
     void send(const char* data, size_t len);
     void sendOutput();
 
-    // 获取连接
     TcpConnectionPtr connection() const { return connection_; }
     EventLoop* getLoop() const { return loop_; }
     const Address& serverAddress() const { return serverAddr_; }
@@ -128,9 +127,8 @@ private:
     ServicesCloseCallback ScloseCallback_;
     ServicesErrorCallBack SerrorCallback_;
 
-    // 内部函数
     void newConnection(int sockfd);
-    void removeConnection(const TcpConnectionPtr& conn);
+    void removeConnection();
     void connectFail();
 };
 }

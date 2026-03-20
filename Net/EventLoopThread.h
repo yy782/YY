@@ -90,7 +90,10 @@ public:
         }
         thread_.join();     // 等待线程结束
     }
-
+    EventLoop* getEventLoop()
+    {
+        return loop_;
+    }
 private:
     Thread thread_;
     EventLoop* loop_;                // 改为指针，指向子线程的 loop

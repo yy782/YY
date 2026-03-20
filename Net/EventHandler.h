@@ -101,7 +101,7 @@ public:
 private:
     void update();
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
-    int fd_;
+    int fd_={-1};
     Event events_;
     Event revents_;
     EventLoop* loop_;
