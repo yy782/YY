@@ -52,8 +52,8 @@ public:
     Address getAddr()const{return addr_;}
     bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
-    template<int context,typename Return,typename... Args>
-    Return ConText(Args&&... args) = delete;
+    template<typename Tag, typename... Args>
+    typename Tag::ReturnType Extend(Args&&... args)=delete;
 
 
     void setReading()
