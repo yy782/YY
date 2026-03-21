@@ -19,6 +19,7 @@
 #include "../ConfigCenter.h"
 #include "../../Common/AsyncLog.h"
 #include "../../Common/SyncLog.h"
+#include <execinfo.h>
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::sockets;
@@ -137,8 +138,10 @@ int main()
     server.start();
     auto& signal_handler=SignalHandler::getInstance(&loop);
     signal_handler.addSign(SIGTERM,[&server,&loop](){
+        
         loop.quit();
         server.stop();
+        LOG_SYSTEM_DEBUG("Siganal handle exit");
         sleep(2);
     });
     loop.loop();
