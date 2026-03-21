@@ -57,7 +57,9 @@ public:
     bool isReading()const{return events_&EventType::ReadEvent;}
     bool isExcept()const{return events_&EventType::ExceptEvent;}
     bool isReadingAndExcept()const{return events_&(EventType::ReadEvent|EventType::ExceptEvent);}
-    void setReading(){events_.add_event(EventType::ReadEvent);update();}
+    void setReading(){
+        events_.add_event(EventType::ReadEvent);update();
+    }
     void cancelReading(){events_.remove_event(EventType::ReadEvent);update();}
     void setWriting(){events_.add_event(EventType::WriteEvent);update();}
     void cancelWriting(){events_.remove_event(EventType::WriteEvent);update();}

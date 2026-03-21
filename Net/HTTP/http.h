@@ -5,7 +5,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <map>
-#include "../../Common/string_view.h"
+#include "../../Common/stringPiece.h"
 #include <functional>
 namespace yy 
 {
@@ -44,24 +44,24 @@ public:
     virtual ~HttpMsg() {}
     
     virtual int encode(std::string& buf) = 0;
-    virtual ParseResult tryDecode(string_view buf, bool copyBody = true) = 0;
+    virtual ParseResult tryDecode(stringPiece buf, bool copyBody = true) = 0;
     virtual void clear();
     
     std::string getHeader(const std::string& name);
-    string_view getBody();
+    stringPiece getBody();
     size_t getByte() const;
     
     std::map<std::string, std::string> headers_;
     std::string version_;
     std::string body_;
-    string_view bodyView_;
+    stringPiece bodyView_;
 
 protected:
     bool complete_;
     size_t contentLen_;
     size_t scanned_;
     
-    ParseResult tryDecode_(string_view buf, bool copyBody, string_view* line1);
+    ParseResult tryDecode_(stringPiece buf, bool copyBody, stringPiece* line1);
 };
 
 // HTTP请求
@@ -87,7 +87,7 @@ public:
     static std::string methodToString(Method m);
     
     virtual int encode(std::string& buf) override;
-    virtual ParseResult tryDecode(string_view buf, bool copyBody = true) override;
+    virtual ParseResult tryDecode(stringPiece buf, bool copyBody = true) override;
     virtual void clear() override;
 
 private:
@@ -115,7 +115,7 @@ public:
     void setNotFound();
     
     virtual int encode(std::string& buf) override;
-    virtual ParseResult tryDecode(string_view buf, bool copyBody = true) override;
+    virtual ParseResult tryDecode(stringPiece buf, bool copyBody = true) override;
     virtual void clear() override;
 
 private:

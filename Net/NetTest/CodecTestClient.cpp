@@ -3,6 +3,7 @@
 #include "../TcpClient.h"
 #include "../Codec.h"
 #include "../ConfigCenter.h"
+#include "../EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
 int MsgCount=0;
@@ -15,11 +16,9 @@ public:
     {
         client_.setMessageCallBack(bind(&CodecTestClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&CodecTestClient::handleClose,this,_1));
-        client_.setConnectedCallback(bind(&CodecTestClient::handleConnected,this,_1));
-
-         
+        client_.setConnectionCallback(bind(&CodecTestClient::handleConnected,this,_1));
     }
-    void handleConnected(TcpConnectionPtr /*conn*/)
+    void handleConnected(TcpConnectionPtr)
     {
         std::cout<<"Connected to server"<<std::endl;
         // 连接成功后发送消息
@@ -35,7 +34,7 @@ public:
     }
     void send(const std::string& msg)
     {
-        LineCodec::encode(string_view(msg),client_.getSendBuffer());
+        LineCodec::encode(stringPiece(msg),client_.getSendBuffer());
         client_.sendOutput();
     }
     void connect()
@@ -50,7 +49,7 @@ public:
     void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        string_view msg;
+        stringPiece msg;
         int p=1;
         while(p>0)
         {
@@ -74,7 +73,7 @@ public:
         conn->send("bye\n",4);
         exit(0);
     }
-
+    bool isConnected(){return client_.isConnected();}
 private:
     TcpClient client_;
     
@@ -84,9 +83,12 @@ private:
 int main()
 {
     Address addr(8080,true);
-    EventLoop client_loop;
-    CodecTestClient client(addr,&client_loop);
+    EventLoopThread thread;
+    CodecTestClient client(addr,thread.run());
     client.connect(); 
 
-    client_loop.loop();
+    while(client.isConnected())
+    {
+        sleep(1);
+    }        
 }

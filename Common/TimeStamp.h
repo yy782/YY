@@ -98,9 +98,9 @@ public:
     TimeInterval(long times):
     TimeInterval(TimePeriod(times))
     {}
-        template<typename Rep, typename Period>
-    TimeInterval(std::chrono::duration<Rep, Period> duration)
-        : timePeriod_(std::chrono::duration_cast<TimePeriod>(duration))
+    template<typename Rep, typename Period>
+    TimeInterval(std::chrono::duration<Rep, Period> duration): 
+    timePeriod_(std::chrono::duration_cast<TimePeriod>(duration))
     {}
     const TimePeriod& getTimePeriod()const{return timePeriod_;}
     TimePeriod& getTimePeriod(){return timePeriod_;}
@@ -182,6 +182,14 @@ bool operator>=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<Precisi
 {
     return !(lhs<rhs);
 }
+template<typename PrecisionTag>
+TimeInterval<PrecisionTag> operator*(int times,const TimeInterval<PrecisionTag>& lhs)
+{
+    
+    auto period = lhs.getTimePeriod();
+    return TimeInterval<PrecisionTag>(period * times);
+}
+
 
 }
 #endif

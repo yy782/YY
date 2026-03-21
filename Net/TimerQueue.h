@@ -1,7 +1,7 @@
 #ifndef _YY_NET_TIMERQUEUE_H_
 #define _YY_NET_TIMERQUEUE_H_
 
-
+#include "EventLoop.h"
 #include <set>
 #include <memory>
 #include "../Common/noncopyable.h"
@@ -11,6 +11,7 @@
 #include <memory>
 #include "Timer.h"
 #include "EventHandler.h"
+#include <utility>
 namespace yy
 {
 namespace net
@@ -18,7 +19,6 @@ namespace net
 
 
 
-class EventLoop;
 
 
 
@@ -55,6 +55,18 @@ private:
     TimerList timers_;
     //QuerySet querySet_;
 };
+
+template<class PrecisionTag>
+void EventLoop::runTimer(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
+{
+    submit([this,cb=std::move(cb),interval=std::move(interval),execute_count]()mutable
+    {///////////////////////////////////////////////
+        assert(isInLoopThread());
+        thread_local static TimerQueue<PrecisionTag> queue(this);
+        auto timer=std::make_shared<Timer<PrecisionTag>>(std::move(cb),std::move(interval),execute_count);
+        queue.insertInLoop(timer);
+    });
+}
 }    
 }
 

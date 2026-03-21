@@ -62,7 +62,7 @@ private:
     void onMessage(TcpConnectionPtr conn)
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        string_view msg;
+        stringPiece msg;
 
         while(true)
         {
@@ -71,15 +71,7 @@ private:
             {
                 return;
             }
-            msg=string_view(buffer.peek(),last);
-            
-    
-    
-            if(msg=="bye") // @note 
-            {
-                return;
-            }
-
+            msg=stringPiece(buffer.peek(),last);
             conn->send(msg.data(),msg.size());
             LOG_SYSTEM_INFO("recv msg: "<<msg);
             // 消费掉缓冲区中的数据
@@ -147,6 +139,7 @@ int main()
     signal_handler.addSign(SIGTERM,[&server,&loop](){
         loop.quit();
         server.stop();
+        sleep(2);
     });
     loop.loop();
 }

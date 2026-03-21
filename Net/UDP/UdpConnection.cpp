@@ -139,7 +139,7 @@ void UdpConnection::handleRead() {
     ssize_t n=sockets::recvfromAuto(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
 
 
-    messageCallback_(shared_from_this(),string_view(buf,n),peerAddr);
+    messageCallback_(shared_from_this(),stringPiece(buf,n),peerAddr);
 }
 
 void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest) {

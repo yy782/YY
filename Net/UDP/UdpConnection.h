@@ -7,7 +7,7 @@
 #include "../EventHandler.h"
 #include "../InetAddress.h"
 #include "../AutoContext.h"
-#include "../../Common/string_view.h"
+#include "../../Common/stringPiece.h"
 #include "../../Common/TimeStamp.h"
 namespace yy 
 {
@@ -20,7 +20,7 @@ class UdpConnection : public std::enable_shared_from_this<UdpConnection>,
 {
 public:
     typedef std::shared_ptr<UdpConnection> UdpConnectionPtr;
-    typedef std::function<void(UdpConnectionPtr,string_view, const Address&)> UdpMessageCallBack;
+    typedef std::function<void(UdpConnectionPtr,stringPiece, const Address&)> UdpMessageCallBack;
     typedef std::function<void(UdpConnectionPtr)> UdpErrorCallBack;
     typedef AutoContext ServicesData;
 

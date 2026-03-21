@@ -23,7 +23,7 @@ public:
             loop->quit();
             exit(0);
         });
-        client_.setConnectedCallback([this](TcpConnectionPtr){
+        client_.setConnectionCallback([this](TcpConnectionPtr){
             this->sendStudent();
         });
         client_.setConnectFailCallback([this,loop](TcpClient* /*client*/){

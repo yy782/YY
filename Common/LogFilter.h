@@ -88,6 +88,7 @@ struct LogModule
     static inline const std::string EVENT = "EVENT";
     static inline const std::string WARN = "WARN";
     static inline const std::string HTTP = "HTTP";
+    static inline const std::string CLIENT = "CLIENT";
     static inline const std::string DEFAULT = "DEFAULT";
 };
 
@@ -260,7 +261,7 @@ extern LogFilter* g_log_filter;
 #define LOG_TCP_DEBUG(msg) LOG_BASE(LogModule::TCP, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_TIME_DEBUG(msg) LOG_BASE(LogModule::TIME, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_MEMORY_DEBUG(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_DEBUG, "DEBUG", msg)
-#define LOG_WARN_DEBUG(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_DEBUG, "DEBUG", msg)
+#define LOG_CLIENT_DEBUG(msg) LOG_BASE(LogModule::CLIENT, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_EVENT_DEBUG(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_HTTP_DEBUG(msg) LOG_BASE(LogModule::HTTP, LOG_LEVEL_DEBUG, "DEBUG", msg)
 #define LOG_DEFAULT_DEBUG(msg) LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_DEBUG, "DEBUG", msg)
@@ -271,7 +272,7 @@ extern LogFilter* g_log_filter;
 #define LOG_TCP_DEBUG(msg) 
 #define LOG_TIME_DEBUG(msg) 
 #define LOG_MEMORY_DEBUG(msg) 
-#define LOG_WARN_DEBUG(msg) 
+#define LOG_CLIENT_DEBUG(msg) 
 #define LOG_EVENT_DEBUG(msg) 
 #define LOG_HTTP_DEBUG(msg) 
 #define LOG_DEFAULT_DEBUG(msg) 
@@ -294,9 +295,9 @@ extern LogFilter* g_log_filter;
 #define LOG_MEMORY_INFO(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_INFO, "INFO", msg)
 #define LOG_MEMORY_WARN(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_WARN, "INFO", msg)
 #define LOG_MEMORY_ERROR(msg) LOG_BASE(LogModule::MEMORY, LOG_LEVEL_ERROR, "INFO", msg)
-#define LOG_WARN_INFO(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_INFO, "INFO", msg)
-#define LOG_WARN_WARN(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN, "INFO", msg)
-#define LOG_WARN_ERROR(msg) LOG_BASE(LogModule::WARN, LOG_LEVEL_ERROR, "INFO", msg)
+#define LOG_CLIENT_INFO(msg) LOG_BASE(LogModule::CLIENT, LOG_LEVEL_INFO, "INFO", msg)
+#define LOG_CLIENT_WARN(msg) LOG_BASE(LogModule::CLIENT, LOG_LEVEL_WARN, "INFO", msg)
+#define LOG_CLIENT_ERROR(msg) LOG_BASE(LogModule::CLIENT, LOG_LEVEL_ERROR, "INFO", msg)
 #define LOG_EVENT_INFO(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_INFO, "INFO", msg)
 #define LOG_EVENT_WARN(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_WARN, "INFO", msg)
 #define LOG_EVENT_ERROR(msg) LOG_BASE(LogModule::EVENT, LOG_LEVEL_ERROR, "INFO", msg)

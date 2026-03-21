@@ -7,7 +7,7 @@ namespace net
 TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
 loop_(loop),
 acceptor_(std::make_unique<Acceptor>(addr,loop_)),
-threadpool_(threadnum,loop)
+threadpool_(threadnum)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 

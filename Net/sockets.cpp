@@ -135,7 +135,7 @@ int connect(int fd,const Address& addr)
 {
     return ::connect(fd,addr.getSockAddr(),addr.get_len());
 }
-struct sockaddr_in6 sockets::getLocalAddr(int sockfd)
+struct sockaddr_in6 getLocalAddr(int sockfd)
 {
     struct sockaddr_in6 localaddr;
     memZero(&localaddr, sizeof localaddr);
@@ -147,7 +147,7 @@ struct sockaddr_in6 sockets::getLocalAddr(int sockfd)
     return localaddr;
 }
 
-struct sockaddr_in6 sockets::getPeerAddr(int sockfd)
+struct sockaddr_in6 getPeerAddr(int sockfd)
 {
     struct sockaddr_in6 peeraddr;
     memZero(&peeraddr, sizeof peeraddr);
@@ -158,7 +158,7 @@ struct sockaddr_in6 sockets::getPeerAddr(int sockfd)
     }
     return peeraddr;
 }
-bool sockets::isSelfConnect(int sockfd)
+bool isSelfConnect(int sockfd)
 {
     struct sockaddr_in6 localaddr = getLocalAddr(sockfd);
     struct sockaddr_in6 peeraddr = getPeerAddr(sockfd);
@@ -309,7 +309,7 @@ void set_CloseOnExec(int fd)
 
 ssize_t readvAuto(int fd, const iovec* iovec, int count)
 {
-    int ret=::readv(fd,iovec,count);
+    ssize_t ret=::readv(fd,iovec,count);
     if(ret<0)
     {
         LOG_ERRNO(errno);

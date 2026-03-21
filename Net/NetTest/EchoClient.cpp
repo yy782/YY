@@ -3,6 +3,7 @@
 #include "../TcpClient.h"
 #include "../Codec.h"
 #include "../ConfigCenter.h"
+#include "../EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
 
@@ -10,9 +11,11 @@ using namespace yy::net;
 class EchoClient// stdout是线程不安全的
 {
 public:
-    EchoClient(const Address& serverAddr,EventLoop* loop):
-    client_(serverAddr,loop),
-    stdIn_(0,loop)
+    EchoClient(const Address& serverAddr,EventLoopThread* thread):
+    loop_(thread->run()),
+    client_(serverAddr,loop_),
+    stdIn_(0,loop_),
+    thread_(thread)
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
@@ -40,7 +43,7 @@ public:
     void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        string_view msg;
+        stringPiece msg;
         while(true)
         {
             const char* last=buffer.findBorder("\n",1);
@@ -48,7 +51,7 @@ public:
             {
                 return;
             }
-            msg=string_view(buffer.peek(),last);
+            msg=stringPiece(buffer.peek(),last);
             
             
             std::cout<<"recv:"<<msg.data()<<std::endl;
@@ -63,28 +66,28 @@ public:
             if(line=="quit")
             {
                 client_.disconnect();
-                exit(0);
             }
             else 
             {
-
                 line+="\n";
                 client_.send(line.c_str(),line.size());  
-              
-              
             }
             
         }
     }
-    void handleClose(TcpConnectionPtr conn) // 对端主动关闭时的回调
+    void handleClose(TcpConnectionPtr) 
     {
-        conn->send("bye\n",4);
+        thread_->stop();
+        sleep(1);
         exit(0);
     }
     bool isConnected(){return client_.isConnected();}
 private:
+    EventLoop* loop_;
+
     TcpClient client_;
     EventHandler stdIn_;
+    EventLoopThread* thread_;
 };
 
 
@@ -98,14 +101,20 @@ int main()
         std::cerr<<"Failed to parse config.conf at line "<<parse_result<<std::endl;
         return 1;
     }
-    
+    EventLoopThread thread;
     
     std::string host=config.get("server","host");
     int port=static_cast<int>(config.getInteger("server","port"));
     Address addr(host.c_str(),port);
-    EventLoop client_loop;
-    EchoClient client(addr,&client_loop);
+    EchoClient client(addr,&thread);
     client.connect(); 
+    // 主线程一直休眠
+    sleep(1);
+    while(client.isConnected())
+    {
+        sleep(1);
+    }
 
-    client_loop.loop(); // 应该让loop在其他线程先connect运行，这里简略了
+
+    //a'sa'sa
 }

@@ -15,8 +15,7 @@ class EventLoopThreadPool:public noncopyable
 {
 public:
     //typedef std::unordered_map<EventHandlerPtr,EventLoop*> EventHandlerMap;
-    EventLoopThreadPool(int num,EventLoop* loop):
-    loop_(loop)
+    EventLoopThreadPool(int num)
     {
         threads_.reserve(num);
         for(int i=0;i<num;++i)
@@ -43,7 +42,7 @@ public:
     // void removeHandler(EventHandlerPtr handler);
     // void updateHandler(EventHandlerPtr handler);
 private:
-    EventLoop* loop_;
+
     std::vector<std::unique_ptr<EventLoopThread>> threads_; //vector要求移动构造，用指针存储，避免填写移动构造的麻烦
     //EventHandlerMap handlers_;
 };    

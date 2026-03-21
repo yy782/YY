@@ -77,7 +77,7 @@ public:
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
     typedef TcpConnection::Buffer Buffer;
 
-    TcpClient(EventLoop* loop, const Address& serverAddr);
+    TcpClient(const Address& serverAddr,EventLoop* loop);
     ~TcpClient();
 
     // 连接控制
@@ -97,8 +97,8 @@ public:
     // 回调设置
     void setConnectionCallback(ServicesConnectionCallBack cb) { SconnectionCallback_ = std::move(cb); }
     void setConnectFailCallback(ServicesConnectFailCallback cb) { SconnectFailCallback_ = std::move(cb); }
-    void setMessageCallback(ServicesMessageCallBack cb) { SmessageCallback_ = std::move(cb); }
-    void setCloseCallback(ServicesCloseCallback cb) { ScloseCallback_ = std::move(cb); }
+    void setMessageCallBack(ServicesMessageCallBack cb) { SmessageCallback_ = std::move(cb); }
+    void setCloseCallBack(ServicesCloseCallback cb) { ScloseCallback_ = std::move(cb); }
     void setErrorCallback(ServicesErrorCallBack cb) {SerrorCallback_ = std::move(cb); }
 
     // 发送数据
@@ -108,16 +108,19 @@ public:
 
     TcpConnectionPtr connection() const { return connection_; }
     EventLoop* getLoop() const { return loop_; }
-    const Address& serverAddress() const { return serverAddr_; }
+    const Address& getPeerAddr() const { return serverAddr_; }
+    Buffer& getSendBuffer() { return connection_->getSendBuffer(); }
+    Buffer& getRecvBuffer() { return connection_->getRecvBuffer(); }
 
 private:
     // Pimpl: 隐藏所有连接细节
     struct Connector;
-    std::unique_ptr<Connector> connector_;
+    
 
     EventLoop* loop_;
     Address serverAddr_;
     std::atomic<bool> retry_;
+    std::unique_ptr<Connector> connector_;
     TcpConnectionPtr connection_;
 
     // 回调函数

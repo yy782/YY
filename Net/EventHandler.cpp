@@ -22,6 +22,7 @@ void EventHandler::init(int fd,EventLoop* loop)
     fd_=fd;
     loop_->addListen(this); 
 }  
+
 void EventHandler::handler_revent()
 {
 

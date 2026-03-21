@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <iostream>
+#include "../EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
 // ./HttpClient
@@ -22,7 +23,7 @@ public:
         
             closeCb_();
         });
-        client_.setConnectedCallback([this](TcpConnectionPtr){
+        client_.setConnectionCallback([this](TcpConnectionPtr){
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
             conCb_();
         });
@@ -130,7 +131,7 @@ private:
         while(true)
         {
             Http::ParseResult result = response_.tryDecode(
-                string_view(buffer.peek(), buffer.get_readable_size()),
+                stringPiece(buffer.peek(), buffer.get_readable_size()),
                 true  // copy body
             );
             

@@ -63,7 +63,7 @@ private:
     void onMessage(TcpConnectionPtr conn)
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
-        string_view msg;
+        stringPiece msg;
         
         int p=1;
         while(p>0)

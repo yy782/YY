@@ -15,8 +15,8 @@ void testLengthCodec() {
     
     std::cout << "编码后buffer大小: " << buffer.get_readable_size() << " 字节" << std::endl;
     
-    string_view data=buffer.getReadView();
-    string_view decoded;
+    stringPiece data=buffer.getReadView();
+    stringPiece decoded;
     int ret = LengthCodec::tryDecode(data, decoded);
     
     assert(ret > 0);
@@ -78,7 +78,7 @@ void testLengthCodec() {
     
     // 2. 获取数据视图
     data = buffer.getReadView();
-    string_view msg;
+    stringPiece msg;
     
     // 3. 解码第一个消息
     ret = LengthCodec::tryDecode(data, msg);
@@ -87,7 +87,7 @@ void testLengthCodec() {
     assert(msg1 == "first");
     
     // 4. 移动视图，解码第二个消息
-    data = string_view(data.data() + ret, data.size() - ret);
+    data = stringPiece(data.data() + ret, data.size() - ret);
     ret = LengthCodec::tryDecode(data, msg);
     std::string msg2(msg.data(), msg.size());
     std::cout << "第二个消息: " << msg2 << std::endl;

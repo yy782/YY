@@ -4,7 +4,7 @@
 #include "sockets.h"
 
 #include "TimerQueue.h"
-#include "EventLoop.h"
+
 namespace yy
 {
 namespace net

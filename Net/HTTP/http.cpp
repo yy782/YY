@@ -13,7 +13,7 @@ void HttpMsg::clear() {
     headers_.clear();
     version_ = "HTTP/1.1";
     body_.clear();              // 修正：加下划线
-    bodyView_ = string_view();  // 修正：加下划线
+    bodyView_ = stringPiece();  // 修正：加下划线
     complete_ = false;
     contentLen_ = 0;
     scanned_ = 0;
@@ -24,13 +24,13 @@ std::string HttpMsg::getHeader(const std::string& name) {
     return it != headers_.end() ? it->second : "";
 }
 
-string_view HttpMsg::getBody() {
-    return bodyView_.size() ? bodyView_ : string_view(body_);  // 修正：加下划线
+stringPiece HttpMsg::getBody() {
+    return bodyView_.size() ? bodyView_ : stringPiece(body_);  // 修正：加下划线
 }
 
 size_t HttpMsg::getByte() const { return scanned_; }
 
-ParseResult HttpMsg::tryDecode_(string_view buf, bool copyBody, string_view* line1) {
+ParseResult HttpMsg::tryDecode_(stringPiece buf, bool copyBody, stringPiece* line1) {
     if (complete_) {
         return ParseResult::Complete;
     }
@@ -38,12 +38,12 @@ ParseResult HttpMsg::tryDecode_(string_view buf, bool copyBody, string_view* lin
     // 解析头部
     if (!contentLen_) {
         const char* p = buf.data();
-        string_view headerSlice;
+        stringPiece headerSlice;
         
         // 查找头部结束标记 \r\n\r\n
         while (buf.size() >= scanned_ + 4) {
             if (p[scanned_] == '\r' && memcmp(p + scanned_, "\r\n\r\n", 4) == 0) {
-                headerSlice = string_view(p, p + scanned_);
+                headerSlice = stringPiece(p, p + scanned_);
                 break;
             }
             scanned_++;
@@ -59,8 +59,8 @@ ParseResult HttpMsg::tryDecode_(string_view buf, bool copyBody, string_view* lin
         // 解析头部字段
         while (headerSlice.size()) {
             headerSlice.eat(2);  // 跳过 \r\n
-            string_view line = headerSlice.eatLine();
-            string_view key = line.eatWord();
+            stringPiece line = headerSlice.eatLine();
+            stringPiece key = line.eatWord();
             line.trimSpace();
             
             if (key.size() && line.size() && key.data()[key.size()-1] == ':') {
@@ -93,7 +93,7 @@ ParseResult HttpMsg::tryDecode_(string_view buf, bool copyBody, string_view* lin
         if (copyBody) {
             body_.assign(buf.data() + scanned_, contentLen_);  // 修正：body_ 加下划线
         } else {
-            bodyView_ = string_view(buf.data() + scanned_, contentLen_);  // 修正：bodyView_ 加下划线
+            bodyView_ = stringPiece(buf.data() + scanned_, contentLen_);  // 修正：bodyView_ 加下划线
         }
         complete_ = true;
         scanned_ += contentLen_;
@@ -136,20 +136,20 @@ int HttpRequest::encode(std::string& buf) {
     buf += "\r\n";
     
     // body
-    string_view bodyView = getBody();
+    stringPiece bodyView = getBody();
     buf.append(bodyView.data(), bodyView.size());
     
     return static_cast<int>(buf.size() - oldSize);
 }
 
-ParseResult HttpRequest::tryDecode(string_view buf, bool copyBody) {
-    string_view line1;
+ParseResult HttpRequest::tryDecode(stringPiece buf, bool copyBody) {
+    stringPiece line1;
     ParseResult r = tryDecode_(buf, copyBody, &line1);
     
     if (line1.size()) {
-        string_view methodView = line1.eatWord();
-        string_view urlView = line1.eatWord();
-        string_view verView = line1.eatWord();
+        stringPiece methodView = line1.eatWord();
+        stringPiece urlView = line1.eatWord();
+        stringPiece verView = line1.eatWord();
         
         method_ = stringToMethod(methodView.toString());
         queryUrl_ = urlView.toString();
@@ -254,14 +254,14 @@ int HttpResponse::encode(std::string& buf) {
     buf += "\r\n";
     
     // body
-    string_view bodyView = getBody();
+    stringPiece bodyView = getBody();
     buf.append(bodyView.data(), bodyView.size());
     
     return static_cast<int>(buf.size() - oldSize);
 }
 
-ParseResult HttpResponse::tryDecode(string_view buf, bool copyBody) {
-    string_view line1;
+ParseResult HttpResponse::tryDecode(stringPiece buf, bool copyBody) {
+    stringPiece line1;
     ParseResult r = tryDecode_(buf, copyBody, &line1);
     
     if (line1.size()) {
@@ -294,7 +294,7 @@ HttpParser::HttpParser() : parseState_(ParseState::REQUEST_LINE) {}
 
 ParseResult HttpParser::parseRequest(const char* data, size_t len, bool copyBody) {
     inputBuffer_.append(data, len);
-    ParseResult r = req_.tryDecode(string_view(inputBuffer_), copyBody);
+    ParseResult r = req_.tryDecode(stringPiece(inputBuffer_), copyBody);
     
     if (r == ParseResult::Complete) {
         inputBuffer_.erase(0, req_.getByte());

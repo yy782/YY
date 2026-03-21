@@ -32,6 +32,8 @@ bool EventLoop::CheckeEventLoopStatus()
 EventLoop::EventLoop():
 poller_(),
 activeHandlers_(),
+FunctionList_(),
+
 status_(EventLoopStatus::Init),
 QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
@@ -68,13 +70,13 @@ void EventLoop::loop()
             assert(handler!=nullptr);
             handler->handler_revent();
         }
-        if(status_==EventLoopStatus::Quit)break;
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
         doPendingFunctions();
+        if(status_==EventLoopStatus::Quit)break;
     }
-
-    assert(CheckeEventLoopStatus());
+    while(!FunctionList_.empty())
+        doPendingFunctions();
 } 
 bool EventLoop::isInLoopThread()
 {
@@ -93,22 +95,30 @@ void EventLoop::quit()
 }
 void EventLoop::submit(Functor cb)
 {
-    assert(cb);
-    FunctionList_.blockappend(std::move(cb));
-    
+    if(isInLoopThread())
+    {
+        cb();
+    }
+    else 
+    {
+        assert(cb);
+        FunctionList_.blockappend(std::move(cb));        
+    }
 }
 void EventLoop::doPendingFunctions()
 {
+    thread_local size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
-    assert(CheckeEventLoopStatus());
     while(!FunctionList_.empty()) // task持续不断，饥饿?
     {
         Functor cb;
-        FunctionList_.retrieve(cb);
-        cb();
+        FunctionList_.retrieve(cb); 
+        cb(); //调用链过深 ?
+        ++FinishNum;
+        if(FinishNum==30)
+            break;
     }
     status_&=~EventLoopStatus::PendingFunctions;
-    assert(CheckeEventLoopStatus());
 }   
 }    
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>  // snprintf
 #include "TcpClient.h"
 #include "sockets.h"
+#include "TimerQueue.h"
 namespace yy 
 {
 namespace net 
@@ -28,7 +29,7 @@ struct TcpClient::Connector:noncopyable
 
     ~Connector() 
     {
-        stop();
+      
     }
 
     void start() 
@@ -53,7 +54,6 @@ struct TcpClient::Connector:noncopyable
 private:
     void startInLoop() 
     {
-        assert(loop_->isInLoopThread());
         if (!connect_ || state_ != kDisconnected) return;
         connectInLoop();
     }
@@ -145,15 +145,15 @@ private:
         if (connect_&&client_->retry()) 
         {
             EXCLUDE_BEFORE_COMPILATION( 
-                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.toIpPort()<<" in "<<
-                retryDelayMs_<<" ms");
+                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
+                retryDelayMs_.getTimes()<<" ms");
             )
             loop_->runTimer<LowPrecision>([this](){
                 startInLoop();
             },retryDelayMs_,1);
 
             // 指数退避
-            LTimeInterval NextretryDelayMs=2ms*retryDelayMs_;
+            LTimeInterval NextretryDelayMs=2*retryDelayMs_;
             retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
         } 
         else 
@@ -170,15 +170,15 @@ private:
         if (connect_&&client_->retry()) 
         {
             EXCLUDE_BEFORE_COMPILATION( 
-                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.toIpPort()<<" in "<<
-                retryDelayMs_<<" ms");
+                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
+                retryDelayMs_.getTimes()<<" ms");
             )
             loop_->runTimer<LowPrecision>([this](){
                 startInLoop();
             },retryDelayMs_,1);
 
             // 指数退避
-            LTimeInterval NextretryDelayMs=2ms*retryDelayMs_;
+            LTimeInterval NextretryDelayMs=2*retryDelayMs_;
             retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
         } 
         else 
@@ -219,11 +219,11 @@ private:
 const LTimeInterval TcpClient::Connector::kInitRetryDelayMs=500ms;
 const LTimeInterval TcpClient::Connector::kMaxRetryDelayMs=30*1000ms;
 
-TcpClient::TcpClient(EventLoop* loop, const Address& serverAddr): 
+TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop): 
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_unique<Connector>(loop, serverAddr, this)) 
+    connector_(std::make_unique<Connector>(loop, serverAddr, this))
 {
 }
 

@@ -14,13 +14,17 @@ namespace net
 
 #define FOREVER -1
 
+
+template<typename PrecisionTag>  
+class Timer;
 typedef std::function<void()> TimerCallBack; 
+
 
 template<typename PrecisionTag>  
 class Timer:public noncopyable
 {
 public:
-    
+    typedef Timer<PrecisionTag> PTimer;
     typedef TimeStamp<PrecisionTag> Time_Stamp;
     typedef TimeInterval<PrecisionTag> Time_Interval;
     
