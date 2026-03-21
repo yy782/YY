@@ -1,8 +1,9 @@
 #include "../UDP/UdpConnection.h"
 #include <string>
+#include "../SignalHandler.h"
 using namespace yy;
 using namespace yy::net;
-
+//./UdpServer
 class UdpEchoServer {
 public:
     UdpEchoServer(EventLoop* loop, const char* host, unsigned short port)
@@ -20,11 +21,14 @@ public:
                       << std::endl;
             
             // 原样返回给客户端
-            conn->sendTo(data.data(), data.size(), peer);
+            conn->sendTo(data.data(), data.size(), &peer);
         });
         std::cout << "UDP Echo server started on " << host << ":" << port << std::endl;
     }
-    
+    void stop()
+    {
+        server_->close();
+    }
 private:
     EventLoop* loop_;
     UdpConnection::UdpConnectionPtr server_;
@@ -32,9 +36,13 @@ private:
 
 int main() {
     EventLoop loop;
+    std::cout<<getpid()<<std::endl;
+    UdpEchoServer server(&loop, "127.0.0.1", 8888);
+    Signal::signal(SIGTERM,[&server,&loop](){
+        loop.quit();
+        server.stop();
+    });    
     
-    // 创建echo服务器，监听本地8888端口
-    UdpEchoServer server(&loop, "0.0.0.0", 8888);
     
     // 启动事件循环
     loop.loop();

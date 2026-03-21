@@ -136,14 +136,6 @@ int main()
     EventLoop loop;
     EchoServer server(serverAddr,thread_nums,&loop);
     server.start();
-    // auto& signal_handler=SignalHandler::getInstance(&loop);
-    // signal_handler.addSign(SIGTERM,[&server,&loop](){
-    //     LOG_SYSTEM_DEBUG("Siganal handle exit");
-    //     loop.quit();
-    //     server.stop();
-        
-    //     sleep(2);
-    // });
     Signal::signal(SIGTERM,[&server,&loop](){
         LOG_SYSTEM_DEBUG("Siganal handle exit");
         loop.quit();

@@ -12,7 +12,7 @@ UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
     EventLoop* loop, const char* host, unsigned short port) 
 {
     
-    Address addr(std::atoi(host), port);
+    Address addr(host, port);
     int fd=sockets::createUdpSocketOrDie(addr.get_family());
     sockets::set_CloseOnExec(fd);
     
@@ -65,26 +65,26 @@ void UdpConnection::onError(UdpErrorCallBack cb)
     errorCallback_=std::move(cb);
 }
 
-void UdpConnection::send(const char* buf, size_t len) {
-    assert(!isServer_);
-    sendTo(buf,len,peer_);
-}
+// void UdpConnection::send(const char* buf, size_t len) {
+//     assert(!isServer_);
+//     sendInLoop(buf,len,nullptr);
+// }
 
-void UdpConnection::send(const std::string& s) {
-    send(s.data(), s.size());
-}
+// void UdpConnection::send(const std::string& s) {
+//     send(s.data(), s.size());
+// }
 
-void UdpConnection::send(const char* s) 
-{
-    send(s, strlen(s));
-}
+// void UdpConnection::send(const char* s) 
+// {
+//     send(s, strlen(s));
+// }
 
-void UdpConnection::sendTo(const char* buf, size_t len, const Address& dest) {
+void UdpConnection::sendTo(const char* buf, size_t len, const Address* dest) {
 
     sendTo(std::string(buf, len),dest);
 }
 
-void UdpConnection::sendTo(const std::string& s,const Address& dest) 
+void UdpConnection::sendTo(const std::string& s,const Address* dest) 
 {
     if (closed_) 
     {
@@ -94,7 +94,7 @@ void UdpConnection::sendTo(const std::string& s,const Address& dest)
 
     loop_->submit([this,buf=std::move(s),dest]() 
     {
-        sendInLoop(buf.data(), buf.size(), &dest);
+        sendInLoop(buf.data(), buf.size(),dest);
     });    
 }
 void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleTime)
@@ -102,7 +102,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
     MaxidleTime_=MaxidleTime;
     checkUdpAlive_=true;
     LTimer timer([this](){
-        send("heartbeat");
+        sendTo("heartbeat");
         lastSendTimestamp_=LTimeStamp::now();
     },interval,FOREVER);
     int timerfd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
@@ -152,8 +152,9 @@ void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest)
                      *dest);
     }else 
     {
-        // 发送给固定对端（客户端模式）
-        n =sockets::sendAuto(handler_.get_fd(),buf,len,0);
+       
+        n=sockets::sendtoAuto(handler_.get_fd(), buf, len, 0,
+                     peer_);
     }
     if (n<0)
     {

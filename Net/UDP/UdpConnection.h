@@ -40,14 +40,14 @@ public:
     void onMessage(UdpMessageCallBack cb);
     void onError(UdpErrorCallBack cb);
 
-    // 发送数据（给固定对端，适用于客户端模式）
-    void send(const char* buf, size_t len);
-    void send(const std::string& s);
-    void send(const char* s);
+    // // 发送数据（给固定对端，适用于客户端模式）
+    // void send(const char* buf, size_t len);
+    // void send(const std::string& s);
+    // void send(const char* s);
 
     // 发送数据到指定地址（适用于服务器模式）
-    void sendTo(const char* buf, size_t len, const Address& dest);
-    void sendTo(const std::string& s, const Address& dest);
+    void sendTo(const char* buf, size_t len, const Address* dest=nullptr);
+    void sendTo(const std::string& s, const Address* dest=nullptr);
 
     // 关闭连接
     void close();
