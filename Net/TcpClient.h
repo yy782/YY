@@ -71,7 +71,7 @@ namespace net
 class TcpClient : noncopyable {
 public:
     typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
-    typedef std::function<void(TcpClient*)> ServicesConnectFailCallback;
+    typedef std::function<void()> ServicesConnectFailCallback;
     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
     typedef TcpConnection::CloseCallBack ServicesCloseCallback;
     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;

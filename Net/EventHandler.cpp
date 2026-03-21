@@ -85,6 +85,7 @@ void EventHandler::update()
 void EventHandler::removeListen()
 {
     assert(loop_);
+    
     loop_->remove_listen(this);
 }
 }

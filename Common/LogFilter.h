@@ -116,9 +116,20 @@ public:
         global_level_=level;
         return *this;
     }
+    LogFilter& set_global_level(const std::string& level)
+    {
+        assert(std::all_of(level.begin(), level.end(),[](unsigned char c) {
+        return std::isupper(c) || std::isspace(c) || std::ispunct(c);}));
+         global_level_ = level == "DEBUG" ? LOG_LEVEL_DEBUG :
+                         level == "INFO" ? LOG_LEVEL_INFO :
+                         level == "WARN" ? LOG_LEVEL_WARN :
+                         level == "ERROR" ? LOG_LEVEL_ERROR :
+                         LOG_LEVEL_DEBUG;
+        return *this;
+    }
     LogFilter& set_global_level(std::string& level)
     {
-         std::transform(level.begin(),level.end(),level.begin(), ::toupper);
+        std::transform(level.begin(),level.end(),level.begin(), ::toupper);
          global_level_ = level == "DEBUG" ? LOG_LEVEL_DEBUG :
                          level == "INFO" ? LOG_LEVEL_INFO :
                          level == "WARN" ? LOG_LEVEL_WARN :

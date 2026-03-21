@@ -26,11 +26,6 @@ public:
         client_.setConnectionCallback([this](TcpConnectionPtr){
             this->sendStudent();
         });
-        client_.setConnectFailCallback([this,loop](TcpClient* /*client*/){
-            std::cout << "连接失败！" << std::endl;
-            loop->quit();
-            exit(1);
-        });
     }
     
     void connect() 

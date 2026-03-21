@@ -53,8 +53,7 @@ void TimerQueue<PrecisionTag>::insertInLoop(TimerPtr timer)
     LOG_TIME_DEBUG(timers_.size());
     
     assert(timer!=nullptr);
-    auto& when=timer->getTimerStamp();
-    assert(when>Time_Stamp::now());
+    
 #ifdef NDEBUG    
     timers_.insert(Entry(timer->getTimerStamp(),timer)); 
 #else

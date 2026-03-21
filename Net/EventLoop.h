@@ -56,10 +56,7 @@ public:
             submit(std::bind(&PollerType::remove_listen,&poller_,handler));
     }    
 
-    void setPid_t(const Pid_t& pid)
-    {
-        threadId_=pid;
-    }
+
     
     bool isInLoopThread();
     void submit(Functor cb);

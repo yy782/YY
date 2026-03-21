@@ -6,7 +6,7 @@
 #include "../EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
-
+std::atomic<bool> isConnected=true;
 // ./EchoClient 
 class EchoClient// stdout是线程不安全的
 {
@@ -18,10 +18,7 @@ public:
     thread_(thread)
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
-        client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1));
-
-        
-        
+        client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
         stdIn_.setReadCallBack([this](){handleRead();});
         stdIn_.set_name("stdIn");
         stdIn_.setReading();
@@ -54,7 +51,7 @@ public:
             msg=stringPiece(buffer.peek(),last);
             
             
-            std::cout<<"recv:"<<msg.data()<<std::endl;
+            std::cout<<"recv:"<<std::string(msg)<<std::endl;
             buffer.consume(msg.size()+1);             
         }
     }
@@ -77,11 +74,8 @@ public:
     }
     void handleClose(TcpConnectionPtr) 
     {
-        thread_->stop();
-        sleep(1);
-        exit(0);
+        isConnected.store(false);
     }
-    bool isConnected(){return client_.isConnected();}
 private:
     EventLoop* loop_;
 
@@ -110,11 +104,11 @@ int main()
     client.connect(); 
     // 主线程一直休眠
     sleep(1);
-    while(client.isConnected())
+    while(isConnected.load())
     {
         sleep(1);
     }
 
-
-    //a'sa'sa
+    thread.stop();
+   
 }

@@ -15,7 +15,9 @@ enum EventLoopStatus
     EventHandling=1<<2,
     PendingFunctions=1<<3,
 
-    Quit=1<<4    
+    Quiting=1<<4,
+    
+    Quited=1<<5
 };
 
 const int PollTimeMs=100;
@@ -24,7 +26,7 @@ const int PollTimeMs=100;
 bool EventLoop::CheckeEventLoopStatus()
 {
     if((status_&EventLoopStatus::EventHandling)&&(status_&EventLoopStatus::PendingFunctions))return false;
-    if((status_&EventLoopStatus::Quit)&&status_!=EventLoopStatus::Quit)return false;
+    if((status_&EventLoopStatus::Quiting)&&(status_&EventLoopStatus::Init))return false;
     if((status_&EventLoopStatus::Init)&&status_!=EventLoopStatus::Init)return false;
     return true;
 }
@@ -33,7 +35,7 @@ EventLoop::EventLoop():
 poller_(),
 activeHandlers_(),
 FunctionList_(),
-
+threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
 QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
@@ -52,7 +54,7 @@ QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 }
 bool EventLoop::isQuit()
 {
-    return status_&EventLoopStatus::Quit;
+    return status_&EventLoopStatus::Quiting;
 }
 void EventLoop::loop()
 {
@@ -73,10 +75,11 @@ void EventLoop::loop()
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
         doPendingFunctions();
-        if(status_==EventLoopStatus::Quit)break;
+        if(status_&EventLoopStatus::Quiting)break;
     }
     while(!FunctionList_.empty())
         doPendingFunctions();
+    status_=EventLoopStatus::Quited;
 } 
 bool EventLoop::isInLoopThread()
 {
@@ -87,7 +90,7 @@ void EventLoop::quit()
 
     assert(CheckeEventLoopStatus());
     submit([this](){
-        status_=EventLoopStatus::Quit;
+        status_=EventLoopStatus::Quiting;
         uint64_t one =1;
         ssize_t n=sockets::writeAuto(QuitHandler_.get_fd(), &one, sizeof one);
         assert(n==sizeof one);        

@@ -93,6 +93,13 @@ void Epoll::add_listen(EventHandler* handler)
 
     assert((handler->get_status()==New||
             handler->get_status()==Delete));
+
+    // if(handler->get_status()==New||
+    //         handler->get_status()==Delete)
+    //         {
+    //             return ;
+    //         }
+
     assert(handlers_.find(handler->get_fd())==handlers_.end());
     handlers_[handler->get_fd()]=handler;
     handler->set_status(Added);

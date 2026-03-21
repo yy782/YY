@@ -287,7 +287,10 @@ void TcpClient::sendOutput()
     }
 }
 
-void TcpClient::newConnection(int sockfd) {
+void TcpClient::newConnection(int sockfd) 
+{
+    LOG_CLIENT_DEBUG("connected!");
+    
     assert(loop_->isInLoopThread());
     connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_);
     connection_->setConnectCallBack(SconnectionCallback_);
@@ -325,7 +328,7 @@ void TcpClient::connectFail() {
     assert(loop_->isInLoopThread());
 
     if (SconnectFailCallback_) {
-        SconnectFailCallback_(this);            
+        SconnectFailCallback_();            
     }
 }
 

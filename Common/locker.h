@@ -121,12 +121,16 @@ public:
     bool joinable()const noexcept{
         return thread_.joinable();
     }
-    void join(){thread_.join();}
+    void join(){
+        
+        thread_.join();
+       
+        }
     void detach(){thread_.detach();}
-    Pid_t getId(){return thread_.get_id();}
     static bool isSelf(const Pid_t& pid){
         return pid==std::this_thread::get_id();
     }
+    Pid_t static getId(){return std::this_thread::get_id();}
 private:
     std::thread thread_;
 };

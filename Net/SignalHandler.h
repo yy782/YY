@@ -18,8 +18,8 @@ namespace net
 {
 
 
-class EventLoop;
-// class SignalHandler:public noncopyable
+class EventLoop; 
+// class SignalHandler:public noncopyable       // 信号被默认执行?
 // {
 // public:
 //    typedef std::function<void()> SigCallBack;
@@ -29,11 +29,14 @@ class EventLoop;
 //         return instance;
 //     }
 //    void addSign(int sig,SigCallBack cb); 
+//    void updateHandler();
 // private:
 //     SignalHandler(EventLoop* loop);
 //     void handle();
 //     sigset_t sigset_;
-//     EventHandler handler_;
+//     int fd_;
+//     EventLoop* loop_;
+//     std::unique_ptr<EventHandler> handler_;
 //     std::map<int,SigCallBack> callbacks_;
 // };
 // class SignalHandler :public noncopyable
@@ -98,65 +101,146 @@ class EventLoop;
 //     std::unique_ptr<EventHandler> handler_;
 //     std::map<int, SigCallBack> callbacks_;
 // };
-class SignalHandler {
-public:
-    typedef std::function<void()> SigCallBack;
-    SignalHandler(EventLoop* loop):
-    loop_(loop)
-    {
+// class SignalHandler {
+// public:
+//     typedef std::function<void()> SigCallBack;
+//     SignalHandler(EventLoop* loop):
+//     loop_(loop)
+//     {
 
-    }
-    static SignalHandler& getInstance(EventLoop* loop) {
-        static SignalHandler instance(loop);
-        return instance;
-    }
-    // int init() {
-    //     sigset_t mask;
-    //     sigemptyset(&mask);
-    //     for (const auto& pair : handlers_) {
-    //         sigaddset(&mask, pair.first);
-    //     }
+//     }
+//     static SignalHandler& getInstance(EventLoop* loop) {
+//         static SignalHandler instance(loop);
+//         return instance;
+//     }
+//     // int init() {
+//     //     sigset_t mask;
+//     //     sigemptyset(&mask);
+//     //     for (const auto& pair : handlers_) {
+//     //         sigaddset(&mask, pair.first);
+//     //     }
         
-    //     // 阻塞这些信号，让 signalfd 捕获
-    //     pthread_sigmask(SIG_BLOCK, &mask, nullptr);
+//     //     // 阻塞这些信号，让 signalfd 捕获
+//     //     pthread_sigmask(SIG_BLOCK, &mask, nullptr);
         
-    //     // 创建 signalfd
-    //     signalFd_ = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
-    //     return signalFd_;
-    // }
-    SignalHandler& addSign(int sig, SigCallBack cb) 
-    {
+//     //     // 创建 signalfd
+//     //     signalFd_ = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+//     //     return signalFd_;
+//     // }
+//     SignalHandler& addSign(int sig, SigCallBack cb) 
+//     {
 
-    }
+//     }
     
-    // 处理信号事件（在事件循环中调用）
-    void handleRead() {
-        struct signalfd_siginfo fdsi;
-        ssize_t n = ::read(signalFd_, &fdsi, sizeof(fdsi));
-        if (n != sizeof(fdsi)) return;
+//     // 处理信号事件（在事件循环中调用）
+//     void handleRead() {
+//         struct signalfd_siginfo fdsi;
+//         ssize_t n = ::read(signalFd_, &fdsi, sizeof(fdsi));
+//         if (n != sizeof(fdsi)) return;
         
-        int sig = fdsi.ssi_signo;
-        std::function<void()> CallBacks_;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            auto it = handlers_.find(sig);
-            if (it != handlers_.end()) {
-                CallBacks_ = it->second;
-            }
-        }
+//         int sig = fdsi.ssi_signo;
+//         std::function<void()> CallBacks_;
+//         {
+//             std::lock_guard<std::mutex> lock(mutex_);
+//             auto it = handlers_.find(sig);
+//             if (it != handlers_.end()) {
+//                 CallBacks_ = it->second;
+//             }
+//         }
         
-        if (CallBacks_) {
-            CallBacks_();  // 执行用户回调（在事件循环线程中）
-        }
-    }
+//         if (CallBacks_) {
+//             CallBacks_();  // 执行用户回调（在事件循环线程中）
+//         }
+//     }
     
-private:
-    EventLoop* loop_;
-    EventHandler handler_;
-    std::map<int,SigCallBack> CallBacks_;
-    std::mutex mutex_;
+// private:
+//     EventLoop* loop_;
+//     EventHandler handler_;
+//     std::map<int,SigCallBack> CallBacks_;
+//     std::mutex mutex_;
+// };
+// class SignalHandler {
+// public:
+//     typedef std::function<void()> SigCallBack;
+//     static SignalHandler& getInstance(EventLoop* loop) {
+//         static SignalHandler instance(loop);
+//         return instance;
+//     }
+//     explicit SignalHandler(EventLoop* loop)
+//         : loop_(loop),
+//           signalFd_(-1)
+//     {
+//         initSignalFd();
+//     }
+    
+//     ~SignalHandler() 
+//     {
+    
+//     }
+//     SignalHandler& addSign(int sig, SigCallBack cb) {
+//         callbacks_[sig] = std::move(cb);
+//         updateSignalFd();
+//         return *this;
+//     }
+    
+
+//     void handleRead() {
+//         struct signalfd_siginfo fdsi;
+//         ssize_t n = ::read(signalFd_, &fdsi, sizeof(fdsi));
+//         if (n != sizeof(fdsi)) {
+//             return;
+//         }
+        
+//         int sig = fdsi.ssi_signo;
+//         SigCallBack cb;
+//         {
+
+//             auto it = callbacks_.find(sig);
+//             if (it != callbacks_.end()) {
+//                 cb = it->second;
+//             }
+//         }
+        
+//         if (cb) {
+//             cb();  
+//         }
+//     }
+    
+// private:
+//     void initSignalFd() {
+//         sigset_t mask;
+//         sigemptyset(&mask);    
+//         pthread_sigmask(SIG_BLOCK, &mask, nullptr);
+//         signalFd_ =sockets::setSignalOrDie(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+        
+
+//         handler_.init(signalFd_, loop_);
+//         handler_.setReadCallBack(std::bind(&SignalHandler::handleRead, this));
+//         handler_.setReading();
+//         handler_.set_name("SignalHandler");
+//     }
+    
+//     void updateSignalFd() {
+//         if (signalFd_ < 0) return;
+//         sigset_t mask;
+//         sigemptyset(&mask);
+//         for (const auto& pair : callbacks_) {
+//             sigaddset(&mask, pair.first);
+//         }
+
+//         sockets::setSignalOrDie(signalFd_, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+//     }
+    
+// private:
+//     EventLoop* loop_;
+//     int signalFd_;
+//     EventHandler handler_;  
+//     std::map<int, SigCallBack> callbacks_;
+
+// };
+struct Signal {
+    static void signal(int sig, const std::function<void()> &handler);
 };
-
 }    
 }
 

@@ -12,11 +12,12 @@ threadpool_(threadnum)
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 
     acceptor_->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1,_2));
-    acceptor_->listen();    
+        
 }   
 
 void TcpServer::loop()
 {
+    acceptor_->listen();
     threadpool_.run();
 } 
 void TcpServer::stop()

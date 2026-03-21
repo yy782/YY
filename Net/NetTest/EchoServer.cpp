@@ -72,11 +72,11 @@ private:
             {
                 return;
             }
-            msg=stringPiece(buffer.peek(),last);
+            msg=stringPiece(buffer.peek(),last+1);
             conn->send(msg.data(),msg.size());
             LOG_SYSTEM_INFO("recv msg: "<<msg);
             // 消费掉缓冲区中的数据
-            buffer.consume(msg.size()+ 1); // +1 是为了包含\n            
+            buffer.consume(msg.size()); // +1 是为了包含\n            
         }
 
     }
@@ -136,12 +136,19 @@ int main()
     EventLoop loop;
     EchoServer server(serverAddr,thread_nums,&loop);
     server.start();
-    auto& signal_handler=SignalHandler::getInstance(&loop);
-    signal_handler.addSign(SIGTERM,[&server,&loop](){
+    // auto& signal_handler=SignalHandler::getInstance(&loop);
+    // signal_handler.addSign(SIGTERM,[&server,&loop](){
+    //     LOG_SYSTEM_DEBUG("Siganal handle exit");
+    //     loop.quit();
+    //     server.stop();
         
+    //     sleep(2);
+    // });
+    Signal::signal(SIGTERM,[&server,&loop](){
+        LOG_SYSTEM_DEBUG("Siganal handle exit");
         loop.quit();
         server.stop();
-        LOG_SYSTEM_DEBUG("Siganal handle exit");
+        
         sleep(2);
     });
     loop.loop();

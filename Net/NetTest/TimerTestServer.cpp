@@ -8,6 +8,22 @@ using namespace yy::net;
 #include <algorithm>
 const int N=20;
 std::atomic<int> MsgCount=0;
+
+struct FlushTime
+{
+    using ReturnType=void;
+};
+
+
+template<>
+void TcpConnection::Extend<FlushTime>()
+{
+    context<LTimeStamp>()=LTimeStamp::now();
+}
+
+
+
+
 //./TimerTestServer
 // cd programs/yy/build/bin
 class TimerServer
@@ -42,7 +58,7 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
-        conn->context<LTimeStamp>()=LTimeStamp::now();
+        conn->Extend<FlushTime>();
 
         std::weak_ptr<TcpConnection> weakConn=conn;
         auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
@@ -87,7 +103,7 @@ private:
     }
     void onMessage(TcpConnectionPtr conn)
     {
-        conn->context<LTimeStamp>()=LTimeStamp::now();
+        conn->Extend<FlushTime>();
 
         LOG_SYSTEM_INFO("recv msg! from"<<conn->getAddr().sockaddrToString());
     }
@@ -104,24 +120,30 @@ private:
 
 int main()
 {
-    EXCLUDE_BEFORE_COMPILATION(
-        LOG_SYSTEM_INFO("[PID] "<<getpid());
-    )
+
     SyncLog::getInstance("../Log.log").getFilter() 
         .set_global_level(LOG_LEVEL_DEBUG) 
         .set_module_enabled("TCP")
         .set_module_enabled("SYSTEM")
         .set_module_enabled("TIME");
-        
+    EXCLUDE_BEFORE_COMPILATION(
+        LOG_SYSTEM_INFO("[PID] "<<getpid());
+    )        
     Address addr("127.0.0.1",8080);   
     EventLoop loop;
     TimerServer server(addr,4,&loop);
-    server.start();
-    auto& signal_handler=SignalHandler::getInstance(&loop);
-    signal_handler.addSign(SIGTERM,[&server,&loop](){
+    
+    Signal::signal(SIGTERM,[&server,&loop](){
+        LOG_SYSTEM_DEBUG("Siganal handle exit");
         loop.quit();
         server.stop();
+        
+        sleep(2);
     });
+    server.start();
+    loop.runTimer<LowPrecision>([](){
+        LOG_TIME_INFO("server run 5s");
+    },5s,1);
     loop.loop();
 
 }
