@@ -108,11 +108,6 @@ public:
 private:
     TimePeriod timePeriod_;    
 };
-
-
-
-
-
 template<typename PrecisionTag1,typename PrecisionTag2>
 TimeStamp<PrecisionTag1> operator+(const TimeStamp<PrecisionTag1>& lhs,const TimeInterval<PrecisionTag2>& rhs)
 {
@@ -183,13 +178,17 @@ bool operator>=(const TimeInterval<PrecisionTag>& lhs,const TimeInterval<Precisi
     return !(lhs<rhs);
 }
 template<typename PrecisionTag>
-TimeInterval<PrecisionTag> operator*(int times,const TimeInterval<PrecisionTag>& lhs)
+TimeInterval<PrecisionTag> operator*(int Count,const TimeInterval<PrecisionTag>& lhs)
 {
     
     auto period = lhs.getTimePeriod();
-    return TimeInterval<PrecisionTag>(period * times);
+    return TimeInterval<PrecisionTag>(period*Count);
 }
-
+template<typename Rep, typename Period,typename PrecisionTag>
+TimeInterval<PrecisionTag> operator*(std::chrono::duration<Rep, Period> duration,const TimeInterval<PrecisionTag>& lhs)
+{
+    static_assert("禁止矢量相乘");
+}
 
 }
 #endif

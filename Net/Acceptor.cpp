@@ -1,5 +1,5 @@
 #include "Acceptor.h"
-
+#include <vector>
 namespace yy
 {
 namespace net
@@ -34,30 +34,39 @@ Acceptor::~Acceptor()
 void Acceptor::accept()
 {
     Address addr;
-    int fd;
-    if(addr_.get_family()==AF_INET6)
+    while(true)
     {
-        fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,true);
-    }
-    else
-    {
-        fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
-    }
-    if(fd>0)
-    {
-        assert(callback_);
-        callback_(fd,addr);
-    }
-    else 
-    {
-        if (errno == EMFILE)
+        int fd;
+        if(addr_.get_family()==AF_INET6)
         {
-            close(idleFd_);
-            idleFd_=sockets::acceptAutoOrDie(fd,addr,true);
-            close(idleFd_);
-            idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
+            fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,true);
         }
-    } 
+        else
+        {
+            fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
+        }
+        if(fd>0&&sockets::setNonBlocking(fd))
+        {
+            
+            assert(callback_);
+            callback_(fd,addr);
+        }
+        else 
+        {
+            if (errno == EMFILE)
+            {
+                close(idleFd_);
+                idleFd_=sockets::acceptAutoOrDie(fd,addr,true);
+                close(idleFd_);
+                idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
+            }
+            if(errno==EAGAIN||errno == EWOULDBLOCK)
+            {
+                break;
+            }
+        }         
+    }
+
     
 }    
 }    

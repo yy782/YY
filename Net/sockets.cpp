@@ -178,7 +178,22 @@ bool isSelfConnect(int sockfd)
     {
         return false;
     }
+}
+bool setNonBlocking(int fd) 
+{
+    int flags = fcntl(fd, F_GETFL,0);
+    if (flags == -1) 
+    {
+        return false;
     }
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) == -1) 
+    {
+        return false;
+    } 
+    return true;
+}
+
 int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
 {
     int connfd=-1;
@@ -206,10 +221,7 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
         LOG_ERRNO(errno);
         switch (errno)
         {
-        case EINTR://被信号中断  
-            if constexpr (std::is_same_v<PollerType,Epoll>)
-                return acceptAutoOrDie(fd,address,is_ipv6);            
-            
+        case EINTR://被信号中断              
         case EAGAIN://连接队列为空
         case ECONNABORTED://连接被客户端终止
         case EPROTO://协议错误
@@ -233,7 +245,8 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
     }
     // @brief 这里选择沿用muduo的设计，将错误控制在可判断的风险里 
     //      muduo库没有选择在信号中断时重新accept，有一部分原因是选择了epoll的水平触发模式
-    //      accept的errno处理如此谨慎，一部分原因是accept是直接关联服务端的，与连接的所有客户有关    
+    //      accept的errno处理如此谨慎，一部分原因是accept是直接关联服务端的，与连接的所有客户有关  
+      
     return connfd;
 }
 void setKeepAlive(int fd,bool on,int idleSeconds, 
@@ -264,6 +277,16 @@ void setKeepAlive(int fd,bool on,int idleSeconds,
     {
         LOG_ERRNO(errno);
     }
+}
+void setTcpNoDelay(int fd,bool on)
+{
+    int optval = on ? 1 : 0;
+    int ret=::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+                &optval, static_cast<socklen_t>(sizeof optval));
+    if(ret<0) 
+    {
+        LOG_ERRNO(errno);
+    }  
 }
 void reuse_addr(int fd,bool on)
 {
@@ -307,14 +330,10 @@ void set_CloseOnExec(int fd)
     // @brief 避免在子进程继承文件描述符，比如监听套接字，导致异常        
 }
 
-ssize_t readvAuto(int fd, const iovec* iovec, int count)
+ssize_t readv(int fd, const iovec* iovec, int count)
 {
-    ssize_t ret=::readv(fd,iovec,count);
-    if(ret<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return ret;
+    return ::readv(fd,iovec,count);
+    
 }
 ssize_t readAuto(int fd,void* buf,size_t len)
 {
@@ -480,12 +499,7 @@ ssize_t write(int fd,const void* buf,size_t len)
 }
 ssize_t recv(int fd,void* buf,size_t len,int flags)
 {
-    auto n=::recv(fd,buf,len,flags);
-    if(n<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return n;
+    return ::recv(fd,buf,len,flags);
 }
 ssize_t send(int fd,const void* buf,size_t len,int flags)
 {
@@ -596,8 +610,8 @@ ssize_t recvET(int fd, void* buf, size_t len, int flags)
                 LOG_ERRNO(errno);
                 return (len - left) > 0 ? (len - left) : -1;
             }
-        } else if (n == 0) {
-            // 对端关闭
+        } else if (n == 0) 
+        {
             return len - left;
         } else {
             ptr += n;

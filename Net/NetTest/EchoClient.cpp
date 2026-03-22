@@ -37,7 +37,7 @@ public:
     {
         client_.disconnect();
     }
-    void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
+    void handleMessage(TcpConnectionPtr conn) 
     {
         TcpBuffer& buffer=conn->getRecvBuffer();
         stringPiece msg;
@@ -102,8 +102,6 @@ int main()
     Address addr(host.c_str(),port);
     EchoClient client(addr,&thread);
     client.connect(); 
-    // 主线程一直休眠
-    sleep(1);
     while(isConnected.load())
     {
         sleep(1);

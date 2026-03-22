@@ -19,17 +19,13 @@ class EventLoop;
 class TimerWheel:public noncopyable
 {
 public:
-    
-    typedef Timer<LowPrecision> LTimer;
-    typedef std::shared_ptr<LTimer> LTimerPtr;
-
     struct Node;
     typedef std::shared_ptr<Node> NodePtr;
     typedef std::weak_ptr<Node> WeakNodePtr;  
     TimerWheel()=delete;
     TimerWheel(EventLoop* loop,int maxSlots,int SI);  
     ~TimerWheel();
-    void insert(TimerCallBack cb,LTimer::Time_Interval interval,int execute_count)
+    void insert(Timer<Base>::TimerCallBack cb,LTimer::Time_Interval interval,int execute_count)
     {
         auto timer=std::make_shared<LTimer>(std::move(cb),interval,execute_count);
         insert(timer);

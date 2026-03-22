@@ -87,6 +87,10 @@ public:
     {
         sockets::setKeepAlive(handler_.get_fd(),on,idleSeconds,intervalSeconds,maxProbes);
     }
+    void setTcpNoDelay(bool on)
+    {
+        sockets::setTcpNoDelay(handler_.get_fd(),on);
+    }
     void setName(const char* name){handler_.set_name(name);}
 
     
@@ -96,6 +100,7 @@ public:
     
     void send(const char* message,size_t len);
     void send(std::string&& message);
+    void send(const std::string& message);
     void sendOutput(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     template<typename T>
     T& context(){ return data_.context<T>();}

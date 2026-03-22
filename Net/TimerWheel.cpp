@@ -101,7 +101,7 @@ void TimerWheel::tick()
         LOG_TIME_DEBUG("tick!");
     )
 
-    LOG_TIME_DEBUG("cur_slot_: "<<cur_slot_);
+    //LOG_TIME_DEBUG("cur_slot_: "<<cur_slot_);
 
     auto tmp=slots_[cur_slot_];
     while(tmp){

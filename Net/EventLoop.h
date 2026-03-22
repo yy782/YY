@@ -61,7 +61,7 @@ public:
     bool isInLoopThread();
     void submit(Functor cb);
     template<class PrecisionTag>
-    void runTimer(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
+    void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
 private:
   
     
@@ -72,9 +72,7 @@ private:
     PollerType poller_;
     PollerHandlerList activeHandlers_;
     FunctionList FunctionList_;
-    
     Pid_t threadId_;
-
     int status_;
     EventHandler QuitHandler_;
     

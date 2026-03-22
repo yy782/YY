@@ -104,7 +104,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
     LTimer timer([this](){
         sendTo("heartbeat");
         lastSendTimestamp_=LTimeStamp::now();
-    },interval,FOREVER);
+    },interval,BaseTimer::FOREVER);
     int timerfd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
     sockets::timerfd_settime(timerfd,0,timer);
     timerHandler_.init(timerfd,loop_);

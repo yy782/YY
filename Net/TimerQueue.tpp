@@ -36,7 +36,7 @@ TimerQueue<PrecisionTag>::~TimerQueue()
     
 }    
 template<typename PrecisionTag>
-void TimerQueue<PrecisionTag>::insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count)
+void TimerQueue<PrecisionTag>::insert(BaseTimer::TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count)
 {
     auto timer=std::make_shared<PTimer>(std::move(cb),interval,execute_count);
     insertInLoop(timer);
@@ -50,7 +50,7 @@ template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insertInLoop(TimerPtr timer)
 {
     assert(handler_.get_loop()->isInLoopThread());
-    LOG_TIME_DEBUG(timers_.size());
+    //LOG_TIME_DEBUG(timers_.size());
     
     assert(timer!=nullptr);
     
@@ -85,7 +85,7 @@ void TimerQueue<PrecisionTag>::handlerRead()
     assert(handler_.get_loop()->isInLoopThread());
     ReadTimerfd();
 
-    LOG_TIME_DEBUG("TimerQueue handlerRead");
+    //LOG_TIME_DEBUG("TimerQueue handlerRead");
 
     std::vector<Entry> expired=getDueTasks(Time_Stamp::now());
     std::vector<Entry> NewTasks;
@@ -142,12 +142,9 @@ std::vector<typename TimerQueue<PrecisionTag>::Entry> TimerQueue<PrecisionTag>::
     typename TimerList::iterator end=timers_.upper_bound(sentry);
     assert(end==timers_.end()||now<end->first);
     std::move(timers_.begin(),end,back_inserter(expired));
-#ifdef NDEBUG  
+
     timers_.erase(timers_.begin(),end);
-#else
-    auto n=timers_.erase(timers_.begin(),end);
-    assert(n->second);
-#endif
+
   return expired;
 }  
 template<typename PrecisionTag>

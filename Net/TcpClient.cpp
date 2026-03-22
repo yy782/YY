@@ -275,7 +275,7 @@ void TcpClient::send(const char* data, size_t len)
         connection_->send(data, len);
     } else 
     {
-       connection_->getSendBuffer().append(data,len);         // 数据挤压问题 
+       LOG_WARN("not connected!");
     }
 }
 

@@ -57,6 +57,10 @@ void TcpConnection::send(const char* message,size_t len)
 {
     send(std::string(message,len));       
 }
+void TcpConnection::send(const std::string& message)
+{
+    send(std::string(message));
+}
 void TcpConnection::send(std::string&& message)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
@@ -99,30 +103,45 @@ void TcpConnection::handleRead()
 {
     assert(SmessageCallBack_);
      
-    //auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),0);
-    auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
-    if(n>0)
+    while(true)
     {
-        updateWaterMark();
-        SmessageCallBack_(shared_from_this());  
+        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+        if(n>0)
+        {
+            updateWaterMark();
+            SmessageCallBack_(shared_from_this());  
 
-        handleBackpressureAfterRead();
-    }  
-    else if(n==0)
-    {
-        handleClose();
+            handleBackpressureAfterRead();
+        }  
+        else if(n==0)
+        {
+            handleClose();
+        }
+        else
+        {   if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                break;
+            }
+            else if(errno==EINTR)
+            {
+                continue;
+            }
+            else
+            {
+                handleError();
+                break;
+            }
+                
+                
+        }            
     }
-    else
-    {
-        handleError();
-    }    
+
 }
 void TcpConnection::handleWrite()
 {
 
     ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
-    if(len==0)return;
     ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
     if(n>0)
     {

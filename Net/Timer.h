@@ -6,36 +6,42 @@
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include <atomic>
-
+#include "../Common/Types.h"
 namespace yy
 {
 namespace net
 {
 
-#define FOREVER -1
-
 
 template<typename PrecisionTag>  
 class Timer;
-typedef std::function<void()> TimerCallBack; 
-
+typedef Timer<Base> BaseTimer; 
+typedef Timer<LowPrecision> LTimer;
+typedef Timer<HighPrecision> HTimer;
+typedef std::shared_ptr<LTimer> LTimerPtr;
+typedef std::shared_ptr<HTimer> HTimerPtr;
+template<>
+struct Timer<Base>:public noncopyable
+{
+    typedef std::function<void()> TimerCallBack;   
+    static constexpr int FOREVER = -1; 
+};
 
 template<typename PrecisionTag>  
 class Timer:public noncopyable
 {
 public:
-    typedef Timer<PrecisionTag> PTimer;
     typedef TimeStamp<PrecisionTag> Time_Stamp;
     typedef TimeInterval<PrecisionTag> Time_Interval;
     
     
-    Timer(TimerCallBack cb,Time_Interval interval,int execute_count):
+    Timer(BaseTimer::TimerCallBack cb,Time_Interval interval,int execute_count):
     callback_(std::move(cb)),
     interval_(interval),
     execute_count_(execute_count),
     expiration_(Time_Stamp::now()+interval)
     {
-        assert((execute_count_.load()<0&&execute_count_.load()==FOREVER)||execute_count_.load()>=0);
+        assert((execute_count_.load()<0&&execute_count_.load()==BaseTimer::FOREVER)||execute_count_.load()>=0);
     }
     int remain_count()const{return execute_count_.load();}
     void modifyExecuteCount(size_t count){execute_count_.store(count);}
@@ -47,7 +53,7 @@ public:
     {
         assert(execute_count_.load()!=0);
         
-        if(execute_count_.load()!=FOREVER)
+        if(execute_count_.load()!=BaseTimer::FOREVER)
         {
             --execute_count_;
             
@@ -58,16 +64,13 @@ public:
     void setRemainCount(int c){execute_count_=c;}
     void cancel(){execute_count_=0;}
 private:
-    const TimerCallBack callback_;
+    const BaseTimer::TimerCallBack callback_;
     Time_Interval interval_;
     std::atomic<int> execute_count_;
     Time_Stamp expiration_;
 };
 
-typedef Timer<LowPrecision> LTimer;
-typedef Timer<HighPrecision> HTimer;
-typedef std::shared_ptr<LTimer> LTimerPtr;
-typedef std::shared_ptr<HTimer> HTimerPtr;
+
 }    
 }
 

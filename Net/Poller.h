@@ -12,7 +12,7 @@
 #include "../Common/TimeStamp.h"
 #include "EventHandler.h"
 #include <memory>
-
+// @note CRTP模型下不能创建Poller对象，只能创建子类对象，因为无法解释子类多出的内存布局
 namespace yy
 {
 namespace net
@@ -52,7 +52,7 @@ public:
 protected:    
     std::map<int,EventHandler*> handlers_;
     // @brief 选择指针存储，1.避免拷贝开销，2.EventHandler拒绝拷贝
-    Poller()=default; // @note CRTP模型下不能创建Poller对象，只能创建子类对象，因为无法解释子类多出的内存布局
+    Poller()=default; 
 
     EventHandler* get_event_handler(int fd);
 
@@ -164,11 +164,6 @@ bool Poller<PollerTag>::has_handler(EventHandler* event_handler)
     auto it=handlers_.find(event_handler->get_fd());
     return it!=handlers_.end();
 }
-
-
-
-
-
 }    
 }
 

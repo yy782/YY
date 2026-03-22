@@ -23,11 +23,9 @@ public:
     {
         auto it=contexts_.find(typeid(T));
         if (it==contexts_.end()) {
-            
             ContextNode node;
             node.obj=new T();
-            node.deleter=[this,&node](){delete static_cast<T*>(node.obj);};
-            
+            node.deleter=[this,p=node.obj](){delete static_cast<T*>(p);};
             auto result=contexts_.emplace(typeid(T),std::move(node));
             it=result.first;
         }

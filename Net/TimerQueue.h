@@ -27,7 +27,7 @@ class TimerQueue:public noncopyable
 {// @brief TimerQueue主要负责高精度的定时器任务
 public:
     typedef Timer<PrecisionTag> PTimer;
-    typedef TimeStamp<PrecisionTag> Time_Stamp;
+    typedef typename PTimer::Time_Stamp Time_Stamp;
     typedef std::shared_ptr<PTimer> TimerPtr;
     typedef std::shared_ptr<EventHandler> EventHandlerPtr;
     typedef std::pair<Time_Stamp,TimerPtr> Entry;
@@ -38,7 +38,7 @@ public:
     TimerQueue()=delete;
     TimerQueue(EventLoop* loop);
     ~TimerQueue();
-    void insert(TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count);
+    void insert(BaseTimer::TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count);
     void insert(TimerPtr timer);
     void cancelTimer(TimerPtr timer);
     void handlerRead();
@@ -57,7 +57,7 @@ private:
 };
 
 template<class PrecisionTag>
-void EventLoop::runTimer(TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
+void EventLoop::runTimer(Timer<Base>::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
 {
     submit([this,cb=std::move(cb),interval=std::move(interval),execute_count]()mutable
     {///////////////////////////////////////////////

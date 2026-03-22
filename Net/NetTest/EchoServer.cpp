@@ -76,7 +76,7 @@ private:
             conn->send(msg.data(),msg.size());
             LOG_SYSTEM_INFO("recv msg: "<<msg);
             // 消费掉缓冲区中的数据
-            buffer.consume(msg.size()); // +1 是为了包含\n            
+            buffer.consume(msg.size());          
         }
 
     }
@@ -128,7 +128,7 @@ int main()
     }
     //daemonize(); // 目录被换了
   
-    EXCLUDE_BEFORE_COMPILATION(
+    EXCLUDE_BEFORE_COMPILATION( // 由于部分代码是py脚本写的，要在编译(脚本运行)前抑制
         LOG_SYSTEM_INFO("[PID] "<<getpid());
     )
     Address serverAddr(host.c_str(),port);

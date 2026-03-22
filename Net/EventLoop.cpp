@@ -112,14 +112,12 @@ void EventLoop::doPendingFunctions()
 {
     thread_local size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
-    while(!FunctionList_.empty()) // task持续不断，饥饿?
+    while(!FunctionList_.empty()&&FinishNum<30) // task持续不断，饥饿?
     {
         Functor cb;
         FunctionList_.retrieve(cb); 
         cb(); //调用链过深 ?
         ++FinishNum;
-        if(FinishNum==30)
-            break;
     }
     status_&=~EventLoopStatus::PendingFunctions;
 }   

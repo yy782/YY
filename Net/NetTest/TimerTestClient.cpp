@@ -3,6 +3,7 @@
 #include <iostream>
 #include "../../Common/TimeStamp.h"
 #include <atomic>
+#include "../EventLoopThread.h"
 // ./TimerTestClient
 using namespace yy;
 using namespace yy::net;
@@ -10,7 +11,9 @@ using namespace yy::net;
 class TimerClient;
 
 const int N=20;
+std::atomic<int> ConnNum=0;
 
+bool AllDisCon=false;
 class TimerClient// stdout是线程不安全的
 {
 public:
@@ -18,10 +21,15 @@ public:
     client_(serverAddr,loop)
     {
         client_.setMessageCallBack([this](TcpConnectionPtr){
-        
+            
+        });
+        client_.setConnectionCallback([this](TcpConnectionPtr){
+            ++ConnNum;
+            send("hello !",8);
         });
         client_.setCloseCallBack([this](TcpConnectionPtr){
-            std::cout<<"client close"<<std::endl;
+            --ConnNum;
+            if(ConnNum==0)AllDisCon=true;
         });
     }
     void send(const char* msg,size_t len)
@@ -50,32 +58,22 @@ int main()
 { 
     std::vector<std::unique_ptr<TimerClient>> clients;
     Address serverAddr("127.0.0.1",8080);
-    EventLoop loop;
-
+    EventLoopThread thread;
+    auto loop=thread.run();
     for(int i=0;i<N;i++)
     {
-        clients.emplace_back(new TimerClient(serverAddr,&loop));
+        clients.emplace_back(new TimerClient(serverAddr,loop));
         
     }
 
     for(int i=0;i<N;++i)
     {
         clients[i]->connect();
-    }
-   
-    for(int i=0;i<N/2;++i)
+    }    
+    while(!AllDisCon)
     {
-        clients[i]->send("hello world",11);
+        sleep(1);
     }
-    std::thread t([&loop](){
-        loop.loop();
-    });     
-    sleep(120); 
-    for(int i=0;i<N;++i)
-    {
-        assert(!clients[i]->isConnected());
-    }
-    loop.quit();
-    t.join();
+    thread.stop();
     return 0;
 }

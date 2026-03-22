@@ -8,12 +8,11 @@ using namespace yy::net;
 #include <algorithm>
 const int N=20;
 std::atomic<int> MsgCount=0;
-
+std::atomic<int> ConnNum=0;
 struct FlushTime
 {
     using ReturnType=void;
 };
-
 
 template<>
 void TcpConnection::Extend<FlushTime>()
@@ -55,6 +54,8 @@ public:
 private:
     void onConnection(TcpConnectionPtr conn)
     {
+        ++ConnNum;
+        LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setReading();// @note 对方连接是否决定监听由业务层决定
@@ -70,7 +71,7 @@ private:
             }
         },
         30s,
-        FOREVER
+        BaseTimer::FOREVER
         );
 
         timerWheel_.insert(timer);
@@ -109,6 +110,8 @@ private:
     }
     void onClose(TcpConnectionPtr conn)
     {
+        --ConnNum;
+        LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
         conn->context<LTimerPtr>()->cancel();
