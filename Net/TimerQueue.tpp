@@ -11,23 +11,20 @@ namespace net
 {
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::TimerQueue(EventLoop* loop):
-handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
+handler_()
 {
-    
+    int fd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
     handler_.setReadCallBack(std::bind(&TimerQueue::handlerRead,this));
-    handler_.setReading();
-
-
     if constexpr (std::is_same_v<PrecisionTag,LowPrecision>)
     {
-        handler_.set_name("LTimerQueue");
+        handler_.init(fd,loop,"LTimerQueue");
     }
     else
     {
-        handler_.set_name("HTimerQueue");
+        handler_.init(fd,loop,"HTimerQueue");
     }
 
-    
+    handler_.setReading();
 
 }
 template<typename PrecisionTag>
@@ -152,10 +149,10 @@ void TimerQueue<PrecisionTag>::ReadTimerfd()
 {
     assert(handler_.get_loop()->isInLoopThread());
     uint64_t howmany;
-    ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
+    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         EXCLUDE_BEFORE_COMPILATION(
-        LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error");
+            LOG_TIME_ERROR("TimerQueue::ReadTimerfd() read error:"<<errno);
         )
     }
 } 

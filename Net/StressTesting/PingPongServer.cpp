@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
         .set_global_level(LOG_LEVEL_DEBUG) 
         .set_module_enabled("TCP")
         .set_module_enabled("SYSTEM")
-        .set_module_enabled("TIME")
-        .set_module_enabled("EVENT");
+        ;
     Address listenAddr("0.0.0.0",8080);
     EventLoop loop;
     TcpServer server(listenAddr,threadNums,&loop);
 
     server.setConnectCallBack([](TcpConnectionPtr con){
         con->setTcpNoDelay(true);
+        con->setReading();
     });
     server.setMessageCallBack([](TcpConnectionPtr con){
         auto& buf=con->getRecvBuffer();

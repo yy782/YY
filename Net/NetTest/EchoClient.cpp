@@ -14,13 +14,13 @@ public:
     EchoClient(const Address& serverAddr,EventLoopThread* thread):
     loop_(thread->run()),
     client_(serverAddr,loop_),
-    stdIn_(0,loop_),
+    stdIn_(0,loop_,"stdIn"),
     thread_(thread)
     {
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
         stdIn_.setReadCallBack([this](){handleRead();});
-        stdIn_.set_name("stdIn");
+       
         stdIn_.setReading();
          
     }

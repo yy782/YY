@@ -178,6 +178,11 @@ void Session::handleClose(TcpConnectionPtr)
 }
 int main(int argc, char* argv[])
 {
+    SyncLog::getInstance("../CliLog.log").getFilter() 
+      .set_global_level(LOG_LEVEL_DEBUG) 
+      .set_module_enabled("TCP")
+      .set_module_enabled("SYSTEM")
+        ;
     int threadCount;
     int blockSize;
     int sessionCount ;
@@ -186,7 +191,7 @@ int main(int argc, char* argv[])
     {
       threadCount = 4;
       blockSize = 4096;
-      sessionCount = 1;
+      sessionCount = 100;
       timeout = 60;        
     }
     else

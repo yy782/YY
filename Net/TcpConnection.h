@@ -91,9 +91,6 @@ public:
     {
         sockets::setTcpNoDelay(handler_.get_fd(),on);
     }
-    void setName(const char* name){handler_.set_name(name);}
-
-    
     // @brief 这些是有多线程安全问题的
     void disconnect(); // @brief 这是我端主动关闭连接时的回调,关闭我方的写端    
     

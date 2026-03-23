@@ -120,7 +120,7 @@ private:
     EventLoop* loop_;
     Address serverAddr_;
     std::atomic<bool> retry_;
-    std::unique_ptr<Connector> connector_;
+    std::shared_ptr<Connector> connector_;
     TcpConnectionPtr connection_;
 
     // 回调函数

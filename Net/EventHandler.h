@@ -36,8 +36,8 @@ public:
     {
         sockets::close(fd_);
     }
-    EventHandler(int fd,EventLoop* loop);
-    void init(int fd,EventLoop* loop);
+    EventHandler(int fd,EventLoop* loop,const  char* name);
+    void init(int fd,EventLoop* loop,const char* name);
     int get_fd()const{return fd_;}
     EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}
@@ -82,7 +82,6 @@ public:
     void setErrorCallBack(EventCallBack cb){errorCallback_=std::move(cb);}
     void setExceptCallBack(EventCallBack cb){exceptCallback_=std::move(cb);}
 
-    void set_name(const std::string& name){name_=name;}
     const std::string& printName()
     {
         if(name_.empty())
@@ -97,12 +96,19 @@ public:
     void disableAll()
     {
         events_=EventType::NoneEvent;
+        update();
     }
     void removeListen();
+    void hasDestructed()
+    {
+        isExist_=false;
+    }
+
 
 private:
     void update();
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
+    std::atomic<bool> isExist_={false};
     int fd_={-1};
     Event events_;
     Event revents_;

@@ -2,11 +2,13 @@
 #include "TcpClient.h"
 #include "sockets.h"
 #include "TimerQueue.h"
+#include <memory>
 namespace yy 
 {
 namespace net 
 {
-struct TcpClient::Connector:noncopyable
+struct TcpClient::Connector:noncopyable,
+                            std::enable_shared_from_this<Connector>
 {   
     enum State 
     { 
@@ -29,7 +31,7 @@ struct TcpClient::Connector:noncopyable
 
     ~Connector() 
     {
-      
+        handler_->hasDestructed();
     }
 
     void start() 
@@ -62,6 +64,10 @@ private:
     {
         assert(loop_->isInLoopThread());
         assert(state_ == kDisconnected);
+        if(handler_)
+        {
+            handler_.reset();
+        }
         int fd = sockets::createTcpSocketOrDie(serverAddr_.get_family());
         int ret = sockets::connect(fd, serverAddr_);
         int savedErrno = (ret == 0) ? 0 : errno;
@@ -90,11 +96,9 @@ private:
     void connecting(int fd) 
     {
         state_=State::kConnecting;
-
-        handler_=std::make_unique<EventHandler>(fd,loop_);
+        handler_=std::make_unique<EventHandler>(fd,loop_,"ConnectorHandler");
         handler_->setWriteCallBack(std::bind(&Connector::handleWrite,this));
         handler_->setErrorCallBack(std::bind(&Connector::handleError,this));
-        handler_->set_name("ConnectorHandler");
         handler_->setWriting();
     }
 
@@ -118,8 +122,8 @@ private:
                 return;
             }
             state_=kConnected;
+            handler_->disableAll();
             client_->newConnection(::dup(sockfd));
-            resetHandler();
         }
     }
 
@@ -134,9 +138,9 @@ private:
             retry();
         }
     }
-    void retry(int sockfd) // handler未绑定fd
+    void retry(int sockfd) 
     {
-        assert(handler_->get_fd()==-1);
+
         if(sockfd >= 0) 
         {
             sockets::close(sockfd);
@@ -148,8 +152,12 @@ private:
                 LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
                 retryDelayMs_.getTimes()<<" ms");
             )
-            loop_->runTimer<LowPrecision>([this](){
-                startInLoop();
+            loop_->runTimer<LowPrecision>([c=weak_from_this()](){
+                auto p=c.lock();
+                if(p)
+                {
+                    p->startInLoop();                    
+                }
             },retryDelayMs_,1);
 
             // 指数退避
@@ -165,7 +173,7 @@ private:
     {
         assert(handler_->get_fd()>0);
         handler_->removeListen();
-        handler_.reset();
+        
         state_=kDisconnected;
         if (connect_&&client_->retry()) 
         {
@@ -173,8 +181,12 @@ private:
                 LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
                 retryDelayMs_.getTimes()<<" ms");
             )
-            loop_->runTimer<LowPrecision>([this](){
-                startInLoop();
+            loop_->runTimer<LowPrecision>([c=weak_from_this()](){
+                auto p=c.lock();
+                if(p)
+                {
+                    p->startInLoop();                   
+                }
             },retryDelayMs_,1);
 
             // 指数退避
@@ -192,18 +204,17 @@ private:
         if (state_ == kConnecting) 
         {
             state_=kDisconnected;
-            resetHandler();
+            handler_->removeListen();
         }
     }
 
-    void resetHandler() 
-    {
-        if(handler_) 
-        {
-            handler_->removeListen();
-            handler_.reset();
-        }
-    }
+    // void resetHandler() 
+    // {
+    //     if(handler_) 
+    //     {
+    //         handler_->removeListen();
+    //     }
+    // }
 
   
 
@@ -223,12 +234,13 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_unique<Connector>(loop, serverAddr, this))
+    connector_(std::make_shared<Connector>(loop, serverAddr, this))
 {
 }
 
 TcpClient::~TcpClient() 
 {
+    
 }
 
 void TcpClient::connect() 
@@ -311,8 +323,6 @@ void TcpClient::removeConnection() {
     if (ScloseCallback_) {
         ScloseCallback_(connection_);      
     }
-
-    // 清理连接
     connection_.reset();
 
     // 如果需要自动重连

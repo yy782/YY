@@ -7,7 +7,7 @@ namespace net
 Acceptor::Acceptor(const Address& addr,EventLoop* loop):
 addr_(addr),
 loop_(loop),
-handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_),
+handler_(sockets::createTcpSocketOrDie(addr.get_family()),loop_,"Acceptor"),
 idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
 {
     assert(idleFd_>=0);
@@ -22,9 +22,6 @@ idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
     sockets::bindOrDie(fd,addr_);
     handler_.setReadCallBack(std::bind(&Acceptor::accept,this));
     handler_.setReading();
-    handler_.set_name("Acceptor");
-
-
 }
 Acceptor::~Acceptor()
 {

@@ -24,7 +24,7 @@ SI_(SI),
 cur_slot_(0),
 slots_(maxSlots),
 loop_(loop),
-handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop)
+handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop,"TimerWheel")
 {
     for(int i=0;i<maxSlots_;++i)
     {
@@ -40,8 +40,6 @@ handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),l
 
     handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
     handler_.setReading();
-
-    handler_.set_name("TimerWheel");
         
 }
 TimerWheel::~TimerWheel()
@@ -74,7 +72,7 @@ void TimerWheel::insert(LTimerPtr timer)
     node->time_slot=ts;        
 
     LOG_TIME_DEBUG("node rotation:"<<rotation<<" time_slot:"<<ts);
-    loop_->submit([this,ts,node](){ // this会在cb()前构析吗？
+    loop_->submit([this,ts,node](){ 
         if(!slots_[ts]){
             slots_[ts]=node;
         }else{
@@ -143,7 +141,7 @@ void TimerWheel::tick()
 void TimerWheel::ReadTimerfd()
 {
     uint64_t howmany;
-    ssize_t n=sockets::readAuto(handler_.get_fd(),&howmany,sizeof howmany);
+    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         EXCLUDE_BEFORE_COMPILATION(
             LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");

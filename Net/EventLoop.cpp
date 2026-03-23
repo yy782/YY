@@ -37,12 +37,12 @@ activeHandlers_(),
 FunctionList_(),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
-wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
+wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeupHandler")
 {
     auto eventCallBack=[this]()->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::readAuto(wakeHandler_.get_fd(),&one,sizeof one);
+        ssize_t n=sockets::read(wakeHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         
         
@@ -50,7 +50,6 @@ wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
     };
     wakeHandler_.setReadCallBack(eventCallBack);
     wakeHandler_.setReading();
-    wakeHandler_.set_name("wakeupHandler");
 }
 bool EventLoop::isQuit()
 {

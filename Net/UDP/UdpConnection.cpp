@@ -38,7 +38,7 @@ UdpConnection::UdpConnectionPtr UdpConnection::createServer(
 
 UdpConnection::UdpConnection(EventLoop* loop, int fd, const Address& local):
     loop_(loop), 
-    handler_(fd, loop), 
+    handler_(fd, loop,local.sockaddrToString().c_str()), 
     local_(local), 
     closed_(false), 
     isServer_(false) 
@@ -107,7 +107,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
     },interval,BaseTimer::FOREVER);
     int timerfd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
     sockets::timerfd_settime(timerfd,0,timer);
-    timerHandler_.init(timerfd,loop_);
+    timerHandler_.init(timerfd,loop_,"HeartBearHandler");
     timerHandler_.setReadCallBack([this](){
         lastRecvTimestamp_=LTimeStamp::now();
         if(lastRecvTimestamp_-lastSendTimestamp_>MaxidleTime_)

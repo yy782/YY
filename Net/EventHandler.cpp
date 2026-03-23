@@ -5,27 +5,31 @@ namespace yy
 {
 namespace net
 {
-EventHandler::EventHandler(int fd,EventLoop* loop):
+EventHandler::EventHandler(int fd,EventLoop* loop,const char* name):
 status_(-1),
 fd_(fd),
 events_(EventType::NoneEvent),
 revents_(EventType::NoneEvent),
-loop_(loop)
+loop_(loop),
+name_(name)
 {
     assert(loop_!=nullptr);
     loop_->addListen(this);
+    isExist_=true;
 } 
-void EventHandler::init(int fd,EventLoop* loop)
+void EventHandler::init(int fd,EventLoop* loop,const char* name)
 {
     assert(loop);
     loop_=loop;
     fd_=fd;
     loop_->addListen(this); 
+    isExist_=true;
+    name_=name;
 }  
 
 void EventHandler::handler_revent()
 {
-
+    if(!isExist_) return;
     if(revents_&EventType::HupEvent&&!(revents_&EventType::ReadEvent))
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接

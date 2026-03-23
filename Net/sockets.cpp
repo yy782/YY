@@ -503,12 +503,7 @@ ssize_t recv(int fd,void* buf,size_t len,int flags)
 }
 ssize_t send(int fd,const void* buf,size_t len,int flags)
 {
-    auto n=::send(fd,buf,len,flags);
-    if(n<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return n;
+    return ::send(fd,buf,len,flags);
 }
 
 /**

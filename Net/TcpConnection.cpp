@@ -11,7 +11,7 @@ TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
 loop_(loop),
 Connstatus_(ConnectStatus::Connecting),
-handler_(fd,loop) // 监听的loop不确定，延迟初始化
+handler_(fd,loop,addr.sockaddrToString().c_str()) 
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
@@ -26,17 +26,17 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
-    
+    handler_.hasDestructed();
 }
 void TcpConnection::disconnect()
 {
-  
-
     if(SendBuffer_.get_readable_size()==0)
     {
         
-        loop_->submit([this](){
-            disconnectInLoop();
+        loop_->submit([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+                con->disconnectInLoop();
         });
     }
 }  
@@ -65,24 +65,30 @@ void TcpConnection::send(std::string&& message)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
     
-    loop_->submit([this,msg=std::move(message)](){
-        
-        sendInLoop(msg.c_str(),msg.size());
+    loop_->submit([c=weak_from_this(),msg=std::move(message)](){
+        auto con=c.lock();
+        if(con)
+            con->sendInLoop(msg.c_str(),msg.size());
     });     
 }
 void TcpConnection::sendOutput()
 {
-    loop_->submit([this](){
-        if(!handler_.isWriting())
+    loop_->submit([c=weak_from_this()](){
+        auto con=c.lock();
+        if(con)
         {
-            handler_.setWriting();
-        }        
+            if(!con->handler_.isWriting())
+            {
+                con->handler_.setWriting();
+            }             
+        }
+       
     });
 }
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
     assert(loop_->isInLoopThread());
-    ssize_t n=sockets::sendAuto(handler_.get_fd(),message,len,0);
+    ssize_t n=sockets::send(handler_.get_fd(),message,len,0);
     if(n>=0&&n<static_cast<ssize_t>(len))
     {
         SendBuffer_.append(message+n,len-n);
@@ -142,7 +148,7 @@ void TcpConnection::handleWrite()
 
     ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
-    ssize_t n=sockets::sendAuto(fd,SendBuffer_.peek(),len,0);
+    ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,0);
     if(n>0)
     {
         if(n==len)
@@ -202,21 +208,30 @@ void TcpConnection::handleError()
     
 }
 void TcpConnection::handleException()
-{   
-    auto n=sockets::recvAuto(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),MSG_OOB);
-    if(n>0)
+{
+    while(true)
     {
-        char oob_buf[1];
-        if(SexceptCallBack_)SexceptCallBack_(shared_from_this(),oob_buf);          
-    }  
-    else if(n==0)
-    {
-        handleClose();
-    }
-    else
-    {
-        handleError();
-    }  
+        auto n=sockets::recv(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),MSG_OOB);
+        if(n>0)
+        {
+            char oob_buf[1];
+            if(SexceptCallBack_)SexceptCallBack_(shared_from_this(),oob_buf);          
+        }  
+        else if(n==0)
+        {
+            handleClose();
+        }
+        else if(errno== EINTR)
+        {
+            continue;
+        }
+        else 
+        {
+            handleError();
+        }
+        break;          
+    }   
+
 }
 void TcpConnection::handleBackpressureAfterSend()
 {
