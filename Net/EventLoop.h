@@ -63,7 +63,7 @@ public:
     template<class PrecisionTag>
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
 private:
-  
+    void wakeup();
     
     void doPendingFunctions();
     
@@ -74,7 +74,7 @@ private:
     FunctionList FunctionList_;
     Pid_t threadId_;
     int status_;
-    EventHandler QuitHandler_;
+    EventHandler wakeHandler_;
     
 };
 

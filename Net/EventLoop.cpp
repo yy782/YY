@@ -37,20 +37,20 @@ activeHandlers_(),
 FunctionList_(),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
-QuitHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
+wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this)
 {
     auto eventCallBack=[this]()->void
     {
         uint64_t one=1;
-        ssize_t n=sockets::readAuto(QuitHandler_.get_fd(),&one,sizeof one);
+        ssize_t n=sockets::readAuto(wakeHandler_.get_fd(),&one,sizeof one);
         assert(n==sizeof one);
         
         
         return;
     };
-    QuitHandler_.setReadCallBack(eventCallBack);
-    QuitHandler_.setReading();
-    QuitHandler_.set_name("wakeupHandler");
+    wakeHandler_.setReadCallBack(eventCallBack);
+    wakeHandler_.setReading();
+    wakeHandler_.set_name("wakeupHandler");
 }
 bool EventLoop::isQuit()
 {
@@ -92,7 +92,7 @@ void EventLoop::quit()
     submit([this](){
         status_=EventLoopStatus::Quiting;
         uint64_t one =1;
-        ssize_t n=sockets::writeAuto(QuitHandler_.get_fd(), &one, sizeof one);
+        ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
         assert(n==sizeof one);        
     });
 }
@@ -106,6 +106,15 @@ void EventLoop::submit(Functor cb)
     {
         assert(cb);
         FunctionList_.blockappend(std::move(cb));        
+    }
+}
+void EventLoop::wakeup()
+{
+    if(!(status_&EventHandling)&&!(status_&EventLoopStatus::PendingFunctions))
+    {
+        uint64_t one =1;
+        ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
+        assert(n==sizeof one);          
     }
 }
 void EventLoop::doPendingFunctions()

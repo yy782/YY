@@ -178,14 +178,25 @@ void Session::handleClose(TcpConnectionPtr)
 }
 int main(int argc, char* argv[])
 {
+    int threadCount;
+    int blockSize;
+    int sessionCount ;
+    int timeout ;
     if(argc<5)
     {
-        assert("need five data");
+      threadCount = 4;
+      blockSize = 4096;
+      sessionCount = 1;
+      timeout = 60;        
     }
-    int threadCount = atoi(argv[1]);
-    int blockSize = atoi(argv[2]);
-    int sessionCount = atoi(argv[3]);
-    int timeout = atoi(argv[4]);
+    else
+    {
+      threadCount = atoi(argv[1]);
+      blockSize = atoi(argv[2]);
+      sessionCount = atoi(argv[3]);
+      timeout = atoi(argv[4]);
+    } 
+
 
     EventLoop loop;
     Address serverAddr("0.0.0.0",8080);

@@ -16,6 +16,7 @@
 using namespace yy;
 using namespace yy::net;
 //./PingPongServer 4
+//ss -tan | grep 8080
 int main(int argc, char* argv[])
 {
     int threadNums=4;
