@@ -49,7 +49,7 @@ public:
     }
     EventHandler* getHandler(){return &handler_;}    
     int get_fd()const{return handler_.get_fd();}
-    Address getAddr()const{return addr_;}
+    const Address& getAddr()const{return addr_;}
     bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
     template<typename Tag, typename... Args>

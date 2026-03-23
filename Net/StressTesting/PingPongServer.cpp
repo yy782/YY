@@ -39,8 +39,20 @@ int main(int argc, char* argv[])
     });
     server.setMessageCallBack([](TcpConnectionPtr con){
         auto& buf=con->getRecvBuffer();
-        auto size=buf.get_readable_size();
-        con->send(buf.retrieve(size),size);
+        while(true)
+        {
+            auto size=buf.get_readable_size();
+            if(size==0)break;
+            assert(size>0);
+            con->send(buf.retrieve(size),size);
+        }
+    });
+    server.setCloseCallBack([](TcpConnectionPtr con){
+        auto& addr=con->getAddr();
+        LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
+    });
+    server.setErrorCallBack([](TcpConnectionPtr con){
+        LOG_SYSTEM_ERROR(con->getAddr().sockaddrToString()<<" errno:"<<errno);
     });
     server.loop();
     loop.loop();

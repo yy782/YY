@@ -2,10 +2,24 @@
 #include "sockets.h"
 #include <vector>
 
+
+
+
 namespace yy
 {
 namespace net
 {
+
+// bool AssertRecv(TcpConnectionPtr con)
+// {
+//     auto& buf=con->getRecvBuffer();
+//     if(buf.get_readable_size()!=0)
+//     {
+//         LOG_TCP_DEBUG(buf.getReadView());
+//         return false;
+//     }
+    
+// }
 
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
@@ -100,7 +114,16 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
     }
     else if(n<0)
     {
-        handleError();
+        if(errno == EAGAIN)
+        {
+            SendBuffer_.append(message,len);
+            if(!handler_.isWriting())
+            {
+                handler_.setWriting();
+            }            
+        }
+        else 
+            handleError();
     }         
     
 
@@ -122,6 +145,7 @@ void TcpConnection::handleRead()
         else if(n==0)
         {
             handleClose();
+            break;
         }
         else
         {   if(errno == EAGAIN || errno == EWOULDBLOCK)
@@ -145,7 +169,7 @@ void TcpConnection::handleRead()
 }
 void TcpConnection::handleWrite()
 {
-
+    
     ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
     ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,0);
@@ -191,6 +215,8 @@ void TcpConnection::handleClose()
 }
 void TcpConnection::handleError()   
 {
+    LOG_TCP_DEBUG(addr_.sockaddrToString()<<" handleError");
+
     if(errno==EPIPE||errno==ECONNRESET)
     {
         handleClose();
@@ -220,6 +246,7 @@ void TcpConnection::handleException()
         else if(n==0)
         {
             handleClose();
+            break;
         }
         else if(errno== EINTR)
         {
@@ -228,8 +255,8 @@ void TcpConnection::handleException()
         else 
         {
             handleError();
-        }
-        break;          
+            break;
+        }        
     }   
 
 }

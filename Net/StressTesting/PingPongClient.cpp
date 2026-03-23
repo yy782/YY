@@ -35,6 +35,9 @@ class Session : noncopyable
     client_.setMessageCallBack(
         std::bind(&Session::onMessage,this,_1));
     client_.setCloseCallBack(bind(&Session::handleClose,this,_1));
+    client_.setErrorCallback([](TcpConnectionPtr con){
+        LOG_SYSTEM_ERROR(con->getAddr().sockaddrToString()<<" errno:"<<errno);
+    });
   }
 
   void start()
@@ -64,11 +67,17 @@ void onConnection(const TcpConnectionPtr& conn);
   void onMessage(const TcpConnectionPtr& conn)
   {
     auto& buf=conn->getRecvBuffer();
-    auto size=buf.get_readable_size();
-    ++messagesRead_;
-    bytesRead_+=size;
-    bytesWritten_+=size;
-    conn->send(buf.retrieve(size),size);
+    while(true)
+    {
+      auto size=buf.get_readable_size();
+      if(size==0)break;
+      assert(size>0);
+      ++messagesRead_;
+      bytesRead_+=size;
+      bytesWritten_+=size;
+      conn->send(buf.retrieve(size),size);      
+    }
+
   }
 
 
@@ -121,7 +130,9 @@ class Client : noncopyable
     if (++numConnected_ == sessionCount_)
     {
       std::cout<< "all connected";
+
     }
+    LOG_TCP_DEBUG("连接数:"<<numConnected_);
   }
 
   void onDisconnect()
@@ -144,6 +155,7 @@ class Client : noncopyable
       std::cout << static_cast<double>(totalBytesRead) / (timeout_ * 1024 * 1024)
                << " MiB/s throughput"<<"\n";
       loop_->quit();
+      threadPool_.stop();
     }
   }
 
@@ -191,8 +203,8 @@ int main(int argc, char* argv[])
     {
       threadCount = 4;
       blockSize = 4096;
-      sessionCount = 100;
-      timeout = 60;        
+      sessionCount =60;
+      timeout = 5;        
     }
     else
     {
