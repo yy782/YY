@@ -17,37 +17,54 @@ namespace yy
 namespace net
 {
 
-struct Fun
-{
-    std::function<void()> Functor_;
-    std::string name_;
-    Fun()=default;
-    template<typename Callable>
-    Fun(Callable&& callable, std::string name = "NoName")
-        : Functor_(std::forward<Callable>(callable))
-        , name_(std::move(name))
-    {
-    }  
-    std::string getName(){return name_;} 
-    void operator()()
-    {
-        Functor_();
-    }
-};
+// struct Fun
+// {
+//     std::function<void()> Functor_;
+//     std::string name_;
+//     Fun()=default;
+//     template<typename Callable>
+//     Fun(Callable&& callable, std::string name = "NoName")
+//         : Functor_(std::forward<Callable>(callable))
+//         , name_(std::move(name))
+//     {
+//     }  
+//     std::string getName(){return name_;} 
+//     void operator()()
+//     {
+//         Functor_();
+//     }
+// };
 
 class EventLoop:public noncopyable
 {
 public:
     
     typedef Thread::Pid_t Pid_t;
-    //typedef std::function<void()> Functor;
-    typedef Fun Functor;
-    typedef RingBuffer<Functor> FunctionList;
+    typedef std::function<void()> Functor;
+    //typedef Fun Functor;
+
+    //typedef RingBuffer<Functor> FunctionList;
+    typedef std::vector<Functor> FunctionList;
     EventLoop();
     ~EventLoop()=default;
     void loop();
     void quit();
     bool isQuit();
+
+    void setName(const char* name)
+    {
+        name_=name;
+    }
+    // std::atomic<int> num={0};
+    // std::atomic<int> num2={0};
+
+    bool isInLoopThread();
+    void submit(Functor cb);
+    template<class PrecisionTag>
+    void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
+private:
+    friend class EventHandler;
+    void wakeup();
     void addListen(EventHandler* handler)
     {
         assert(handler);
@@ -72,18 +89,7 @@ public:
             poller_.remove_listen(handler);
         else
             submit(std::bind(&PollerType::remove_listen,&poller_,handler));
-    }    
-
-    std::atomic<int> num={0};
-    std::atomic<int> num2={0};
-
-    bool isInLoopThread();
-    void submit(Functor cb);
-    template<class PrecisionTag>
-    void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
-private:
-    void wakeup();
-    
+    }        
     void doPendingFunctions();
     
     bool CheckeEventLoopStatus();
@@ -95,7 +101,10 @@ private:
     int status_;
     EventHandler wakeHandler_;
 
- 
+    std::mutex mtx_;
+
+    int LoopNum={0};
+    std::string name_;
     
 };
 

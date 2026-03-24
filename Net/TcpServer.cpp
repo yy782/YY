@@ -30,7 +30,7 @@ void TcpServer::newConnection(int fd,const Address& addr)
     
 
     EventLoop* loop=threadpool_.getEventLoop();
-    TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop);
+    TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop,addr.sockaddrToString().c_str());
     connects_.insert(conn);
     
     

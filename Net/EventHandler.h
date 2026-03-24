@@ -36,6 +36,7 @@ public:
     {
      
     }
+    void tie(const std::shared_ptr<void>&);
     EventHandler(int fd,EventLoop* loop,const  char* name);
     void init(int fd,EventLoop* loop,const char* name);
     int get_fd()const{return fd_;}
@@ -43,13 +44,12 @@ public:
     Event get_event()const{return events_;}
     int get_status()const{return status_;}
     bool has_ignore()const{return events_==EventType::NoneEvent;}
-    void set_ignore()
-    {
-        assert(events_!=EventType::NoneEvent);
-        events_=EventType::NoneEvent;
-    }
 
-    void set_event(Event event){events_.add_event(event);}
+
+    void set_event(Event event){
+        events_.add_event(event);
+        update();
+    }
 
     void set_revent(Event event){revents_.add_event(event);}
     void set_status(int status){status_=status;}
@@ -99,16 +99,14 @@ public:
         update();
     }
     void removeListen();
-    void hasDestructed()
-    {
-        isExist_=false;
-    }
+
 
 
 private:
     void update();
     int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
-    std::atomic<bool> isExist_={false};
+    std::weak_ptr<void> tie_;
+    bool tied_={false};
     int fd_={-1};
     Event events_;
     Event revents_;

@@ -46,6 +46,7 @@ void BaseLogAppender::append(const char* logline,size_t len)
 {
     size_t written =0;
 
+
     while (written != len)
     {
         size_t remain =len-written;
@@ -80,6 +81,23 @@ LogAppender::~LogAppender()
 }
 void LogAppender::append(const char* logline, size_t len)
 {
+    baseLogFile_->append(logline,len);
+    if(baseLogFile_->getWrittenBytes()>rollSize_)
+    {
+        rollFile();
+    }
+    else
+    {
+        Timeflush();
+    }
+}
+void LogAppender::safeAppend(const char* logline, size_t len)
+{
+    std::lock_guard<std::mutex> l(mtx_);
+    if (fileno(baseLogFile_->getFp()) < 0) {
+        fprintf(stderr, "Invalid file descriptor in log\n");
+        rollFile();
+    }
     baseLogFile_->append(logline,len);
     if(baseLogFile_->getWrittenBytes()>rollSize_)
     {

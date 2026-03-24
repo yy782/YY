@@ -30,12 +30,11 @@ struct TcpClient::Connector:noncopyable,
     }
 
     ~Connector() 
-    {
-        if(handler_)
-        {
-            handler_->hasDestructed();  // 机制需要完善
-            handler_.reset();
-        }      
+    {   
+        if(state_==kConnected)return;
+        if(fd_!=-1)
+            sockets::close(fd_);
+        
     }
 
     void start() 
@@ -80,39 +79,36 @@ private:
     {
         assert(loop_->isInLoopThread());
         assert(state_ == kDisconnected);
-        if(handler_)
-        {
-            handler_.reset();
-        }
-        int fd = sockets::createTcpSocketOrDie(serverAddr_.get_family());
-        int ret = sockets::connect(fd, serverAddr_);
+        fd_ = sockets::createTcpSocketOrDie(serverAddr_.get_family());
+        int ret = sockets::connect(fd_, serverAddr_);
         int savedErrno = (ret == 0) ? 0 : errno;
         switch (savedErrno) {
             case 0:
             case EINPROGRESS:
             case EINTR:
             case EISCONN:
-                connecting(fd);
+                connecting();
                 break;
             case EAGAIN:
             case EADDRINUSE:
             case EADDRNOTAVAIL:
             case ECONNREFUSED:
             case ENETUNREACH:
-                retry(fd);
+                retry();
                 break;
             default:
                 LOG_ERRNO(savedErrno);
-                sockets::close(fd);
+                sockets::close(fd_);
+                fd_=-1;
                 client_->connectFail();
                 break;
         }
     }
 
-    void connecting(int fd) 
+    void connecting() 
     {
         state_=State::kConnecting;
-        handler_=std::make_unique<EventHandler>(fd,loop_,"ConnectorHandler");
+        handler_=std::make_unique<EventHandler>(fd_,loop_,"ConnectorHandler");
         handler_->setWriteCallBack([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
@@ -134,23 +130,27 @@ private:
     {
         if(state_==kConnecting) 
         {
-            int sockfd=handler_->get_fd();
-            int err = sockets::sockfd_has_error(sockfd);
+           
+            int err = sockets::sockfd_has_error(fd_);
             if (err!=0) 
             {
                 LOG_WARN("Connector::handleWrite - SO_ERROR = "<<err);
+                handler_->removeListen();
+                handler_.reset();
                 retry();
                 return;
             }
-            if (sockets::isSelfConnect(sockfd)) 
+            if (sockets::isSelfConnect(fd_)) 
             {
                 LOG_WARN("Connector::handleWrite - Self connect");
+                handler_->removeListen();
+                handler_.reset();
                 retry();
                 return;
             }
             state_=kConnected;
-            handler_->disableAll();
-            client_->newConnection(::dup(sockfd));
+            handler_->removeListen();
+            client_->newConnection(fd_);
         }
     }
 
@@ -159,18 +159,21 @@ private:
 
         if (state_ == kConnecting) 
         {
-            int socketfd=handler_->get_fd();
-            int err = sockets::sockfd_has_error(socketfd);
+
+            int err = sockets::sockfd_has_error(fd_);
             LOG_WARN("Connector::handleError - Self connect"<<err);
+            handler_->removeListen();
+            handler_.reset();
             retry();
         }
     }
-    void retry(int sockfd) 
+    void retry() 
     {
 
-        if(sockfd >= 0) 
+        if(fd_ >0) 
         {
-            sockets::close(sockfd);
+            sockets::close(fd_);
+            fd_=-1;
         }
         state_=kDisconnected;
         if (connect_&&client_->retry()) 
@@ -184,35 +187,6 @@ private:
                 if(p)
                 {
                     p->startInLoop();                    
-                }
-            },retryDelayMs_,1);
-
-            // 指数退避
-            LTimeInterval NextretryDelayMs=2*retryDelayMs_;
-            retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
-        } 
-        else 
-        {
-            client_->connectFail();
-        }
-    }
-    void retry() // handler已经绑定fd
-    {
-        assert(handler_->get_fd()>0);
-        handler_->removeListen();
-        
-        state_=kDisconnected;
-        if (connect_&&client_->retry()) 
-        {
-            EXCLUDE_BEFORE_COMPILATION( 
-                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
-                retryDelayMs_.getTimes()<<" ms");
-            )
-            loop_->runTimer<LowPrecision>([c=weak_from_this()](){
-                auto p=c.lock();
-                if(p)
-                {
-                    p->startInLoop();                   
                 }
             },retryDelayMs_,1);
 
@@ -244,7 +218,7 @@ private:
     // }
 
   
-
+    int fd_={-1};
     EventLoop* loop_;
     Address serverAddr_;
     TcpClient* client_;  
@@ -304,7 +278,8 @@ bool TcpClient::isConnecting() const
 
 void TcpClient::send(std::string&& message) 
 {
-    connection_->send(std::move(message));
+    //connection_->send(std::move(message));
+    (void)message;
 }
 
 void TcpClient::send(const char* data, size_t len) 
@@ -326,22 +301,38 @@ void TcpClient::sendOutput()
     }
 }
 
+// void TcpClient::newConnection(int sockfd) 
+// {
+    
+//     assert(loop_->isInLoopThread());
+//     connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_,"TcpCli");
+
+
+
+//     connection_->setConnectCallBack(SconnectionCallback_);
+//     connection_->setMessageCallBack(SmessageCallback_);
+//     connection_->setErrorCallBack(SerrorCallback_);
+//     connection_->setCloseCallBack(std::bind(&TcpClient::removeConnection, 
+//                                             this));
+
+//     connection_->ConnectSuccess();
+// }
 void TcpClient::newConnection(int sockfd) 
 {
-    LOG_CLIENT_DEBUG("connected!");
     
     assert(loop_->isInLoopThread());
-    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_);
+    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_,"TcpCli");
+
+
+
     connection_->setConnectCallBack(SconnectionCallback_);
     connection_->setMessageCallBack(SmessageCallback_);
     connection_->setErrorCallBack(SerrorCallback_);
     connection_->setCloseCallBack(std::bind(&TcpClient::removeConnection, 
                                             this));
-    connection_->setReading();
-    connection_->setExcept();
+
     connection_->ConnectSuccess();
 }
-
 void TcpClient::removeConnection() {
     assert(loop_->isInLoopThread());
    

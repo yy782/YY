@@ -218,7 +218,7 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
     // @brief muduo库选择accept4或accept来实现更好的兼容，我这里选择accept来向下兼容
     if(connfd==-1)
     {
-        LOG_ERRNO(errno);
+        
         switch (errno)
         {
         case EINTR://被信号中断              
@@ -236,9 +236,11 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
         case ENOMEM://内存不足
         case ENOTSOCK://FD不是套接字
         case EOPNOTSUPP://操作不被支持
+            LOG_ERRNO(errno);
             LOG_SYSFATAL("unexpected error of ::accept ");
             break;
         default:
+            LOG_ERRNO(errno);
             LOG_SYSFATAL("unexpected error of ::accept ");
             break;
         }
@@ -287,6 +289,25 @@ void setTcpNoDelay(int fd,bool on)
     {
         LOG_ERRNO(errno);
     }  
+}
+void setSocketBufferSize(int fd,int recvBufSize,int sendBufSize)
+{
+    if(recvBufSize>0)
+    {
+        int ret=::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &recvBufSize, static_cast<socklen_t>(sizeof recvBufSize));
+        if(ret<0)
+        {
+            LOG_ERRNO(errno);
+        }
+    }
+    if(sendBufSize>0)
+    {
+        int ret=::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sendBufSize, static_cast<socklen_t>(sizeof sendBufSize));
+        if(ret<0)
+        {
+            LOG_ERRNO(errno);
+        }
+    }
 }
 void reuse_addr(int fd,bool on)
 {
@@ -499,11 +520,11 @@ ssize_t write(int fd,const void* buf,size_t len)
 }
 ssize_t recv(int fd,void* buf,size_t len,int flags)
 {
-    return ::recv(fd,buf,len,flags);
+    return ::recv(fd,buf,len,flags|MSG_DONTWAIT);
 }
 ssize_t send(int fd,const void* buf,size_t len,int flags)
 {
-    return ::send(fd,buf,len,flags);
+    return ::send(fd,buf,len,flags|MSG_NOSIGNAL);
 }
 
 /**

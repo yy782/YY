@@ -20,10 +20,10 @@ public:
         
         client_.setMessageCallBack(std::bind(&HTTPClient::onMessage, this, _1));
         client_.setCloseCallBack([this](TcpConnectionPtr){
-        
             closeCb_();
         });
         client_.setConnectionCallback([this](TcpConnectionPtr){
+            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
             conCb_();
         });

@@ -121,7 +121,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
 void UdpConnection::close() 
 {
     assert(!closed_);
-    loop_->remove_listen(&handler_);
+    handler_.removeListen();
     closed_=true;
 }
 
@@ -136,7 +136,7 @@ void UdpConnection::handleRead() {
   
     struct sockaddr_storage peerAddr;
 
-    ssize_t n=sockets::recvfromAuto(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
+    ssize_t n=sockets::recvfrom(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
 
 
     messageCallback_(shared_from_this(),stringPiece(buf,n),peerAddr);
@@ -148,12 +148,12 @@ void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest)
     ssize_t n;
     if (dest) 
     {
-        n=sockets::sendtoAuto(handler_.get_fd(), buf, len, 0,
+        n=sockets::sendto(handler_.get_fd(), buf, len, 0,
                      *dest);
     }else 
     {
        
-        n=sockets::sendtoAuto(handler_.get_fd(), buf, len, 0,
+        n=sockets::sendto(handler_.get_fd(), buf, len, 0,
                      peer_);
     }
     if (n<0)

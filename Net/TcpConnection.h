@@ -10,6 +10,7 @@
 #include "Codec.h"
 #include "AutoContext.h"
 #include "EventLoop.h"
+#include <string_view>
 namespace yy
 {
 namespace net
@@ -36,12 +37,13 @@ public:
 
 
     TcpConnection()=delete;
-    TcpConnection(int fd,const Address& addr,EventLoop* loop); // 服务端的构造函数
+    TcpConnection(int fd,const Address& addr,EventLoop* loop,const char* name="NoName");
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     void ConnectSuccess()
     {
         assert(Connstatus_==ConnectStatus::Connecting);
         Connstatus_=ConnectStatus::Connected;
+        handler_.tie(shared_from_this());
         if(SconnectCallback_)
         {
             SconnectCallback_(shared_from_this());
@@ -68,6 +70,12 @@ public:
         handler_.get_loop()->submit([this](){
           handler_.setExcept();
         });
+    }
+    void setEvent(Event e)
+    {
+        handler_.get_loop()->submit([this,e](){
+          handler_.set_event(e);
+        });        
     }
     void setConnectCallBack(ServicesConnectionCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
@@ -98,6 +106,7 @@ public:
     void send(const char* message,size_t len);
     void send(std::string&& message);
     void send(const std::string& message);
+    //void send(const std::string_view& msg);
     void sendOutput(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     template<typename T>
     T& context(){ return data_.context<T>();}
@@ -140,7 +149,7 @@ private:
     void handleBackpressureAfterRead();
     
 
-
+    int fd_;
     Address addr_; // @prief 对端的地址
     EventLoop* loop_;
     Buffer RecvBuffer_;

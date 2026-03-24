@@ -50,7 +50,7 @@ private:
     void modifyTimerfd();
     std::vector<Entry> getDueTasks(const Time_Stamp& now); 
 
-
+    const int fd_;
     EventHandler handler_;
     TimerList timers_;
     //QuerySet querySet_;

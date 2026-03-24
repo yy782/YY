@@ -58,7 +58,7 @@ private:
         LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        conn->setReading();// @note 对方连接是否决定监听由业务层决定
+        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
         conn->Extend<FlushTime>();
 
         std::weak_ptr<TcpConnection> weakConn=conn;

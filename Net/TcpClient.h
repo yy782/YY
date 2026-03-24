@@ -79,7 +79,10 @@ public:
 
     TcpClient(const Address& serverAddr,EventLoop* loop);
     ~TcpClient();
-
+    void setEvent(Event e)
+    {
+        connection_->setEvent(e);
+    }
     // 连接控制
     void connect();
     void disconnect();
@@ -118,10 +121,13 @@ private:
     
 
     EventLoop* loop_;
+    Address addr_;
     Address serverAddr_;
     std::atomic<bool> retry_;
+
     std::shared_ptr<Connector> connector_;
     TcpConnectionPtr connection_;
+
 
     // 回调函数
     ServicesConnectionCallBack SconnectionCallback_;

@@ -58,7 +58,7 @@ private:
     {
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        conn->setReading();// @note 对方连接是否决定监听由业务层决定
+        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);// @note 对方连接是否决定监听由业务层决定
     }
     void onMessage(TcpConnectionPtr conn)
     {

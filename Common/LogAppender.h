@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <memory>
 #include <string>
-
+#include <mutex>
 using namespace std::chrono_literals;
 
 namespace yy
@@ -23,6 +23,7 @@ public:
     off_t getWrittenBytes()const{return writtenBytes_;}
     const std::string& getName()const{return name_;}
     const std::string& getTyps()const{return type_;}
+    FILE* getFp(){return fp_;}
     constexpr static size_t BUFFER_SIZE=6;
 private:
     const std::string name_;
@@ -41,6 +42,7 @@ public:
     ~LogAppender();
     typedef std::unique_ptr<BaseLogAppender> BaseLogFilePtr;
     void append(const char* logline, size_t len);
+    void safeAppend(const char* logline, size_t len);
     void flush(){baseLogFile_->flush();}
     void rollFile();
 private:
@@ -53,6 +55,8 @@ private:
 
     LTimeStamp lastFlushTime_;
     const FlushInterval flushInterval_;
+
+    std::mutex mtx_;
 };
 }
 

@@ -13,12 +13,12 @@ filter_()
     g_log_filter=&filter_;
     filter_.set_callback(std::bind(&SyncLog::append,this,_1));
     char p []="==================================== 日志启动 ==================================== \n";
-    appender_.append(p,strlen(p));
+    appender_.safeAppend(p,strlen(p));
     appender_.flush(); // 立即flush
 }  
 void SyncLog::append(const std::string& log)
 {
-    appender_.append(log.c_str(),log.size());
+    appender_.safeAppend(log.c_str(),log.size());
 
 #ifndef NDEBUG
     appender_.flush();
@@ -28,7 +28,7 @@ void SyncLog::append(const std::string& log)
 SyncLog::~SyncLog()
 {
     char p []="==================================== 日志结束 ==================================== \n";
-    appender_.append(p,strlen(p));
+    appender_.safeAppend(p,strlen(p));
     appender_.flush();
     g_log_filter=nullptr;
 } 

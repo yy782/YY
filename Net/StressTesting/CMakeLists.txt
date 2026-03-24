@@ -15,7 +15,6 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
         PRIVATE
             net
     )
-
     
     target_include_directories(${TEST_NAME}
         PRIVATE

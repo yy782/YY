@@ -24,6 +24,7 @@ public:
             
         });
         client_.setConnectionCallback([this](TcpConnectionPtr){
+            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
             ++ConnNum;
             send("hello !",8);
         });

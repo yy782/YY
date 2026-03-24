@@ -22,11 +22,12 @@ namespace net
     
 // }
 const int MaxReadNum=100;
-TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
+TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop,const char* name):
+fd_(fd),
 addr_(addr),
 loop_(loop),
 Connstatus_(ConnectStatus::Connecting),
-handler_(fd,loop,addr.sockaddrToString().c_str()) 
+handler_(fd,loop,name) 
 {
 
     handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
@@ -34,6 +35,7 @@ handler_(fd,loop,addr.sockaddrToString().c_str())
     handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
     handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
     handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
+    //handler_.tie(shared_from_this()); 对象没创建不能shared_from_this()
 }
 TcpConnection::~TcpConnection()
 {
@@ -41,18 +43,24 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
-    handler_.hasDestructed();
+    sockets::close(fd_);
 }
+
 void TcpConnection::disconnect()
 {
     if(SendBuffer_.get_readable_size()==0)
     {
         
-        loop_->submit(Fun([c=weak_from_this()](){
+        // loop_->submit(Fun([c=weak_from_this()](){
+        //     auto con=c.lock();
+        //     if(con)
+        //         con->disconnectInLoop();
+        // },"Tcpshutdown"));
+        loop_->submit([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
                 con->disconnectInLoop();
-        },"Tcpshutdown"));
+        });
     }else 
     {
         if(!handler_.isWriting())
@@ -70,8 +78,8 @@ void TcpConnection::disconnectInLoop()///////////////////////
         if(SendBuffer_.get_readable_size()==0)
         {
            sockets::shutdown(handler_.get_fd(),SHUT_WR);  
-           ++shutDownNum;
-           LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
+           //++shutDownNum;
+           //LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
         }
         else 
         {
@@ -84,8 +92,38 @@ void TcpConnection::disconnectInLoop()///////////////////////
 }
 void TcpConnection::send(const char* message,size_t len)
 {
-    send(std::string(message,len));       
+    
+
+    if(loop_->isInLoopThread())
+    {
+        sendInLoop(message,len);
+    }
+    else 
+    {
+        loop_->submit([c=weak_from_this(),s=std::string(message,len)]()
+        {
+            auto con=c.lock();
+            if(con)
+            {
+                con->sendInLoop(s.c_str(),s.size());
+            }
+        });
+    }      
 }
+// void TcpConnection::send(const std::string& message)
+// {
+//     send(std::string(message));
+// }
+// void TcpConnection::send(std::string&& message)
+// {
+//     if(Connstatus_!=ConnectStatus::Connected)return;
+    
+//     loop_->submit([c=weak_from_this(),msg=std::move(message)](){
+//         auto con=c.lock();
+//         if(con)
+//             con->sendInLoop(msg.c_str(),msg.size());
+//     });     
+// }
 void TcpConnection::send(const std::string& message)
 {
     send(std::string(message));
@@ -100,6 +138,26 @@ void TcpConnection::send(std::string&& message)
             con->sendInLoop(msg.c_str(),msg.size());
     });     
 }
+// void TcpConnection::send(const std::string_view& msg)
+// {
+//     if(loop_->isInLoopThread())
+//     {
+//         sendInLoop(msg.data(),msg.size());
+//     }
+//     else 
+//     {
+//         loop_->submit([c=weak_from_this(),s=std::string(msg)]()
+//         {
+//             auto con=c.lock();
+//             if(con)
+//             {
+//                 con->sendInLoop(s.c_str(),s.size());
+//             }
+//         });
+//     }
+// }
+
+
 void TcpConnection::sendOutput()
 {
     loop_->submit([c=weak_from_this()](){
@@ -109,15 +167,18 @@ void TcpConnection::sendOutput()
             if(!con->handler_.isWriting())
             {
                 con->handler_.setWriting();
-            }             
+            }              
         }
-       
     });
 }
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
+    // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
+    // LOG_SYSTEM_DEBUG("semdInLoop happen"<<" time:"<<Now.nowToString());    
+
     assert(loop_->isInLoopThread());
     ssize_t n=sockets::send(handler_.get_fd(),message,len,0);
+    // LOG_TCP_DEBUG("sendInLoop: 尝试发送"<<len<<"字节，实际发送"<<n<<"字节");
     if(n>=0&&n<static_cast<ssize_t>(len))
     {
         SendBuffer_.append(message+n,len-n);
@@ -138,57 +199,83 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
             }            
         }
         else 
+        {
             handleError();
+        }     
     }         
-    
-
 }
+// void TcpConnection::handleRead()
+// {
+//     assert(loop_->isInLoopThread());
+//     assert(SmessageCallBack_);
+//     int ReadNum=0;
+//     while(ReadNum<MaxReadNum)
+//     {
+//         auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+//         if(n>0)
+//         {
+//             updateWaterMark();
+//             SmessageCallBack_(shared_from_this());  
+//             ++ReadNum;
+//             handleBackpressureAfterRead();
+//         }  
+//         else if(n==0)
+//         {
+
+//             handleClose();
+//             return;
+//         }
+//         else
+//         {   if(errno == EAGAIN || errno == EWOULDBLOCK)
+//             {
+//                 return;
+//             }
+//             else if(errno==EINTR)
+//             {
+//                 continue;
+//             }
+//             else
+//             {
+//                 handleError();
+//                 return;
+//             }  
+//         }            
+//     }
+//     handler_.get_loop()->submit([c=weak_from_this()](){
+//         auto con=c.lock();
+//         if(con)
+//         {
+//             con->handleRead();
+//         }
+//     });
+// }
 void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
     assert(SmessageCallBack_);
-    int ReadNum=0;
-    while(ReadNum<MaxReadNum)
-    {
-        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
-        if(n>0)
-        {
-            updateWaterMark();
-            SmessageCallBack_(shared_from_this());  
-            ++ReadNum;
-            handleBackpressureAfterRead();
-        }  
-        else if(n==0)
-        {
 
-            handleClose();
-            return;
-        }
-        else
-        {   if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                return;
-            }
-            else if(errno==EINTR)
-            {
-                continue;
-            }
-            else
-            {
-                handleError();
-                return;
-            }
-                
-                
-        }            
+
+    auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+    if(n>0)
+    {
+
+        updateWaterMark();
+        SmessageCallBack_(shared_from_this());
+        handleBackpressureAfterRead();
+        // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.get_readable_size()<<"字节");
+    }  
+    else if(n==0)
+    {
+        handleClose();
+        return;
     }
-    handler_.get_loop()->submit([c=weak_from_this()](){
-        auto con=c.lock();
-        if(con)
+    else
+    {   if(errno == EAGAIN || errno == EWOULDBLOCK||errno==EINTR)
         {
-            con->handleRead();
+            handleError();
+            return;                
         }
-    });
+    }            
 }
 void TcpConnection::handleWrite()
 {
@@ -203,8 +290,8 @@ void TcpConnection::handleWrite()
             if(Connstatus_==ConnectStatus::DisConnecting)
             {
                 sockets::shutdown(fd,SHUT_WR);
-                ++shutDownNum;
-                LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
+                // ++shutDownNum;
+                // LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
             }
             if(handler_.isWriting())
             {
@@ -227,11 +314,7 @@ void TcpConnection::handleClose()
 {
     assert(loop_->isInLoopThread());
     assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting); 
-    
-    handler_.disableAll(); // 防止close后有handlewrite
-    loop_->remove_listen(&handler_);
-    
-
+    handler_.removeListen();
     Connstatus_=ConnectStatus::DisConnected;
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
 }

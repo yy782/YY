@@ -19,12 +19,13 @@ struct TimerWheel::Node
     int time_slot;//记录定时器属于时间轮上哪个槽    
 };    
 TimerWheel::TimerWheel(EventLoop* loop,int maxSlots,int SI):
+fd_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK)),
 maxSlots_(maxSlots),
 SI_(SI),
 cur_slot_(0),
 slots_(maxSlots),
 loop_(loop),
-handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),loop,"TimerWheel")
+handler_(fd_,loop,"TimerWheel")
 {
     for(int i=0;i<maxSlots_;++i)
     {
@@ -39,7 +40,7 @@ handler_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK),l
     sockets::timerfd_settime(fd,0,new_ts);
 
     handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
-    handler_.setReading();
+    handler_.set_event(EventType::ReadEvent|EventType::EV_ET); // 本身是线程安全的
         
 }
 TimerWheel::~TimerWheel()
@@ -48,6 +49,7 @@ TimerWheel::~TimerWheel()
     {
         slots_[i].reset();
     }
+    sockets::close(fd_);
 }
 void TimerWheel::insert(LTimerPtr timer)
 {

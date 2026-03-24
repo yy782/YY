@@ -55,8 +55,41 @@ bool EventLoop::isQuit()
 {
     return status_&EventLoopStatus::Quiting;
 }
+// void EventLoop::loop()
+// {
+
+//     static int LoopNum=0;
+
+//     status_&=~EventLoopStatus::Init;
+//     status_|=EventLoopStatus::Looping;
+//     assert(CheckeEventLoopStatus());
+//     while(status_&EventLoopStatus::Looping)
+//     {
+//         activeHandlers_.clear();
+//         poller_.poll(PollTimeMs,activeHandlers_);
+//         TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
+//         LOG_SYSTEM_DEBUG()
+//         status_|=EventLoopStatus::EventHandling;
+//         assert(CheckeEventLoopStatus());
+//         for(auto& handler:activeHandlers_)
+//         {
+//             assert(handler!=nullptr);
+//             handler->handler_revent();
+//         }
+//         assert(status_&EventLoopStatus::EventHandling);
+//         status_&=~EventLoopStatus::EventHandling;
+//         doPendingFunctions();
+//         if(status_&EventLoopStatus::Quiting)break;
+//     }
+//     while(!FunctionList_.empty())
+//         doPendingFunctions();
+//     status_=EventLoopStatus::Quited;
+// } 
 void EventLoop::loop()
 {
+
+    
+
     status_&=~EventLoopStatus::Init;
     status_|=EventLoopStatus::Looping;
     assert(CheckeEventLoopStatus());
@@ -64,6 +97,9 @@ void EventLoop::loop()
     {
         activeHandlers_.clear();
         poller_.poll(PollTimeMs,activeHandlers_);
+        // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
+        // LOG_SYSTEM_DEBUG(name_<<" 第"<<(++LoopNum)<<"次事件循环"<<" Timer:"<<Now.nowToString());
+
         status_|=EventLoopStatus::EventHandling;
         assert(CheckeEventLoopStatus());
         for(auto& handler:activeHandlers_)
@@ -92,8 +128,31 @@ void EventLoop::quit()
     submit([this](){
         status_=EventLoopStatus::Quiting;     
     });
-    wakeup();
+    uint64_t one =1;
+    ssize_t n=sockets::write(wakeHandler_.get_fd(), &one, sizeof one);
+    assert(n==sizeof one);
 }
+// void EventLoop::submit(Functor cb)
+// {
+//     if(isInLoopThread())
+//     {
+//         cb();
+//     }
+//     else 
+//     {
+//         assert(cb);
+//         if(cb.getName()!="NoName")
+//         {
+//             ++num;
+//             LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" submit "<<cb.getName()<<" had push:"<<num);
+//         }
+
+//         // FunctionList_.blockappend(std::move(cb));    
+//         std::lock_guard<std::mutex> l(mtx_);    
+//         FunctionList_.push_back(std::move(cb));
+//         wakeup();
+//     }
+// }
 void EventLoop::submit(Functor cb)
 {
     if(isInLoopThread())
@@ -102,44 +161,92 @@ void EventLoop::submit(Functor cb)
     }
     else 
     {
-        //assert(cb);
-        if(cb.getName()!="NoName")
-        {
-            ++num;
-            LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" submit "<<cb.getName()<<" had push:"<<num);
-        }
-
-        FunctionList_.blockappend(std::move(cb));        
-
+        // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
+        // LOG_SYSTEM_DEBUG(name_<<"be submited "<<cb.getName()<<" Timer:"<<Now.nowToString()); 
+        // FunctionList_.blockappend(std::move(cb));    
+        std::lock_guard<std::mutex> l(mtx_);    
+        FunctionList_.push_back(std::move(cb));
+        wakeup();
     }
 }
+// void EventLoop::wakeup()
+// {
+
+//     uint64_t one =1;
+//     ssize_t n=sockets::write(wakeHandler_.get_fd(), &one, sizeof one);
+//     assert(n==sizeof one);          
+
+// }
+// void EventLoop::wakeup()
+// {
+//     if(!(status_&EventLoopStatus::EventHandling)&&!(status_&EventLoopStatus::PendingFunctions))
+//     {
+//         uint64_t one =1;
+//         ssize_t n=sockets::write(wakeHandler_.get_fd(), &one, sizeof one);
+//         assert(n==sizeof one);        
+//     }
+// }
 void EventLoop::wakeup()
 {
 
     uint64_t one =1;
-    ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
-    assert(n==sizeof one);          
-
+    ssize_t n=sockets::write(wakeHandler_.get_fd(), &one, sizeof one);
+    assert(n==sizeof one);        
+    
 }
+// void EventLoop::doPendingFunctions()
+// {
+//     size_t FinishNum=0;
+//     status_|=EventLoopStatus::PendingFunctions;
+//     while(!FunctionList_.empty()&&FinishNum<30) 
+//     {
+//         Functor cb;
+//         FunctionList_.retrieve(cb);
+
+//         // if(cb.getName()!="NoName")
+//         // {
+//         //     LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" handle "<<cb.getName()<<" had pop:"<<(++num2));
+    
+//         // }
+        
+//         cb(); 
+//         ++FinishNum;
+//     }
+//     status_&=~EventLoopStatus::PendingFunctions;
+// }   
+// void EventLoop::doPendingFunctions()
+// {
+//   FunctionList functors;
+//   status_|=EventLoopStatus::PendingFunctions;
+
+//   {
+//     std::lock_guard<std::mutex> l(mtx_);
+//     functors.swap(FunctionList_);
+//   }
+
+//   for (const Functor& functor : functors)
+//   {
+//         functor();
+//   }
+// status_&=~EventLoopStatus::PendingFunctions;
+// }
 void EventLoop::doPendingFunctions()
 {
-    size_t FinishNum=0;
-    status_|=EventLoopStatus::PendingFunctions;
-    while(!FunctionList_.empty()&&FinishNum<30) 
-    {
-        Functor cb;
-        FunctionList_.retrieve(cb);
+  FunctionList functors;
+  status_|=EventLoopStatus::PendingFunctions;
 
-        if(cb.getName()!="NoName")
-        {
-            LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" handle "<<cb.getName()<<" had pop:"<<(++num2));
-    
-        }
-        
-        cb(); 
-        ++FinishNum;
-    }
-    status_&=~EventLoopStatus::PendingFunctions;
-}   
+  {
+    std::lock_guard<std::mutex> l(mtx_);
+    functors.swap(FunctionList_);
+  }
+
+  for (Functor& functor : functors)
+  {
+        // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
+        // LOG_SYSTEM_DEBUG(name_<<"handle "<<functor.getName()<<" Timer:"<<Now.nowToString());        
+        functor();
+  }
+status_&=~EventLoopStatus::PendingFunctions;
+}
 }    
 }

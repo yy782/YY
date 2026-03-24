@@ -24,6 +24,7 @@ public:
             exit(0);
         });
         client_.setConnectionCallback([this](TcpConnectionPtr){
+            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
             this->sendStudent();
         });
     }

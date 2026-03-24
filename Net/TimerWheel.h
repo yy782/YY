@@ -35,6 +35,7 @@ public:
     
 private:
     void ReadTimerfd();
+    const int fd_;
     const int maxSlots_;
     const int SI_;
     int cur_slot_;

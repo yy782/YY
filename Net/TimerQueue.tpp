@@ -11,26 +11,25 @@ namespace net
 {
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::TimerQueue(EventLoop* loop):
+fd_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK)),
 handler_()
 {
-    int fd=sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK);
     handler_.setReadCallBack(std::bind(&TimerQueue::handlerRead,this));
     if constexpr (std::is_same_v<PrecisionTag,LowPrecision>)
     {
-        handler_.init(fd,loop,"LTimerQueue");
+        handler_.init(fd_,loop,"LTimerQueue");
     }
     else
     {
-        handler_.init(fd,loop,"HTimerQueue");
+        handler_.init(fd_,loop,"HTimerQueue");
     }
-
-    handler_.setReading();
-
+   
+    handler_.set_event(EventType::ReadEvent|EventType::EV_ET);
 }
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::~TimerQueue()
 {
-    
+    sockets::close(fd_);
 }    
 template<typename PrecisionTag>
 void TimerQueue<PrecisionTag>::insert(BaseTimer::TimerCallBack cb,typename PTimer::Time_Interval interval,int execute_count)

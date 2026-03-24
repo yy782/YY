@@ -17,12 +17,19 @@ public:
     stdIn_(0,loop_,"stdIn"),
     thread_(thread)
     {
+        client_.setConnectionCallback([this](TcpConnectionPtr){
+            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        });
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
         stdIn_.setReadCallBack([this](){handleRead();});
        
-        stdIn_.setReading();
+        stdIn_.set_event(EventType::ReadEvent|EventType::EV_ET);
          
+    }
+    ~EchoClient()
+    {
+        sockets::close(0);
     }
     void send(const std::string& msg)
     {

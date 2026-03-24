@@ -15,21 +15,32 @@ name_(name)
 {
     assert(loop_!=nullptr);
     loop_->addListen(this);
-    isExist_=true;
+    
+ 
 } 
 void EventHandler::init(int fd,EventLoop* loop,const char* name)
 {
+    assert(fd_==-1);
+    assert(fd!=-1);
     assert(loop);
     loop_=loop;
     fd_=fd;
     loop_->addListen(this); 
-    isExist_=true;
     name_=name;
 }  
-
+void EventHandler::tie(const std::shared_ptr<void>& obj)
+{
+  tie_ = obj;
+  tied_=true;
+}
 void EventHandler::handler_revent()
 {
-    if(!isExist_) return;
+    std::shared_ptr<void> guard;
+    if(tied_)
+    {
+        guard=tie_.lock();
+        if(!guard)return;        
+    }
     if(revents_&EventType::HupEvent&&!(revents_&EventType::ReadEvent))
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接

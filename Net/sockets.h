@@ -38,6 +38,7 @@ int acceptAutoOrDie(int fd,Address& address,bool is_ipv6);
 void setKeepAlive(int fd,bool on,int idleSeconds=7200, 
                   int intervalSeconds=75,int maxProbes=9);
 void setTcpNoDelay(int fd,bool on);//控制TCP的Nagle算法开关
+void setSocketBufferSize(int fd,int recvBufSize,int sendBufSize);
 // @brief 设置端口重用
 void reuse_addr(int fd,bool on=true);
 bool setNonBlocking(int fd);
@@ -47,12 +48,12 @@ void reuse_port(int fd,bool on=true);
 void set_CloseOnExec(int fd); // 这些报错极为罕见，选择不检查
 ssize_t read(int fd,void* buf,size_t len);
 ssize_t readv(int fd, const iovec* iovec, int count);
-ssize_t writeAuto(int fd,const void* buf,size_t len); //SIGPIPE信号
+ssize_t write(int fd,const void* buf,size_t len); //SIGPIPE信号
 
 ssize_t recv(int fd,void* buf,size_t len,int flags);
 ssize_t send(int fd,const void* buf,size_t len,int flags);
-ssize_t recvfromAuto(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
-ssize_t sendtoAuto(int fd,const void* buf,size_t len,int flags,const Address& address);
+ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
+ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address);
 int sockfd_has_error(int fd);
 void OnlyIpv6(int fd,bool ipv6_only=true);
 void close(int fd);

@@ -20,6 +20,7 @@ public:
     }
     void handleConnected(TcpConnectionPtr)
     {
+        client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
         std::cout<<"Connected to server"<<std::endl;
         // 连接成功后发送消息
         std::cout<<"Sending Hello 1"<<std::endl;
