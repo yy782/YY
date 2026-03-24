@@ -88,12 +88,11 @@ void EventLoop::quit()
 {
 
     assert(CheckeEventLoopStatus());
+    
     submit([this](){
-        status_=EventLoopStatus::Quiting;
-        uint64_t one =1;
-        ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
-        assert(n==sizeof one);        
+        status_=EventLoopStatus::Quiting;     
     });
+    wakeup();
 }
 void EventLoop::submit(Functor cb)
 {
@@ -103,28 +102,41 @@ void EventLoop::submit(Functor cb)
     }
     else 
     {
-        assert(cb);
+        //assert(cb);
+        if(cb.getName()!="NoName")
+        {
+            ++num;
+            LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" submit "<<cb.getName()<<" had push:"<<num);
+        }
+
         FunctionList_.blockappend(std::move(cb));        
+
     }
 }
 void EventLoop::wakeup()
 {
-    if(!(status_&EventHandling)&&!(status_&EventLoopStatus::PendingFunctions))
-    {
-        uint64_t one =1;
-        ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
-        assert(n==sizeof one);          
-    }
+
+    uint64_t one =1;
+    ssize_t n=sockets::writeAuto(wakeHandler_.get_fd(), &one, sizeof one);
+    assert(n==sizeof one);          
+
 }
 void EventLoop::doPendingFunctions()
 {
-    thread_local size_t FinishNum=0;
+    size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
-    while(!FunctionList_.empty()&&FinishNum<30) // task持续不断，饥饿?
+    while(!FunctionList_.empty()&&FinishNum<30) 
     {
         Functor cb;
-        FunctionList_.retrieve(cb); 
-        cb(); //调用链过深 ?
+        FunctionList_.retrieve(cb);
+
+        if(cb.getName()!="NoName")
+        {
+            LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" handle "<<cb.getName()<<" had pop:"<<(++num2));
+    
+        }
+        
+        cb(); 
         ++FinishNum;
     }
     status_&=~EventLoopStatus::PendingFunctions;

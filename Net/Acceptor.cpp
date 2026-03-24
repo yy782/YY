@@ -27,6 +27,7 @@ Acceptor::~Acceptor()
 {
   handler_.disableAll();
   handler_.removeListen();
+  sockets::close(handler_.get_fd());
 }
 void Acceptor::accept()
 {

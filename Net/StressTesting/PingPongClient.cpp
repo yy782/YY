@@ -67,7 +67,7 @@ void onConnection(const TcpConnectionPtr& conn);
   void onMessage(const TcpConnectionPtr& conn)
   {
     auto& buf=conn->getRecvBuffer();
-    while(true)
+    while(true) // loop死锁?
     {
       auto size=buf.get_readable_size();
       if(size==0)break;
@@ -98,7 +98,7 @@ class Client : noncopyable
          int timeout,
          int threadCount)
     : loop_(loop),
-      threadPool_(threadCount),
+      threadPool_(threadCount,loop),
       sessionCount_(sessionCount),
       timeout_(timeout)
   {
@@ -120,6 +120,10 @@ class Client : noncopyable
       session->start();
       sessions_.emplace_back(session);
     }
+  }
+  ~Client()
+  {
+    
   }
   const std::string& message() const
   {
@@ -155,7 +159,6 @@ class Client : noncopyable
       std::cout << static_cast<double>(totalBytesRead) / (timeout_ * 1024 * 1024)
                << " MiB/s throughput"<<"\n";
       loop_->quit();
-      threadPool_.stop();
     }
   }
 
@@ -180,6 +183,7 @@ void handleTimeout()
 
 void Session::onConnection(const TcpConnectionPtr& conn)
 {
+ 
     conn->setTcpNoDelay(true);
     conn->send(owner_->message());
     owner_->onConnect();
@@ -203,7 +207,7 @@ int main(int argc, char* argv[])
     {
       threadCount = 4;
       blockSize = 4096;
-      sessionCount =60;
+      sessionCount =100;
       timeout = 5;        
     }
     else
@@ -220,4 +224,5 @@ int main(int argc, char* argv[])
 
     Client client(&loop, serverAddr, blockSize, sessionCount, timeout, threadCount);
     loop.loop();
+    
 }

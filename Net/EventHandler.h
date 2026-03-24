@@ -34,7 +34,7 @@ public:
     {}
     ~EventHandler()
     {
-        sockets::close(fd_);
+     
     }
     EventHandler(int fd,EventLoop* loop,const  char* name);
     void init(int fd,EventLoop* loop,const char* name);

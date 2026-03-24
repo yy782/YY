@@ -31,19 +31,35 @@ struct TcpClient::Connector:noncopyable,
 
     ~Connector() 
     {
-        handler_->hasDestructed();
+        if(handler_)
+        {
+            handler_->hasDestructed();  // 机制需要完善
+            handler_.reset();
+        }      
     }
 
     void start() 
     {
         connect_=true;
-        loop_->submit(std::bind(&Connector::startInLoop,this));
+        loop_->submit([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+            {
+                con->startInLoop();
+            }
+        });
     }
 
     void stop() 
     {
         connect_ = false;
-        loop_->submit(std::bind(&Connector::stopInLoop,this));
+        loop_->submit([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+            {
+                con->stopInLoop();
+            }
+        });
     }
 
     void restart() 
@@ -97,14 +113,25 @@ private:
     {
         state_=State::kConnecting;
         handler_=std::make_unique<EventHandler>(fd,loop_,"ConnectorHandler");
-        handler_->setWriteCallBack(std::bind(&Connector::handleWrite,this));
-        handler_->setErrorCallBack(std::bind(&Connector::handleError,this));
+        handler_->setWriteCallBack([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+            {
+                con->handleWrite();
+            }
+        });
+        handler_->setErrorCallBack([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+            {
+                con->handleError();
+            }
+        });
         handler_->setWriting();
     }
 
     void handleWrite() 
     {
-        assert(loop_->isInLoopThread());
         if(state_==kConnecting) 
         {
             int sockfd=handler_->get_fd();

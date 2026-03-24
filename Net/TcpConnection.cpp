@@ -3,7 +3,8 @@
 #include <vector>
 
 
-
+#include <atomic>
+std::atomic<int> shutDownNum=0;
 
 namespace yy
 {
@@ -20,7 +21,7 @@ namespace net
 //     }
     
 // }
-
+const int MaxReadNum=100;
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop):
 addr_(addr),
 loop_(loop),
@@ -47,24 +48,38 @@ void TcpConnection::disconnect()
     if(SendBuffer_.get_readable_size()==0)
     {
         
-        loop_->submit([c=weak_from_this()](){
+        loop_->submit(Fun([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
                 con->disconnectInLoop();
-        });
+        },"Tcpshutdown"));
+    }else 
+    {
+        if(!handler_.isWriting())
+        {
+            handler_.setWriting();
+        }          
     }
 }  
-void TcpConnection::disconnectInLoop()
+void TcpConnection::disconnectInLoop()///////////////////////
 {
     assert(loop_->isInLoopThread());
     if(Connstatus_==ConnectStatus::Connected)
     {
         Connstatus_=ConnectStatus::DisConnecting;
-        sockets::shutdown(handler_.get_fd(),SHUT_WR);   
-        if(handler_.isWriting())
+        if(SendBuffer_.get_readable_size()==0)
         {
-            handler_.cancelWriting();
-        }      
+           sockets::shutdown(handler_.get_fd(),SHUT_WR);  
+           ++shutDownNum;
+           LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
+        }
+        else 
+        {
+            if(!handler_.isWriting())
+            {
+                handler_.setWriting();
+            }
+        }    
     }
 }
 void TcpConnection::send(const char* message,size_t len)
@@ -130,27 +145,29 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
 }
 void TcpConnection::handleRead()
 {
+    assert(loop_->isInLoopThread());
     assert(SmessageCallBack_);
-     
-    while(true)
+    int ReadNum=0;
+    while(ReadNum<MaxReadNum)
     {
         auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
         if(n>0)
         {
             updateWaterMark();
             SmessageCallBack_(shared_from_this());  
-
+            ++ReadNum;
             handleBackpressureAfterRead();
         }  
         else if(n==0)
         {
+
             handleClose();
-            break;
+            return;
         }
         else
         {   if(errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                break;
+                return;
             }
             else if(errno==EINTR)
             {
@@ -159,17 +176,23 @@ void TcpConnection::handleRead()
             else
             {
                 handleError();
-                break;
+                return;
             }
                 
                 
         }            
     }
-
+    handler_.get_loop()->submit([c=weak_from_this()](){
+        auto con=c.lock();
+        if(con)
+        {
+            con->handleRead();
+        }
+    });
 }
 void TcpConnection::handleWrite()
 {
-    
+    assert(loop_->isInLoopThread());
     ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
     auto fd=handler_.get_fd();
     ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,0);
@@ -180,6 +203,8 @@ void TcpConnection::handleWrite()
             if(Connstatus_==ConnectStatus::DisConnecting)
             {
                 sockets::shutdown(fd,SHUT_WR);
+                ++shutDownNum;
+                LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
             }
             if(handler_.isWriting())
             {
@@ -201,16 +226,13 @@ void TcpConnection::handleWrite()
 void TcpConnection::handleClose()
 {
     assert(loop_->isInLoopThread());
-    assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting);
-
+    assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting); 
     
     handler_.disableAll(); // 防止close后有handlewrite
     loop_->remove_listen(&handler_);
-
     
 
     Connstatus_=ConnectStatus::DisConnected;
-
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
 }
 void TcpConnection::handleError()   

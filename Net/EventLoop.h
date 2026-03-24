@@ -11,21 +11,38 @@
 
 #include <queue>
 #include "../Common/RingBuffer.h"
+#include <mutex>
 namespace yy
 {
 namespace net
 {
 
-
+struct Fun
+{
+    std::function<void()> Functor_;
+    std::string name_;
+    Fun()=default;
+    template<typename Callable>
+    Fun(Callable&& callable, std::string name = "NoName")
+        : Functor_(std::forward<Callable>(callable))
+        , name_(std::move(name))
+    {
+    }  
+    std::string getName(){return name_;} 
+    void operator()()
+    {
+        Functor_();
+    }
+};
 
 class EventLoop:public noncopyable
 {
 public:
     
     typedef Thread::Pid_t Pid_t;
-    typedef std::function<void()> Functor;
+    //typedef std::function<void()> Functor;
+    typedef Fun Functor;
     typedef RingBuffer<Functor> FunctionList;
-     
     EventLoop();
     ~EventLoop()=default;
     void loop();
@@ -38,6 +55,7 @@ public:
             poller_.add_listen(handler);
         else
             submit(std::bind(&PollerType::add_listen,&poller_,handler));
+
     }
     void update_listen(EventHandler* handler)
     { 
@@ -56,8 +74,9 @@ public:
             submit(std::bind(&PollerType::remove_listen,&poller_,handler));
     }    
 
+    std::atomic<int> num={0};
+    std::atomic<int> num2={0};
 
-    
     bool isInLoopThread();
     void submit(Functor cb);
     template<class PrecisionTag>
@@ -75,6 +94,8 @@ private:
     Pid_t threadId_;
     int status_;
     EventHandler wakeHandler_;
+
+ 
     
 };
 
