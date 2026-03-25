@@ -163,9 +163,24 @@ void EventLoop::submit(Functor cb)
     {
         // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
         // LOG_SYSTEM_DEBUG(name_<<"be submited "<<cb.getName()<<" Timer:"<<Now.nowToString()); 
-        FunctionList_.blockappend(std::move(cb));    
-        wakeup();
+        DelayedExecution(std::move(cb));
     }
+}
+void EventLoop::DelayedExecution(Functor cb)
+{
+    if(FunctionList_.full())
+    {
+        runTimer<LowPrecision>([Fun=std::move(cb),this]()
+        {
+            DelayedExecution(std::move(Fun));
+        },5s,1);
+    }
+    else 
+    {
+        FunctionList_.blockappend(std::move(cb));    
+        wakeup();        
+    }
+    
 }
 // void EventLoop::wakeup()
 // {

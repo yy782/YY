@@ -26,6 +26,7 @@ struct TcpClient::Connector:noncopyable,
     loop_(loop),
     serverAddr_(serverAddr),
     state_(kDisconnected),
+    handler_(nullptr),
     retryDelayMs_(kInitRetryDelayMs),
     retry_(retry),
     Ncb_(std::move(Ncb)),
@@ -35,6 +36,7 @@ struct TcpClient::Connector:noncopyable,
 
     ~Connector() 
     {   
+        if(handler_!=nullptr)delete handler_;
         if(state_==kConnected)return;
         if(fd_!=-1)
             sockets::close(fd_);
@@ -112,21 +114,13 @@ private:
     void connecting() 
     {
         state_=State::kConnecting;
-        handler_=std::make_unique<EventHandler>(fd_,loop_,"ConnectorHandler");
+        handler_=new EventHandler(fd_,loop_,"ConnectorHandler");
         handler_->tie(shared_from_this());
-        handler_->setWriteCallBack([c=weak_from_this()](){
-            auto con=c.lock();
-            if(con)
-            {
-                con->handleWrite();
-            }
+        handler_->setWriteCallBack([this](){
+            handleWrite();
         });
-        handler_->setErrorCallBack([c=weak_from_this()](){
-            auto con=c.lock();
-            if(con)
-            {
-                con->handleError();
-            }
+        handler_->setErrorCallBack([this](){
+            handleError();
         });
         handler_->setWriting();
     }
@@ -141,7 +135,7 @@ private:
             {
                 LOG_WARN("Connector::handleWrite - SO_ERROR = "<<err);
                 handler_->removeListen();
-                handler_.reset();
+                resetHandler();
                 retry();
                 return;
             }
@@ -149,7 +143,7 @@ private:
             {
                 LOG_WARN("Connector::handleWrite - Self connect");
                 handler_->removeListen();
-                handler_.reset();
+                resetHandler();
                 retry();
                 return;
             }
@@ -168,7 +162,7 @@ private:
             int err = sockets::sockfd_has_error(fd_);
             LOG_WARN("Connector::handleError - Self connect"<<err);
             handler_->removeListen();
-            handler_.reset();
+            resetHandler();
             retry();
         }
     }
@@ -216,6 +210,18 @@ private:
             handler_->removeListen();
         }
     }
+    void resetHandler()
+    {
+        EventHandler* p=handler_;
+        loop_->DelayedExecution([p,c=weak_from_this()](){
+            delete p;
+            auto con=c.lock();
+            if(con)
+            {
+                con->handler_=nullptr;
+            }
+        });
+    }
 
     // void resetHandler() 
     // {
@@ -231,7 +237,7 @@ private:
     Address serverAddr_;
     
     State state_;
-    std::unique_ptr<EventHandler> handler_;
+    EventHandler* handler_;// handlerError和handlerWrite中要延迟释放handler资源，但是要捕捉对象，不一定能保证资源释放，用原始指针
     HTimeInterval retryDelayMs_;
     bool* retry_ ;  
 

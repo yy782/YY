@@ -55,6 +55,7 @@ public:
 
     bool isInLoopThread();
     void submit(Functor cb);
+    void DelayedExecution(Functor cb);
     template<class PrecisionTag>
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
 private:
