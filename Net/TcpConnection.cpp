@@ -187,51 +187,52 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
         }     
     }         
 }
-// void TcpConnection::handleRead()
-// {
-//     assert(loop_->isInLoopThread());
-//     assert(SmessageCallBack_);
-//     int ReadNum=0;
-//     while(ReadNum<MaxReadNum)
-//     {
-//         auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
-//         if(n>0)
-//         {
-//             updateWaterMark();
-//             SmessageCallBack_(shared_from_this());  
-//             ++ReadNum;
-//             handleBackpressureAfterRead();
-//         }  
-//         else if(n==0)
-//         {
+void TcpConnection::handleETRead(ServicesReadCallback cb)
+{
 
-//             handleClose();
-//             return;
-//         }
-//         else
-//         {   if(errno == EAGAIN || errno == EWOULDBLOCK)
-//             {
-//                 return;
-//             }
-//             else if(errno==EINTR)
-//             {
-//                 continue;
-//             }
-//             else
-//             {
-//                 handleError();
-//                 return;
-//             }  
-//         }            
-//     }
-//     handler_.get_loop()->submit([c=weak_from_this()](){
-//         auto con=c.lock();
-//         if(con)
-//         {
-//             con->handleRead();
-//         }
-//     });
-// }
+    assert(loop_->isInLoopThread());
+    int ReadNum=0;
+    while(ReadNum<MaxReadNum)
+    {
+        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+        if(n>0)
+        {
+            updateWaterMark();
+            cb();  
+            ++ReadNum;
+            handleBackpressureAfterRead();
+        }  
+        else if(n==0)
+        {
+
+            handleClose();
+            return;
+        }
+        else
+        {   if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                return;
+            }
+            else if(errno==EINTR)
+            {
+                continue;
+            }
+            else
+            {
+                handleError();
+                return;
+            }  
+        }            
+    }
+    handler_.get_loop()->submit([c=weak_from_this()](){
+        auto con=c.lock();
+        if(con)
+        {
+            con->handleRead();
+        }
+    });
+
+}
 void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
@@ -263,7 +264,7 @@ void TcpConnection::handleRead()
     }
     else 
     {
-        SreadCallback_(shared_from_this());
+        SreadCallback_();
     }
             
 }

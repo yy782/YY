@@ -5,7 +5,7 @@
 #include "../../Common/SyncLog.h"
 using namespace yy;
 using namespace yy::net;
-// ./HttpServer
+// ./HttpSer-ET
 class HTTPServer {
 public:
     typedef std::function<void(Http::HttpRequest&, Http::HttpResponse&)> HttpCallback;
@@ -16,7 +16,7 @@ public:
         {
         
         server_.setConnectCallBack(std::bind(&HTTPServer::onConnection, this, _1));
-        server_.setMessageCallBack(std::bind(&HTTPServer::onMessage, this, _1));
+        //server_.setMessageCallBack(std::bind(&HTTPServer::onMessage, this, _1));
         server_.setCloseCallBack(std::bind(&HTTPServer::onClose, this, _1));
     }
     
@@ -64,10 +64,13 @@ private:
         auto addr = conn->getAddr();
         LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
-        //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
-        conn->setReading();
+        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+        conn->setReadCallBack([this,conn](){
+            conn->handleETRead([this,conn](){
+                onMessage(conn);
+            });
+        });
     }
-    
     void onMessage(TcpConnectionPtr conn) {
         TcpBuffer& buffer = conn->getRecvBuffer();
         HTTPConnectionContext& ctx=conn->context<HTTPConnectionContext>();
@@ -189,11 +192,11 @@ int main() {
         resp.body_ = "<html><body><h1>404 - " + req.url_ + " not found</h1></body></html>";
         resp.headers_["Content-Type"] = "text/html";
     });
-
     Signal::signal(SIGTERM,[&server,&loop](){
         LOG_SYSTEM_DEBUG("Siganal handle exit");
         loop.quit();
         server.stop();
+        
         sleep(2);
     });
     LOG_SYSTEM_INFO("HTTP Server starting on port 8080...");

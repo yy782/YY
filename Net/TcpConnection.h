@@ -27,7 +27,7 @@ public:
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
     typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
-    typedef std::function<void(TcpConnectionPtr)> ServicesReadCallback;
+    typedef std::function<void()> ServicesReadCallback;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
@@ -130,6 +130,12 @@ public:
     BackpressureState getRecvBufferState()const{return RecvbpState_;}
     BackpressureState getSendBufferState()const{return SendbpState_;}
     void updateWaterMark();
+
+    void handleETRead(ServicesReadCallback cb);
+    void RhandleClose(){handleClose();}
+    void RhandleError(){handleError();}
+    void handleBackpressureAfterSend();
+    void handleBackpressureAfterRead();
 private:
     void sendInLoop(const char* message,size_t len);
     void disconnectInLoop();
@@ -138,10 +144,9 @@ private:
     void handleClose();
     void handleError();
     void handleException();
-    void parseMessagesWithCodec();
+    //void parseMessagesWithCodec();
 
-    void handleBackpressureAfterSend();
-    void handleBackpressureAfterRead();
+
     
 
     int fd_;

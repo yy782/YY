@@ -276,31 +276,6 @@ bool TcpClient::isConnecting() const
     return connection_ && connection_->isConnecting();
 }
 
-void TcpClient::send(std::string&& message) 
-{
-    //connection_->send(std::move(message));
-    (void)message;
-}
-
-void TcpClient::send(const char* data, size_t len) 
-{
-    if (connection_ && connection_->isConnected()) 
-    {
-        connection_->send(data, len);
-    } else 
-    {
-       LOG_WARN("not connected!");
-    }
-}
-
-void TcpClient::sendOutput()
-{
-    if(connection_ && connection_->isConnected()) 
-    {
-        connection_->sendOutput();
-    }
-}
-
 // void TcpClient::newConnection(int sockfd) 
 // {
     
