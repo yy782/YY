@@ -10,7 +10,8 @@ namespace yy
 {
 namespace net
 {
-class TcpClient : noncopyable {
+class TcpClient : noncopyable,
+                    public std::enable_shared_from_this<TcpClient> {
 public:
     typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
     typedef std::function<void()> ServicesConnectFailCallback;

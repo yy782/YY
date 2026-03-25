@@ -19,7 +19,7 @@ struct TcpClient::Connector:noncopyable,
     static const LTimeInterval kInitRetryDelayMs;
     static const LTimeInterval kMaxRetryDelayMs;
 
-    Connector(EventLoop* loop, const Address& serverAddr, TcpClient* client): 
+    Connector(EventLoop* loop, const Address& serverAddr,const std::weak_ptr<TcpClient>& client): 
     loop_(loop),
     serverAddr_(serverAddr),
     client_(client),
@@ -100,7 +100,9 @@ private:
                 LOG_ERRNO(savedErrno);
                 sockets::close(fd_);
                 fd_=-1;
-                client_->connectFail();
+                auto cli=client_.lock();
+                if(cli)
+                    cli->connectFail();
                 break;
         }
     }
@@ -150,7 +152,9 @@ private:
             }
             state_=kConnected;
             handler_->removeListen();
-            client_->newConnection(fd_);
+            auto cli=client_.lock();
+            if(cli)
+                cli->newConnection(fd_);
         }
     }
 
@@ -176,28 +180,33 @@ private:
             fd_=-1;
         }
         state_=kDisconnected;
-        if (connect_&&client_->retry()) 
+        auto cli=client_.lock();
+        if(cli)
         {
-            EXCLUDE_BEFORE_COMPILATION( 
-                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
-                retryDelayMs_.getTimes()<<" ms");
-            )
-            loop_->runTimer<LowPrecision>([c=weak_from_this()](){
-                auto p=c.lock();
-                if(p)
-                {
-                    p->startInLoop();                    
-                }
-            },retryDelayMs_,1);
+            if (connect_&&cli->retry()) 
+            {
+                EXCLUDE_BEFORE_COMPILATION( 
+                    LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
+                    retryDelayMs_.getTimes()<<" ms");
+                )
+                loop_->runTimer<LowPrecision>([c=weak_from_this()](){
+                    auto p=c.lock();
+                    if(p)
+                    {
+                        p->startInLoop();                    
+                    }
+                },retryDelayMs_,1);
 
-            // 指数退避
-            LTimeInterval NextretryDelayMs=2*retryDelayMs_;
-            retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
-        } 
-        else 
-        {
-            client_->connectFail();
+                // 指数退避
+                LTimeInterval NextretryDelayMs=2*retryDelayMs_;
+                retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
+            } 
+            else 
+            {
+                cli->connectFail();
+            }            
         }
+
     }
     void stopInLoop() 
     {
@@ -221,7 +230,7 @@ private:
     int fd_={-1};
     EventLoop* loop_;
     Address serverAddr_;
-    TcpClient* client_;  
+    std::weak_ptr<TcpClient> client_;  
     State state_;
     std::unique_ptr<EventHandler> handler_;
     LTimeInterval retryDelayMs_;
@@ -235,8 +244,9 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_shared<Connector>(loop, serverAddr, this))
+    connector_(std::make_shared<Connector>(loop, serverAddr,weak_from_this()))
 {
+    //connector_=std::make_shared<Connector>(loop, serverAddr,weak_from_this());
 }
 
 TcpClient::~TcpClient() 

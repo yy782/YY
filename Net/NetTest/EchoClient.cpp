@@ -91,7 +91,12 @@ private:
 
 int main()
 {
-
+    SyncLog::getInstance("../CliLog.log").getFilter() 
+        .set_global_level(LOG_LEVEL_DEBUG) 
+        .set_module_enabled("TCP")
+        .set_module_enabled("SYSTEM")
+        .set_module_enabled("CLIENT")
+        ;
     Conf config;
     int parse_result=config.parse("../../Net/NetTest/config.conf");
     if(parse_result!=0)

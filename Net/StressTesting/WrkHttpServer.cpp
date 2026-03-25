@@ -11,7 +11,7 @@ extern char favicon[555];
 int main(int argc, char* argv[])
 {
     bool isET=false;
-    Address addr("0.0.0.0",8080);
+    Address addr(8080,true);
     int numThreads=1;
     if(argc>1)
     {
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
             resp.body_=std::string("hello, world!\n");
         });
         ser.start();
-
+        loop.loop();
     }
     else 
     {
@@ -70,8 +70,9 @@ int main(int argc, char* argv[])
             resp.body_=std::string("hello, world!\n");
         });
         ser.start();
+        loop.loop();
     }
-    loop.loop();
+    
     
 }
 
