@@ -1,33 +1,34 @@
+#ifndef _YY_NET_HTTP_HTTPCLI_ET_H_
+#define _YY_NET_HTTP_HTTPCLI_ET_H_
+#include "http.h"
 #include "../TcpClient.h"
-#include "../HTTP/http.h"
-#include <functional>
-#include <map>
-#include <iostream>
-#include "../EventLoopThread.h"
-using namespace yy;
-using namespace yy::net;
-// ./HttpCli-ET
-int MsgCount=0;
-class HTTPClient {
+namespace yy 
+{
+namespace net 
+{
+namespace Http 
+{
+class HTTPCliET {
 public:
     typedef std::function<void(const Http::HttpResponse&)> ResponseCallback;
     typedef std::function<void()> CloseCallback;
     typedef std::function<void()> ConnectedCallback;
     
-    HTTPClient(const Address& serverAddr, EventLoop* loop)
+    HTTPCliET(const Address& serverAddr, EventLoop* loop)
         : client_(serverAddr, loop)
          {
         
-        //client_.setMessageCallBack(std::bind(&HTTPClient::onMessage, this, _1));
+        //client_.setMessageCallBack(std::bind(&HTTPCliET::onMessage, this, _1));
         client_.setCloseCallBack([this](TcpConnectionPtr){
             closeCb_();
         });
         client_.setConnectionCallback([this](TcpConnectionPtr con){
+            con->setTcpNoDelay(true);
             con->setEvent(EventType::ReadEvent|EventType::EV_ET);
             //con->setReading();
-            con->setReadCallBack([this,con](){
-                con->handleETRead([this,con](){
-                    onMessage(con);
+            con->setReadCallBack([this](TcpConnectionPtr con1){
+                con1->handleETRead([this](TcpConnectionPtr con2){
+                    onMessage(con2);
                 });
             });
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
@@ -178,11 +179,6 @@ private:
                     // 重置响应解析器
                     response_.clear();
                 }
-                ++MsgCount;
-                if(MsgCount==2)
-                {
-                    client_.disconnect();
-                }
             }            
         }
 
@@ -197,35 +193,8 @@ private:
     ConnectedCallback conCb_;
     CloseCallback closeCb_;
 };
-int main() {
-    EventLoop loop;
-    Address serverAddr("127.0.0.1", 8080);
-    
-    HTTPClient client(serverAddr, &loop);
-    client.setConCallback([&](){
-            client.get("/user?name=Tom", [](const Http::HttpResponse& resp) {
-                    std::cout << "Response: " << resp.body_ << std::endl;
-            });
-      
-
-            std::map<std::string, std::string> headers;
-            headers["Content-Type"] = "application/json";
-            client.post("/api/user", "{\"name\":\"Tom\",\"age\":20}", 
-                    headers, [](const Http::HttpResponse& resp) {
-                    std::cout << "POST Response: " << resp.body_ << std::endl;
-            });
-            
-           
-    });
-    
-    client.setCloseCallback([&]() {
-        std::cout << "Connection closed" << std::endl;
-        loop.quit();
-        exit(0);
-    });
-    
-    client.connect();
-    loop.loop();
-    
-    return 0;
 }
+}    
+}
+
+#endif 

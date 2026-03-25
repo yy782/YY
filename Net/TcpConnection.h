@@ -27,7 +27,7 @@ public:
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
     typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
-    typedef std::function<void()> ServicesReadCallback;
+    typedef std::function<void(TcpConnectionPtr)> ServicesReadCallback;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;

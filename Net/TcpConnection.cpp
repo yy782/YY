@@ -198,7 +198,7 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
         if(n>0)
         {
             updateWaterMark();
-            cb();  
+            cb(shared_from_this());
             ++ReadNum;
             handleBackpressureAfterRead();
         }  
@@ -237,7 +237,11 @@ void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
     assert(!(SreadCallback_&&SmessageCallBack_));
-    if(!SreadCallback_)
+    if(SreadCallback_)
+    {
+        SreadCallback_(shared_from_this());
+    }
+    else 
     {
         assert(SmessageCallBack_);
         auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
@@ -260,11 +264,7 @@ void TcpConnection::handleRead()
                 handleError();
                 return;                
             }
-        }
-    }
-    else 
-    {
-        SreadCallback_();
+        }        
     }
             
 }

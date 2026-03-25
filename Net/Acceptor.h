@@ -25,10 +25,10 @@ public:
     void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
     void listen()
     {
-        handler_.setReading();
-        loop_->submit([this](){
-            sockets::listenOrDie(handler_.get_fd());
-        });
+        handler_.set_event(EventType::ReadEvent|EventType::EV_ET);
+       
+        sockets::listenOrDie(handler_.get_fd());
+        
     }
 private:
     void accept();

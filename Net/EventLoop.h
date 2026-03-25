@@ -43,18 +43,13 @@ public:
     typedef std::function<void()> Functor;
     //typedef Fun Functor;
 
-    //typedef RingBuffer<Functor> FunctionList;
-    typedef std::vector<Functor> FunctionList;
+    typedef RingBuffer<Functor> FunctionList;
+    //typedef std::vector<Functor> FunctionList;
     EventLoop();
     ~EventLoop()=default;
     void loop();
     void quit();
     bool isQuit();
-
-    void setName(const char* name)
-    {
-        name_=name;
-    }
     // std::atomic<int> num={0};
     // std::atomic<int> num2={0};
 
@@ -101,10 +96,10 @@ private:
     int status_;
     EventHandler wakeHandler_;
 
-    std::mutex mtx_;
+    //std::mutex mtx_;
 
-    int LoopNum={0};
-    std::string name_;
+    //int LoopNum={0};
+    //std::string name_;
     
 };
 

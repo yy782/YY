@@ -1,13 +1,13 @@
+#ifndef _YY_NET_HTTP_HTTPCLIENT_H_
+#define _YY_NET_HTTP_HTTPCLIENT_H_
+#include "http.h"
 #include "../TcpClient.h"
-#include "../HTTP/http.h"
-#include <functional>
-#include <map>
-#include <iostream>
-#include "../EventLoopThread.h"
-using namespace yy;
-using namespace yy::net;
-// ./HttpClient
-int MsgCount=0;
+namespace yy 
+{
+namespace net 
+{
+namespace Http 
+{
 class HTTPClient {
 public:
     typedef std::function<void(const Http::HttpResponse&)> ResponseCallback;
@@ -173,11 +173,6 @@ private:
                     // 重置响应解析器
                     response_.clear();
                 }
-                ++MsgCount;
-                if(MsgCount==2)
-                {
-                    client_.disconnect();
-                }
             }            
         }
 
@@ -192,35 +187,8 @@ private:
     ConnectedCallback conCb_;
     CloseCallback closeCb_;
 };
-int main() {
-    EventLoop loop;
-    Address serverAddr("127.0.0.1", 8080);
-    
-    HTTPClient client(serverAddr, &loop);
-    client.setConCallback([&](){
-            client.get("/user?name=Tom", [](const Http::HttpResponse& resp) {
-                    std::cout << "Response: " << resp.body_ << std::endl;
-            });
-      
-
-            std::map<std::string, std::string> headers;
-            headers["Content-Type"] = "application/json";
-            client.post("/api/user", "{\"name\":\"Tom\",\"age\":20}", 
-                    headers, [](const Http::HttpResponse& resp) {
-                    std::cout << "POST Response: " << resp.body_ << std::endl;
-            });
-            
-           
-    });
-    
-    client.setCloseCallback([&]() {
-        std::cout << "Connection closed" << std::endl;
-        loop.quit();
-        exit(0);
-    });
-    
-    client.connect();
-    loop.loop();
-    
-    return 0;
 }
+}    
+}
+
+#endif 

@@ -1,3 +1,5 @@
+#ifndef _YY_NET_CLIENT_H_
+#define _YY_NET_CLIENT_H_
 #include "InetAddress.h"
 #include "sockets.h"
 #include "TcpConnection.h"
@@ -8,66 +10,6 @@ namespace yy
 {
 namespace net
 {
-// class TcpClient:noncopyable
-// {
-// public:
-//     typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-//     typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallBack;
-//     typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
-//     typedef TcpConnection::ConnectStatus Status;
-//     typedef std::function<void(TcpConnectionPtr)> ServicesConnectCallBack;
-
-//     TcpClient(const Address& serverAddr,EventLoop* loop):
-//     serverAddr_(serverAddr),
-//     loop_(loop),
-//     conn_(std::make_shared<TcpConnection>()),
-//     ConnectHandler_(sockets::createTcpSocketOrDie(serverAddr.get_family()),loop)
-//     {
-//         ConnectHandler_.setWriteCallBack(std::bind(&TcpClient::connectEstablished,this));
-//     }
-//     ~TcpClient()
-//     {
-//         conn_->disconnect();
-//     }
-//     void connect()
-//     {
-//         conn_->connect();
-//         EventHandler* handler_ = conn_->getHandler();
-//         handler_->setReadingAndExcept();
-//     }
-//     void disconnect()
-//     {
-
-
-//         conn_->disconnect();
-        
-//     }
-//     void send(const char* msg,size_t len)
-//     {
-//         conn_->send(msg,len);
-//     }
-//     void sendOutput()
-//     {
-//         conn_->sendOutput();
-//     }
-    
-//     bool isConnected(){return conn_->isConnected();}
-//     void setMessageCallBack(ServicesMessageCallBack callback){ conn_->setMessageCallBack(std::move(callback));}
-//     void setCloseCallBack(ServicesCloseCallBack callback){ conn_->setCloseCallBack(std::move(callback));}
-//     void setErrorCallBack(ServicesErrorCallBack callback){ conn_->setErrorCallBack(std::move(callback));}
-//     TcpBuffer& getSendBuffer(){return conn_->getSendBuffer();}
-//     TcpBuffer& getRecvBuffer(){return conn_->getRecvBuffer();}
-
-//     Address getPeerAddr(){return serverAddr_;}
-// private:
-//     void connectEstablished();
-//     Address serverAddr_;
-//     EventLoop* loop_;
-//     TcpConnectionPtr conn_; // @brief 由于回调要TcpConnectionPtr,创建栈对象shared_from_this()会报错
-
-//     EventHandler ConnectHandler_;
-
-// };
 class TcpClient : noncopyable {
 public:
     typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
@@ -142,3 +84,4 @@ private:
 };
 }
 }
+#endif 
