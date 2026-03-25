@@ -10,22 +10,26 @@ namespace net
 struct TcpClient::Connector:noncopyable,
                             std::enable_shared_from_this<Connector>
 {   
+    typedef std::function<void(int)> NewConCallBack;
+    typedef std::function<void()> FailConCallBack;
+
     enum State 
     { 
         kDisconnected, 
         kConnecting, 
         kConnected 
     };
-    static const LTimeInterval kInitRetryDelayMs;
-    static const LTimeInterval kMaxRetryDelayMs;
+    static const HTimeInterval kInitRetryDelayMs;
+    static const HTimeInterval kMaxRetryDelayMs;
 
-    Connector(EventLoop* loop, const Address& serverAddr,const std::weak_ptr<TcpClient>& client): 
+    Connector(EventLoop* loop,const Address& serverAddr,bool* retry ,const NewConCallBack& Ncb,const FailConCallBack& Fcb): 
     loop_(loop),
     serverAddr_(serverAddr),
-    client_(client),
     state_(kDisconnected),
     retryDelayMs_(kInitRetryDelayMs),
-    connect_(false) 
+    retry_(retry),
+    Ncb_(std::move(Ncb)),
+    Fcb_(std::move(Fcb)) 
     {
     }
 
@@ -39,7 +43,7 @@ struct TcpClient::Connector:noncopyable,
 
     void start() 
     {
-        connect_=true;
+
         loop_->submit([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
@@ -51,7 +55,7 @@ struct TcpClient::Connector:noncopyable,
 
     void stop() 
     {
-        connect_ = false;
+
         loop_->submit([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
@@ -71,7 +75,7 @@ struct TcpClient::Connector:noncopyable,
 private:
     void startInLoop() 
     {
-        if (!connect_ || state_ != kDisconnected) return;
+        if(state_ != kDisconnected) return;
         connectInLoop();
     }
 
@@ -100,9 +104,7 @@ private:
                 LOG_ERRNO(savedErrno);
                 sockets::close(fd_);
                 fd_=-1;
-                auto cli=client_.lock();
-                if(cli)
-                    cli->connectFail();
+                Fcb_();
                 break;
         }
     }
@@ -111,6 +113,7 @@ private:
     {
         state_=State::kConnecting;
         handler_=std::make_unique<EventHandler>(fd_,loop_,"ConnectorHandler");
+        handler_->tie(shared_from_this());
         handler_->setWriteCallBack([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
@@ -152,9 +155,7 @@ private:
             }
             state_=kConnected;
             handler_->removeListen();
-            auto cli=client_.lock();
-            if(cli)
-                cli->newConnection(fd_);
+            Ncb_(fd_);
         }
     }
 
@@ -180,32 +181,30 @@ private:
             fd_=-1;
         }
         state_=kDisconnected;
-        auto cli=client_.lock();
-        if(cli)
-        {
-            if (connect_&&cli->retry()) 
-            {
-                EXCLUDE_BEFORE_COMPILATION( 
-                    LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
-                    retryDelayMs_.getTimes()<<" ms");
-                )
-                loop_->runTimer<LowPrecision>([c=weak_from_this()](){
-                    auto p=c.lock();
-                    if(p)
-                    {
-                        p->startInLoop();                    
-                    }
-                },retryDelayMs_,1);
 
-                // 指数退避
-                LTimeInterval NextretryDelayMs=2*retryDelayMs_;
-                retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
-            } 
-            else 
-            {
-                cli->connectFail();
-            }            
-        }
+        if (*retry_ ) 
+        {
+            EXCLUDE_BEFORE_COMPILATION( 
+                LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
+                retryDelayMs_.getTimes()<<" ms");
+            )
+            loop_->runTimer<HighPrecision>([c=weak_from_this()](){
+                auto p=c.lock();
+                if(p)
+                {
+                    p->startInLoop();                    
+                }
+            },retryDelayMs_,1);
+
+            // 指数退避
+            HTimeInterval NextretryDelayMs=2*retryDelayMs_;
+            retryDelayMs_=NextretryDelayMs<kMaxRetryDelayMs?NextretryDelayMs:kMaxRetryDelayMs;
+        } 
+        else 
+        {
+            Fcb_();
+        }            
+        
 
     }
     void stopInLoop() 
@@ -230,21 +229,29 @@ private:
     int fd_={-1};
     EventLoop* loop_;
     Address serverAddr_;
-    std::weak_ptr<TcpClient> client_;  
+    
     State state_;
     std::unique_ptr<EventHandler> handler_;
-    LTimeInterval retryDelayMs_;
-    bool connect_;  
+    HTimeInterval retryDelayMs_;
+    bool* retry_ ;  
+
+    NewConCallBack Ncb_;
+    FailConCallBack Fcb_;
 };
 
-const LTimeInterval TcpClient::Connector::kInitRetryDelayMs=500ms;
-const LTimeInterval TcpClient::Connector::kMaxRetryDelayMs=30*1000ms;
+const HTimeInterval TcpClient::Connector::kInitRetryDelayMs=500ms;
+const HTimeInterval TcpClient::Connector::kMaxRetryDelayMs=30*1000ms;
 
 TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop): 
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_shared<Connector>(loop, serverAddr,weak_from_this()))
+    connector_(std::make_shared<Connector>(loop, serverAddr,&retry_,[this](int fd){
+        newConnection(fd);
+    },[this](){
+        removeConnection();
+    })
+    )
 {
     //connector_=std::make_shared<Connector>(loop, serverAddr,weak_from_this());
 }
@@ -306,7 +313,7 @@ void TcpClient::newConnection(int sockfd)
 {
     
     assert(loop_->isInLoopThread());
-    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_,"TcpCli");
+    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_);
 
 
 

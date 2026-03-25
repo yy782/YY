@@ -81,7 +81,7 @@ void TimerQueue<PrecisionTag>::handlerRead()
     assert(handler_.get_loop()->isInLoopThread());
     ReadTimerfd();
 
-    //LOG_TIME_DEBUG("TimerQueue handlerRead");
+    LOG_TIME_DEBUG("TimerQueue handlerRead");
 
     std::vector<Entry> expired=getDueTasks(Time_Stamp::now());
     std::vector<Entry> NewTasks;

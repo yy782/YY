@@ -13,6 +13,7 @@
 #include "../TcpConnection.h"
 #include "../InetAddress.h"
 #include "../ConfigCenter.h"
+#include "../TimerQueue.h"
 using namespace yy;
 using namespace yy::net;
 //./PingPongClient 4 4096 100 60 

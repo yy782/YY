@@ -17,6 +17,7 @@ public:
     stdIn_(0,loop_,"stdIn"),
     thread_(thread)
     {
+        client_.enableRetry();
         client_.setConnectionCallback([this](TcpConnectionPtr con){
             //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
             con->setReading();
@@ -96,6 +97,7 @@ int main()
         .set_module_enabled("TCP")
         .set_module_enabled("SYSTEM")
         .set_module_enabled("CLIENT")
+        .set_module_enabled("TIME")
         ;
     Conf config;
     int parse_result=config.parse("../../Net/NetTest/config.conf");

@@ -10,8 +10,8 @@ namespace yy
 {
 namespace net
 {
-class TcpClient : noncopyable,
-                    public std::enable_shared_from_this<TcpClient> {
+class TcpClient : noncopyable
+                     {
 public:
     typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
     typedef std::function<void()> ServicesConnectFailCallback;
@@ -66,7 +66,7 @@ private:
     EventLoop* loop_;
     Address addr_;
     Address serverAddr_;
-    std::atomic<bool> retry_;
+    bool retry_;
 
     std::shared_ptr<Connector> connector_;
     TcpConnectionPtr connection_;
