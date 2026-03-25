@@ -4,23 +4,14 @@
 
 
 #include <atomic>
-std::atomic<int> shutDownNum=0;
+
 
 namespace yy
 {
 namespace net
 {
 
-// bool AssertRecv(TcpConnectionPtr con)
-// {
-//     auto& buf=con->getRecvBuffer();
-//     if(buf.get_readable_size()!=0)
-//     {
-//         LOG_TCP_DEBUG(buf.getReadView());
-//         return false;
-//     }
-    
-// }
+
 const int MaxReadNum=100;
 TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop,const char* name):
 fd_(fd),
@@ -50,12 +41,6 @@ void TcpConnection::disconnect()
 {
     if(SendBuffer_.get_readable_size()==0)
     {
-        
-        // loop_->submit(Fun([c=weak_from_this()](){
-        //     auto con=c.lock();
-        //     if(con)
-        //         con->disconnectInLoop();
-        // },"Tcpshutdown"));
         loop_->submit([c=weak_from_this()](){
             auto con=c.lock();
             if(con)
@@ -69,7 +54,7 @@ void TcpConnection::disconnect()
         }          
     }
 }  
-void TcpConnection::disconnectInLoop()///////////////////////
+void TcpConnection::disconnectInLoop()
 {
     assert(loop_->isInLoopThread());
     if(Connstatus_==ConnectStatus::Connected)
@@ -78,8 +63,6 @@ void TcpConnection::disconnectInLoop()///////////////////////
         if(SendBuffer_.get_readable_size()==0)
         {
            sockets::shutdown(handler_.get_fd(),SHUT_WR);  
-           //++shutDownNum;
-           //LOG_SYSTEM_DEBUG("shutDonwNum:"<<shutDownNum);
         }
         else 
         {
@@ -252,30 +235,37 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
 void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
-    assert(SmessageCallBack_);
-
-
-    auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
-    if(n>0)
+    assert(!(SreadCallback_&&SmessageCallBack_));
+    if(!SreadCallback_)
     {
-
-        updateWaterMark();
-        SmessageCallBack_(shared_from_this());
-        handleBackpressureAfterRead();
-        // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.get_readable_size()<<"字节");
-    }  
-    else if(n==0)
-    {
-        handleClose();
-        return;
-    }
-    else
-    {   if(errno == EAGAIN || errno == EWOULDBLOCK||errno==EINTR)
+        assert(SmessageCallBack_);
+        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+        if(n>0)
         {
-            handleError();
-            return;                
+
+            updateWaterMark();
+            SmessageCallBack_(shared_from_this());
+            handleBackpressureAfterRead();
+            // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.get_readable_size()<<"字节");
+        }  
+        else if(n==0)
+        {
+            handleClose();
+            return;
         }
-    }            
+        else
+        {   if(errno == EAGAIN || errno == EWOULDBLOCK||errno==EINTR)
+            {
+                handleError();
+                return;                
+            }
+        }
+    }
+    else 
+    {
+        SreadCallback_(shared_from_this());
+    }
+            
 }
 void TcpConnection::handleWrite()
 {

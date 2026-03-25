@@ -43,7 +43,7 @@ void Acceptor::accept()
         {
             fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
         }
-        if(fd>0&&sockets::setNonBlocking(fd))
+        if(fd>0)
         {
             
             assert(callback_);

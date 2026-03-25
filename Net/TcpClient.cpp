@@ -79,7 +79,7 @@ private:
     {
         assert(loop_->isInLoopThread());
         assert(state_ == kDisconnected);
-        fd_ = sockets::createTcpSocketOrDie(serverAddr_.get_family());
+        fd_ = sockets::createTcpSocketOrDie(serverAddr_.get_family());/////////////////////////////////////////////////////////
         int ret = sockets::connect(fd_, serverAddr_);
         int savedErrno = (ret == 0) ? 0 : errno;
         switch (savedErrno) {

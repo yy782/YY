@@ -22,8 +22,9 @@ public:
         client_.setCloseCallBack([this](TcpConnectionPtr){
             closeCb_();
         });
-        client_.setConnectionCallback([this](TcpConnectionPtr){
-            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        client_.setConnectionCallback([this](TcpConnectionPtr con){
+            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+            con->setReading();
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
             conCb_();
         });
@@ -113,7 +114,7 @@ private:
         // 编码并发送
         std::string requestData;
         req.encode(requestData);
-        client_.send(std::move(requestData));
+        client_.getConnection()->send(std::move(requestData));
         
         // 保存上下文
         RequestContext ctx;

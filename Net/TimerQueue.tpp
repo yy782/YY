@@ -27,7 +27,7 @@ handler_()
     handler_.set_event(EventType::ReadEvent|EventType::EV_ET);
 }
 template<typename PrecisionTag>
-TimerQueue<PrecisionTag>::~TimerQueue()
+TimerQueue<PrecisionTag>::~TimerQueue() // 需要强行保证TimerQueue的生命周期不能比loop小，否则需要移除handle监听
 {
     sockets::close(fd_);
 }    

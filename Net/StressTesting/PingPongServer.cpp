@@ -35,27 +35,19 @@ int main(int argc, char* argv[])
     EventLoop loop;
     TcpServer server(listenAddr,threadNums,&loop);
 
-    server.setConnectCallBack([](TcpConnectionPtr con)mutable
-    {
+    server.setConnectCallBack([&server](TcpConnectionPtr con)mutable
+    { 
+        // if(!sockets::setNonBlocking(con->get_fd()))
+        // {
+        //     LOG_ERRNO(errno);
+        //     server.removeConnection(con);
+        // }
+        // con->setTcpNoDelay(true);
+        // con->setEvent(EventType::ReadEvent|EventType::EV_ET); 
         con->setTcpNoDelay(true);
-        //con->setEvent(EventType::ReadEvent|EventType::EV_ET);
-        con->setReading();
-
-
-        //auto loop_= con->getHandler()->get_loop();
-        //LOG_SYSTEM_DEBUG("loopAddr:"<<loop_<<" push:"<<(++(loop_->num)));
+        con->setReading();       
     });
-    // server.setMessageCallBack([](TcpConnectionPtr con)
-    // {
-    //     auto& buf=con->getRecvBuffer();
-    //     while(true)
-    //     {
-    //         auto size=buf.get_readable_size();
-    //         if(size==0)break;
-    //         assert(size>0);
-    //         con->send(buf.retrieve(size),size);
-    //     }
-    // });
+
     server.setMessageCallBack([](TcpConnectionPtr con)
     {
         auto& buf=con->getRecvBuffer();
@@ -63,12 +55,6 @@ int main(int argc, char* argv[])
         assert(size==4096);
         con->send(buf.retrieve(size),size);
         
-    });
-    server.setCloseCallBack([](TcpConnectionPtr)mutable
-    {
-        //auto& addr=con->getAddr();
-        //auto loop_=con->getHandler()->get_loop();
-        //LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString()<<" CloseNum:"<<(++loop_->num2));
     });
     server.setErrorCallBack([](TcpConnectionPtr con){
         LOG_SYSTEM_ERROR(con->getAddr().sockaddrToString()<<" errno:"<<errno);

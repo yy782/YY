@@ -37,18 +37,18 @@ void TcpServer::newConnection(int fd,const Address& addr)
     
    
     conn->setMessageCallBack(SmessageCallback_);
-    conn->setCloseCallBack([this,loop](TcpConnectionPtr con){
+    conn->setCloseCallBack([this](TcpConnectionPtr con){
         ScloseCallback_(con);
-        removeConnection(con,loop);
+        removeConnection(con);
     });
     conn->setErrorCallBack(SerrorCallback_);
     conn->setConnectCallBack(SconnectCallback_);
     conn->ConnectSuccess();
 }
     
-void TcpServer::removeConnection(TcpConnectionPtr conn,EventLoop* loop)
+void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
-    loop->submit([this,&conn,loop](){
+    conn->getHandler()->get_loop()->submit([this,&conn](){
         assert(connects_.find(conn)!=connects_.end());
         connects_.erase(conn);
     });

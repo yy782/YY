@@ -79,10 +79,10 @@ public:
 
     TcpClient(const Address& serverAddr,EventLoop* loop);
     ~TcpClient();
-    void setEvent(Event e)
-    {
-        connection_->setEvent(e);
-    }
+    // void setEvent(Event e)
+    // {
+    //     connection_->setEvent(e);
+    // }
     // 连接控制
     void connect();
     void disconnect();
@@ -105,15 +105,15 @@ public:
     void setErrorCallback(ServicesErrorCallBack cb) {SerrorCallback_ = std::move(cb); }
 
     // 发送数据
-    void send(std::string&& message);
-    void send(const char* data, size_t len);
-    void sendOutput();
+    // void send(std::string&& message);
+    // void send(const char* data, size_t len);
+    // void sendOutput();
 
-    TcpConnectionPtr connection() const { return connection_; }
+    TcpConnectionPtr getConnection() const { return connection_; }
     EventLoop* getLoop() const { return loop_; }
     const Address& getPeerAddr() const { return serverAddr_; }
-    Buffer& getSendBuffer() { return connection_->getSendBuffer(); }
-    Buffer& getRecvBuffer() { return connection_->getRecvBuffer(); }
+    // Buffer& getSendBuffer() { return connection_->getSendBuffer(); }
+    // Buffer& getRecvBuffer() { return connection_->getRecvBuffer(); }
 
 private:
     // Pimpl: 隐藏所有连接细节

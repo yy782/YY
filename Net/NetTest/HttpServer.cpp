@@ -64,7 +64,8 @@ private:
         auto addr = conn->getAddr();
         LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
-        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+        //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+        conn->setReading();
     }
     
     void onMessage(TcpConnectionPtr conn) {

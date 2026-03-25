@@ -18,25 +18,26 @@ public:
         client_.setCloseCallBack(bind(&CodecTestClient::handleClose,this,_1));
         client_.setConnectionCallback(bind(&CodecTestClient::handleConnected,this,_1));
     }
-    void handleConnected(TcpConnectionPtr)
+    void handleConnected(TcpConnectionPtr con)
     {
-        client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        con->setReading();
         std::cout<<"Connected to server"<<std::endl;
         // 连接成功后发送消息
         std::cout<<"Sending Hello 1"<<std::endl;
-        send("Hello 1");
+        send("Hello 1",con);
         std::cout<<"Sending Hello 2"<<std::endl;
-        send("Hello 2");
+        send("Hello 2",con);
         std::cout<<"Sending Hello 3"<<std::endl;
-        send("Hello 3");
+        send("Hello 3",con);
         std::cout<<"Sending Hello 4"<<std::endl;
-        send("Hello 4");
+        send("Hello 4",con);
         std::cout<<"All messages sent"<<std::endl;
     }
-    void send(const std::string& msg)
+    void send(const std::string& msg,TcpConnectionPtr con)
     {
-        LineCodec::encode(stringPiece(msg),client_.getSendBuffer());
-        client_.sendOutput();
+        LineCodec::encode(stringPiece(msg),con->getSendBuffer());
+        con->sendOutput();
     }
     void connect()
     {

@@ -17,8 +17,9 @@ public:
     stdIn_(0,loop_,"stdIn"),
     thread_(thread)
     {
-        client_.setConnectionCallback([this](TcpConnectionPtr){
-            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        client_.setConnectionCallback([this](TcpConnectionPtr con){
+            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+            con->setReading();
         });
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
@@ -30,10 +31,6 @@ public:
     ~EchoClient()
     {
         sockets::close(0);
-    }
-    void send(const std::string& msg)
-    {
-        client_.send(msg.c_str(),msg.size());
     }
     void connect()
     {
@@ -74,7 +71,7 @@ public:
             else 
             {
                 line+="\n";
-                client_.send(line.c_str(),line.size());  
+                client_.getConnection()->send(line.c_str(),line.size());  
             }
             
         }

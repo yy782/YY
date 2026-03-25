@@ -67,26 +67,13 @@ void onConnection(const TcpConnectionPtr& conn);
   void onMessage(const TcpConnectionPtr& conn)
   {
     auto& buf=conn->getRecvBuffer();
-    // while(true) // loop死锁?
-    // {
-    //   auto size=buf.get_readable_size();
-    //   if(size==0)break;
-    //   assert(size>0);
-    //   ++messagesRead_;
-    //   bytesRead_+=size;
-    //   bytesWritten_+=size;
-    //   conn->send(buf.retrieve(size),size);      
-    // }
-
     auto size=buf.get_readable_size();
-
     assert(size==4096);
     ++messagesRead_;
     bytesRead_+=size;
     bytesWritten_+=size;
     conn->send(buf.retrieve(size),size);      
     assert(buf.get_readable_size()==0);
-  
   }
 
 
@@ -151,25 +138,20 @@ class Client : noncopyable
 
   void onDisconnect()
   {
-    static std::atomic<int> hadCloseNum=0;
-    LOG_TCP_DEBUG("hadCloseNum:"<<(++hadCloseNum));
+
     if(--numConnected_== 0)
     {
       std::cout<< "all disconnected"<<"\n";
 
       int64_t totalBytesRead = 0;
       int64_t totalMessagesRead = 0;
-      std::cout<<"==========统计每个Session=========="<<"\n";
-      int i=1;
+
       for (const auto& session : sessions_)
       {
-        std::cout<<"第"<<i<<"位session:"<<" bytesRead:"<<session->bytesRead()<<
-          " "<<"messagesRead:"<<session->messagesRead()<<std::endl;
         totalBytesRead += session->bytesRead();
         totalMessagesRead += session->messagesRead();
-        ++i;
       }
-      std::cout<<"==========统计结束=========="<<"\n";
+
       std::cout<< totalBytesRead << " total bytes read"<<"\n";
       std::cout << totalMessagesRead << " total messages read"<<"\n";
       std::cout<< static_cast<double>(totalBytesRead) / static_cast<double>(totalMessagesRead)
@@ -201,8 +183,8 @@ void handleTimeout()
 
 void Session::onConnection(const TcpConnectionPtr& conn)
 {
-    //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
-    conn->setReading();
+    conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+    //conn->setReading();
     conn->setTcpNoDelay(true);
     const std::string& msg=owner_->message();
    

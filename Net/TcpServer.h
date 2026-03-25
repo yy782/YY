@@ -44,7 +44,7 @@ public:
 
 
 
-    void removeConnection(TcpConnectionPtr conn,EventLoop* loop);
+    void removeConnection(TcpConnectionPtr conn);
     
     
     void loop();

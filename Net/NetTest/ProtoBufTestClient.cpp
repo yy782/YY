@@ -23,9 +23,10 @@ public:
             loop->quit();
             exit(0);
         });
-        client_.setConnectionCallback([this](TcpConnectionPtr){
-            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
-            this->sendStudent();
+        client_.setConnectionCallback([this](TcpConnectionPtr conn){
+            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+            conn->setReading();
+            this->sendStudent(conn);
         });
     }
     
@@ -34,15 +35,15 @@ public:
         client_.connect();
     
     }
-    void sendStudent() 
+    void sendStudent(TcpConnectionPtr conn) 
     {
         demo::Student student;
         student.set_name("张三");
         student.set_age(20);
         student.set_school("北京大学");
         
-        ProtoMsgCodec::encode(&student,client_.getSendBuffer());
-        client_.sendOutput();
+        ProtoMsgCodec::encode(&student,conn->getSendBuffer());
+        conn->sendOutput();
         
         std::cout << "客户端发送Student消息: " << student.name() << std::endl;
     }    

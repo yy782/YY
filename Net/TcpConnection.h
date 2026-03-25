@@ -27,6 +27,7 @@ public:
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
     typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
+    typedef std::function<void(TcpConnectionPtr)> ServicesReadCallback;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
@@ -60,25 +61,19 @@ public:
 
     void setReading()
     {
-        handler_.get_loop()->submit([this](){
-            handler_.setReading();
-        });
+        handler_.setReading();
     }
     void setExcept()
     {
-       
-        handler_.get_loop()->submit([this](){
-          handler_.setExcept();
-        });
+        handler_.setExcept();
     }
     void setEvent(Event e)
-    {
-        handler_.get_loop()->submit([this,e](){
-          handler_.set_event(e);
-        });        
+    {   
+        handler_.set_event(e);  
     }
     void setConnectCallBack(ServicesConnectionCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
+    void setReadCallBack(ServicesReadCallback cb){SreadCallback_=std::move(cb);}
     void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
     void setCloseCallBack(CloseCallBack cb){ScloseCallBack_=std::move(cb);} // @brief 这是对端关闭的回调
     void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallBack_=std::move(cb);}
@@ -160,6 +155,7 @@ private:
     BackpressureAfterReadCallBack BackpressureAfterRead_;
 
     ServicesConnectionCallBack SconnectCallback_;
+    ServicesReadCallback SreadCallback_;
     ServicesMessageCallBack SmessageCallBack_;
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
     CloseCallBack ScloseCallBack_; 

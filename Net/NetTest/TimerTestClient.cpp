@@ -23,19 +23,15 @@ public:
         client_.setMessageCallBack([this](TcpConnectionPtr){
             
         });
-        client_.setConnectionCallback([this](TcpConnectionPtr){
-            client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
+        client_.setConnectionCallback([this](TcpConnectionPtr conn){
+            conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
             ++ConnNum;
-            send("hello !",8);
+            conn->send("hello !",8);
         });
         client_.setCloseCallBack([this](TcpConnectionPtr){
             --ConnNum;
             if(ConnNum==0)AllDisCon=true;
         });
-    }
-    void send(const char* msg,size_t len)
-    {
-        client_.send(msg,len);
     }
     void connect()
     {
