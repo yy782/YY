@@ -10,112 +10,147 @@
 #include <sys/epoll.h>
 #include <type_traits>
 
-#define EPOLLNVAL 0x020
-                        // @FIMXE 这可能不太好，但是EPOLLNVAL不向外面暴露?
+namespace yy {
+namespace net {
 
-namespace yy
+enum class LogicEvent : uint32_t 
 {
-namespace net
-{
-
-
-struct EventType
-{
-    typedef uint32_t Type_;
-    static constexpr Type_ INVAID_EVENT=-1;
-    static constexpr Type_ NoneEvent=0;
-    static constexpr Type_ ReadEvent=
-                    std::is_same_v<PollerType,Epoll>? static_cast<Type_>(EPOLLIN)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLIN)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLIN)
-                    :INVAID_EVENT;
-    static constexpr Type_ WriteEvent=
-                    std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLOUT)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLOUT)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLOUT)
-                    :INVAID_EVENT;
-    static constexpr Type_ ExceptEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLPRI)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLPRI)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLPRI)
-                    :INVAID_EVENT;
-    static constexpr Type_ ErrorEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLERR)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLERR)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLERR)
-                    :INVAID_EVENT;
-    static constexpr Type_ HupEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLHUP)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLHUP)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLHUP)
-                    :INVAID_EVENT;
-    static constexpr Type_ NvalEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLNVAL)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLNVAL)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLNVAL)
-                    :INVAID_EVENT;
-    static constexpr Type_ RdHupEvent=std::is_same_v<PollerType,Epoll>?static_cast<Type_>(EPOLLRDHUP)
-                    :std::is_same_v<PollerType,Poll>?static_cast<Type_>(POLLRDHUP)
-                    :std::is_same_v<PollerType,Select>?static_cast<Type_>(POLLRDHUP)
-                    :INVAID_EVENT;
-
-
-    static constexpr Type_ EV_ET=EPOLLET;
-    static constexpr Type_ OnlyEvent=EPOLLONESHOT;      
-                        // @brief OnlyEvent是epoll才有的类型 
-    static constexpr Type_ kAllValidEvents=
-        NoneEvent|ReadEvent|WriteEvent|ExceptEvent|ErrorEvent|HupEvent|NvalEvent|RdHupEvent|EV_ET;                         
-    EventType(Type_ event):
-    event_(event)
-    {}
-    Type_ get_event()const{return event_;}
-private:         
-    Type_ event_;                    
-};
-class Event:public copyable
-{
-public:
-    Event():
-    event_(EventType::NoneEvent)
-    {}    
-    Event(uint32_t event):
-    event_(event)
-    {
-        assert(((event&~EventType::kAllValidEvents)==0) && "事件包含非法位" );
-    }
-    uint32_t get_event()const{return event_;}
-
-    void add_event(uint32_t event)
-    {
-        assert(((event&~EventType::kAllValidEvents)==0) && "事件包含非法位" );
-        // @breif 挂起和错误事件是内核主动注册的，不用主动设置
-        this->event_|=event;
-    }
-    void add_event(Event other)
-    {
-        this->event_|=other.event_;
-    }
-    void remove_event(uint32_t event)
-    {
-        assert(((event&~EventType::kAllValidEvents)==0) && "事件包含非法位" );        
-        this->event_&=~event;
-    }
-    bool operator==(EventType event)const{return event_==event.get_event();}
-    bool operator!=(EventType event)const{return !(*this==event);}
-    bool operator&(EventType event)const{return event_&event.get_event();}
-    Event& operator=(EventType event)
-    {
-        event_=event.get_event();
-        return *this;
-    }
-    Event& operator=(uint32_t events) {
-        event_ = events;
-        return *this;
-    }
-private:
-
-    uint32_t event_;
+    None   = 0,
+    Read   = 1 << 0,
+    Write  = 1 << 1,
+    Except = 1 << 2,
+    Error  = 1 << 3,
+    Hup    = 1 << 4,
+    Nval   = 1 << 5,
+    RdHup  = 1 << 6,
+    Edge   = 1 << 7,
+    OneShot = 1 << 8,
+    
+    // 常用组合
+    ReadWrite = Read | Write,
+    AllEvents = Read | Write | Except | Error | Hup | Nval | RdHup,
 };
 
- 
-
-}    
+// 位操作运算符
+inline constexpr LogicEvent operator|(LogicEvent lhs, LogicEvent rhs) {
+    return static_cast<LogicEvent>(
+        static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs)
+    );
 }
 
+inline constexpr LogicEvent operator&(LogicEvent lhs, LogicEvent rhs) {
+    return static_cast<LogicEvent>(
+        static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs)
+    );
+}
+
+inline constexpr LogicEvent operator~(LogicEvent lhs) {
+    return static_cast<LogicEvent>(~static_cast<uint32_t>(lhs));
+}
+
+inline constexpr bool operator==(LogicEvent lhs, uint32_t rhs) {
+    return static_cast<uint32_t>(lhs) == rhs;
+}
+
+inline constexpr bool has_event(LogicEvent lhs, LogicEvent rhs) {
+    return (static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs)) != 0;
+}
+
+
+// 事件类 - 保持与原有接口兼容
+class Event {
+public:
+
+    constexpr Event() noexcept : events_(LogicEvent::None) {}
+    constexpr explicit Event(LogicEvent events) noexcept : events_(events) {
+        assert(validate(events_));
+    }   
+    explicit Event(uint32_t events) noexcept : events_(static_cast<LogicEvent>(events)) {
+        assert(validate(events_));
+    }
+    constexpr LogicEvent get() const noexcept { return events_; }
+    constexpr uint32_t value() const noexcept { return static_cast<uint32_t>(events_); }
+    constexpr void add(LogicEvent event) noexcept {
+        assert(validate(event));
+        events_ = events_ | event;
+    }
+    
+    // 兼容原有接口：添加事件（通过 uint32_t）
+    void add(uint32_t event) {
+        add(static_cast<LogicEvent>(event));
+    }
+    
+    constexpr void remove(LogicEvent event) noexcept {
+        assert(validate(event));
+        events_ = static_cast<LogicEvent>(
+            static_cast<uint32_t>(events_) & ~static_cast<uint32_t>(event)
+        );
+    }
+    
+    // 兼容原有接口：移除事件
+    void remove(uint32_t event) {
+        remove(static_cast<LogicEvent>(event));
+    }
+    
+    constexpr bool has(LogicEvent event) const noexcept {
+        return has_event(events_, event);
+    }
+    
+    // 兼容原有接口：检查事件
+    bool has(uint32_t event) const {
+        return has(static_cast<LogicEvent>(event));
+    }
+    
+    constexpr bool is_none() const noexcept {
+        return events_ == LogicEvent::None;
+    }
+    
+    // 运算符重载 - 保持与原有代码兼容
+    constexpr bool operator==(LogicEvent other) const noexcept {
+        return events_ == other;
+    }
+    
+    constexpr bool operator!=(LogicEvent other) const noexcept {
+        return !(*this == other);
+    }
+    
+    constexpr bool operator&(LogicEvent other) const noexcept {
+        return has(other);
+    }
+    
+    constexpr Event& operator|=(LogicEvent other) noexcept {
+        add(other);
+        return *this;
+    }
+    
+    constexpr Event& operator&=(LogicEvent other) noexcept {
+        events_ = events_ & other;
+        return *this;
+    }
+    
+    // 兼容原有接口：与 EventType 的比较（如果你还有 EventType 类）
+    template<typename T>
+    bool operator==(const T& other) const {
+        return events_ == static_cast<LogicEvent>(other.get_event());
+    }
+    
+    template<typename T>
+    bool operator!=(const T& other) const {
+        return !(*this == other);
+    }
+    
+private:
+    static constexpr bool validate(LogicEvent events) noexcept 
+    {
+        constexpr auto valid_mask = LogicEvent::AllEvents | LogicEvent::Edge | LogicEvent::OneShot;
+        uint32_t invalid = static_cast<uint32_t>(events) & ~static_cast<uint32_t>(valid_mask);
+        return invalid == 0;
+    }
+    
+    LogicEvent events_;
+};
+
+
+} // namespace net
+}
 #endif

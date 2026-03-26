@@ -20,52 +20,22 @@ idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
         sockets::OnlyIpv6(fd,true);
     }
     sockets::bindOrDie(fd,addr_);
-    handler_.setReadCallBack(std::bind(&Acceptor::accept,this));
-    handler_.setReading();
+    if(addr_.get_family()==AF_INET6)
+    {
+        handler_.setReadCallBack(std::bind(&Acceptor::accept<true>,this));
+    }
+    else 
+    {
+        handler_.setReadCallBack(std::bind(&Acceptor::accept<false>,this));
+    }
+    
 }
-Acceptor::~Acceptor()
+Acceptor::~Acceptor() // 确保acceptor的生命周期比loop长
 {
-  handler_.disableAll();
-  handler_.removeListen();
+//   handler_.disableAll();
+//   handler_.removeListen();
   sockets::close(handler_.get_fd());
 }
-void Acceptor::accept()
-{
-    Address addr;
-    while(true)
-    {
-        int fd;
-        if(addr_.get_family()==AF_INET6)
-        {
-            fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,true);
-        }
-        else
-        {
-            fd=sockets::acceptAutoOrDie(handler_.get_fd(),addr,false);
-        }
-        if(fd>0)
-        {
-            
-            assert(callback_);
-            callback_(fd,addr);
-        }
-        else 
-        {
-            if (errno == EMFILE)
-            {
-                close(idleFd_);
-                idleFd_=sockets::acceptAutoOrDie(fd,addr,true);
-                close(idleFd_);
-                idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
-            }
-            if(errno==EAGAIN||errno == EWOULDBLOCK)
-            {
-                break;
-            }
-        }         
-    }
-
-    
-}    
+   
 }    
 }

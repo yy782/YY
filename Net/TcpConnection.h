@@ -55,8 +55,9 @@ public:
     const Address& getAddr()const{return addr_;}
     bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
 
-    template<typename Tag, typename... Args>
-    typename Tag::ReturnType Extend(Args&&... args)=delete;
+
+    template<typename Tag,typename... Args>
+    typename Tag::ReturnType Extend(Tag(Args...));
 
 
     void setReading()

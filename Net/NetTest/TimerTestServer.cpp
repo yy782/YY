@@ -9,16 +9,7 @@ using namespace yy::net;
 const int N=20;
 std::atomic<int> MsgCount=0;
 std::atomic<int> ConnNum=0;
-struct FlushTime
-{
-    using ReturnType=void;
-};
 
-template<>
-void TcpConnection::Extend<FlushTime>()
-{
-    context<LTimeStamp>()=LTimeStamp::now();
-}
 
 
 
@@ -59,7 +50,7 @@ private:
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
-        conn->Extend<FlushTime>();
+        conn->context<LTimeStamp>()=LTimeStamp::now();
 
         std::weak_ptr<TcpConnection> weakConn=conn;
         auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
@@ -104,7 +95,7 @@ private:
     }
     void onMessage(TcpConnectionPtr conn)
     {
-        conn->Extend<FlushTime>();
+        conn->context<LTimeStamp>()=LTimeStamp::now();
 
         LOG_SYSTEM_INFO("recv msg! from"<<conn->getAddr().sockaddrToString());
     }

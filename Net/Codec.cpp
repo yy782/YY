@@ -5,10 +5,6 @@ namespace yy
 {
 namespace net
 {
-
- 
-
-
 int LineCodec::tryDecode(stringPiece data,stringPiece& msg) {
     if(data.size()==1&&data[0]==0x04) // 0x04是EOF
     {

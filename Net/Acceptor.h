@@ -31,6 +31,7 @@ public:
         
     }
 private:
+    template<bool isIpv6=false>
     void accept();
     Address addr_;
     EventLoop* loop_;
@@ -38,7 +39,36 @@ private:
     NewConnectCallBack callback_;
     int idleFd_;
 };
-
+template<bool isIpv6>
+void Acceptor::accept()
+{
+    Address addr;
+    while(true)
+    {
+        int fd=sockets::acceptAutoOrDie<isIpv6>(handler_.get_fd(),addr);
+       
+        if(fd>0)
+        {
+            
+            assert(callback_);
+            callback_(fd,addr);
+        }
+        else 
+        {
+            if (errno == EMFILE)
+            {
+                close(idleFd_);
+                idleFd_=sockets::acceptAutoOrDie<isIpv6>(fd,addr);
+                close(idleFd_);
+                idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
+            }
+            if(errno==EAGAIN||errno == EWOULDBLOCK)
+            {
+                break;
+            }
+        }         
+    }
+} 
 }  
 }
 #endif

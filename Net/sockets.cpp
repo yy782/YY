@@ -14,20 +14,6 @@ namespace net
 {
 namespace sockets
 {
-ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address);
-ssize_t readET(int fd,void* buf,size_t len);
-ssize_t writeET(int fd,const void* buf,size_t len);
-ssize_t recvET(int fd,void* buf,size_t len,int flags);
-ssize_t sendET(int fd,const void* buf,size_t len,int flags);
-ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
-ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address);
-ssize_t read(int fd,void* buf,size_t len);
-ssize_t write(int fd,const void* buf,size_t len);
-ssize_t recv(int fd,void* buf,size_t len,int flags);
-ssize_t send(int fd,const void* buf,size_t len,int flags);
-ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
-
-
 int createTcpSocketOrDie(sa_family_t family)
 {
     auto listenfd=::socket(family,SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
@@ -194,63 +180,7 @@ bool setNonBlocking(int fd)
     return true;
 }
 
-int acceptAutoOrDie(int fd,Address& address,bool is_ipv6)
-{
-    int connfd=-1;
-    if(is_ipv6)
-    {
-        struct sockaddr_in6 addr6_;
-        memZero(&addr6_,sizeof addr6_);
-        address.set_ipv6_addr(addr6_);
-        socklen_t addrlen = static_cast<socklen_t>(sizeof(addr6_));
-        connfd=::accept(fd,address.getSockAddr(),&addrlen);        
-    }
-    else
-    {
-        struct sockaddr_in addr4_;
-        memZero(&addr4_,sizeof addr4_);
-        address.set_ipv4_addr(addr4_);
-        socklen_t addrlen = static_cast<socklen_t>(sizeof(addr4_));
-        connfd=::accept(fd,address.getSockAddr(),&addrlen);
-    }
 
-    
-    // @brief muduo库选择accept4或accept来实现更好的兼容，我这里选择accept来向下兼容
-    if(connfd==-1)
-    {
-        
-        switch (errno)
-        {
-        case EINTR://被信号中断              
-        case EAGAIN://连接队列为空
-        case ECONNABORTED://连接被客户端终止
-        case EPROTO://协议错误
-        case EPERM://权限错误
-        case EMFILE: //进程打开的FD达到上限
-            break;
-        case EBADF://非法的文件描述符
-        case EFAULT://地址空间非法
-        case EINVAL://参数无效
-        case ENFILE://操作系统的FD总数用完了
-        case ENOBUFS://
-        case ENOMEM://内存不足
-        case ENOTSOCK://FD不是套接字
-        case EOPNOTSUPP://操作不被支持
-            LOG_ERRNO(errno);
-            LOG_SYSFATAL("unexpected error of ::accept ");
-            break;
-        default:
-            LOG_ERRNO(errno);
-            LOG_SYSFATAL("unexpected error of ::accept ");
-            break;
-        }
-    }
-    // @brief 这里选择沿用muduo的设计，将错误控制在可判断的风险里 
-    //      muduo库没有选择在信号中断时重新accept，有一部分原因是选择了epoll的水平触发模式
-    //      accept的errno处理如此谨慎，一部分原因是accept是直接关联服务端的，与连接的所有客户有关  
-      
-    return connfd;
-}
 void setKeepAlive(int fd,bool on,int idleSeconds, 
                   int intervalSeconds,int maxProbes)
 {
@@ -355,72 +285,6 @@ ssize_t readv(int fd, const iovec* iovec, int count)
 {
     return ::readv(fd,iovec,count);
     
-}
-ssize_t readAuto(int fd,void* buf,size_t len)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return readET(fd,buf,len);
-    }
-    else
-    {
-        return read(fd,buf,len);
-    }
-}
-ssize_t writeAuto(int fd,const void* buf,size_t len)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return writeET(fd,buf,len);
-    }
-    else
-    {
-        return write(fd,buf,len);
-    }
-}
-ssize_t recvAuto(int fd,void* buf,size_t len,int flags)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return recvET(fd,buf,len,flags|MSG_DONTWAIT);
-    }
-    else
-    {
-        return recv(fd,buf,len,flags);
-    }
-}
-ssize_t sendAuto(int fd,const void* buf,size_t len,int flags)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return sendET(fd,buf,len,flags|MSG_DONTWAIT|MSG_NOSIGNAL|MSG_MORE);
-    }
-    else
-    {
-        return send(fd,buf,len,flags|MSG_NOSIGNAL|MSG_MORE);
-    }
-}
-ssize_t recvfromAuto(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return recvfromET(fd,buf,len,flags,peerAddr);
-    }
-    else
-    {
-        return recvfrom(fd,buf,len,flags,peerAddr);
-    }
-}
-ssize_t sendtoAuto(int fd,const void* buf,size_t len,int flags,const Address& address)
-{
-    if constexpr (std::is_same_v<PollerType,Epoll>)
-    {
-        return sendtoET(fd,buf,len,flags,address);
-    }
-    else
-    {
-        return sendto(fd,buf,len,flags,address.getSockAddr(),address.get_len());
-    }
 }
 int sockfd_has_error(int fd)
 {
