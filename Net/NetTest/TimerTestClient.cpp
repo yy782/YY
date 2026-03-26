@@ -24,7 +24,7 @@ public:
             
         });
         client_.setConnectionCallback([this](TcpConnectionPtr conn){
-            conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+            conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
             ++ConnNum;
             conn->send("hello !",8);
         });

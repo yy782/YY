@@ -2,11 +2,14 @@
 #define YY_COMMON_TIMESTAMP_H
 #include <chrono>
 #include <sys/timerfd.h>
-#include "copyable.h"
-#include "Types.h"
 #include <string>
 #include <iomanip>
 #include <chrono>
+
+
+#include "copyable.h"
+#include "Types.h"
+
 
 namespace yy
 {
@@ -184,11 +187,7 @@ TimeInterval<PrecisionTag> operator*(int Count,const TimeInterval<PrecisionTag>&
     auto period = lhs.getTimePeriod();
     return TimeInterval<PrecisionTag>(period*Count);
 }
-template<typename Rep, typename Period,typename PrecisionTag>
-TimeInterval<PrecisionTag> operator*(std::chrono::duration<Rep, Period> duration,const TimeInterval<PrecisionTag>& lhs)
-{
-    static_assert("禁止矢量相乘");
-}
+
 
 }
 #endif

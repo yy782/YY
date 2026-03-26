@@ -24,7 +24,7 @@ public:
         });
         client_.setConnectionCallback([this](TcpConnectionPtr con){
             con->setTcpNoDelay(true);
-            con->setEvent(EventType::ReadEvent|EventType::EV_ET);
+            con->setEvent(LogicEvent::Read|LogicEvent::Edge);
             //con->setReading();
             con->setReadCallBack([this](TcpConnectionPtr con1){
                 con1->handleETRead([this](TcpConnectionPtr con2){

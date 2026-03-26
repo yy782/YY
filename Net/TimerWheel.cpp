@@ -40,7 +40,7 @@ handler_(fd_,loop,"TimerWheel")
     sockets::timerfd_settime(fd,0,new_ts);
 
     handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
-    handler_.set_event(EventType::ReadEvent|EventType::EV_ET); // 本身是线程安全的
+    handler_.set_event(LogicEvent::Read|LogicEvent::Edge); // 本身是线程安全的
         
 }
 TimerWheel::~TimerWheel() //// 需要强行保证生命周期不能比loop小，否则需要移除handle监听

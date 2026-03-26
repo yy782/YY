@@ -5,23 +5,26 @@ namespace yy
 namespace net 
 {
 
-
-
 class Poll;
 class Select;    
 class Epoll;
-#ifdef POLL
-    typedef Poll PollerType;
-#elif defined(EPOLL)
-    typedef Epoll PollerType;
-#elif defined(SELECT)
-    typedef Select PollerType;  
-#else
-    typedef Epoll PollerType;
-#endif     
 
 }  
 }
+#if defined(POLL)
+    #include "Poller/Poll.h"
+    typedef yy::net::Poll PollerType;
+#elif defined(SELECT)
+    #include "Poller/Select.h"
+    typedef yy::net::Select PollerType;
+#elif defined(EPOLL)
+    #include "Poller/Epoll.h"
+    typedef yy::net::Epoll PollerType;    
+#else 
+    #include "Poller/Epoll.h"
+    typedef yy::net::Epoll PollerType;
+#endif
+
 #endif
 
 

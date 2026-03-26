@@ -26,7 +26,7 @@ public:
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
         stdIn_.setReadCallBack([this](){handleRead();});
        
-        stdIn_.set_event(EventType::ReadEvent|EventType::EV_ET);
+        stdIn_.set_event(LogicEvent::Edge|LogicEvent::Read);
          
     }
     ~EchoClient()

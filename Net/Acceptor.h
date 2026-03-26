@@ -25,7 +25,7 @@ public:
     void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
     void listen()
     {
-        handler_.set_event(EventType::ReadEvent|EventType::EV_ET);
+        handler_.set_event(LogicEvent::Read|LogicEvent::Edge);
        
         sockets::listenOrDie(handler_.get_fd());
         

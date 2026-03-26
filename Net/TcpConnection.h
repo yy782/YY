@@ -72,6 +72,10 @@ public:
     {   
         handler_.set_event(e);  
     }
+    void setEvent(LogicEvent e)
+    {
+        handler_.set_event(e);
+    }
     void setConnectCallBack(ServicesConnectionCallBack cb){SconnectCallback_=std::move(cb);}
     void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
     void setReadCallBack(ServicesReadCallback cb){SreadCallback_=std::move(cb);}

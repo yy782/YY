@@ -1,6 +1,8 @@
 #ifndef YY_NET_POLLER_EPOLL_H_
 #define YY_NET_POLLER_EPOLL_H_
 #include "../Poller.h"
+#include <sys/epoll.h>
+#include <vector>
 
 namespace yy 
 {

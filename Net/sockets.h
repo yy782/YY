@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 #include <assert.h>
 #include <sys/timerfd.h>
+
 #include "../Common/Types.h"
 #include "Timer.h"
 #include "../Common/LogFilter.h"
@@ -16,7 +17,7 @@ namespace yy
 {
 namespace  net
 {
-class Address;
+
 
 namespace sockets
 {

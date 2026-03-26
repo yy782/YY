@@ -1,6 +1,6 @@
 #include "Epoll.h"
 #include "../sockets.h"
-#include "../Event.h"
+
 #include "../../Common/LogFilter.h"
 
 namespace yy 
@@ -72,7 +72,7 @@ void Epoll::poll(int timeout,HandlerList& event_handlers)
 
 
 
-            handler->set_revent(Event(revents));
+            handler->set_revent(revents);
             // @note 这里是uint32_t到int的隐形转换，但是epollfd_返回的就绪事件是在0X00000000-0x0000001F,不会溢出
 
             event_handlers.push_back(handler);
@@ -121,7 +121,7 @@ void Epoll::operator_epoll(int operation,EventHandler* handler)
     assert(handler);
     struct epoll_event ev;
     memZero(&ev,sizeof ev);
-    ev.events=handler->get_event().get_event();
+    ev.events=handler->get_event().value();
     ev.data.ptr=handler;
     if(::epoll_ctl(epollfd_,operation,handler->get_fd(),&ev)==-1)
     {

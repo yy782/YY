@@ -1,13 +1,8 @@
-#ifndef _YY_NET_POLLER_ 
-#define _YY_NET_POLLER_
+#ifndef YY_NET_POLLER_ 
+#define YY_NET_POLLER_
 #include <vector>
 #include <type_traits>
 #include <map>
-
-#include <sys/select.h>
-#include <sys/epoll.h>
-#include <poll.h>
-
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include "EventHandler.h"
@@ -17,6 +12,8 @@ namespace yy
 {
 namespace net
 {
+
+
 typedef std::vector<EventHandler*> PollerHandlerList;
 template<class PollerTag>
 class Poller:noncopyable

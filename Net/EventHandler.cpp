@@ -8,8 +8,6 @@ namespace net
 EventHandler::EventHandler(int fd,EventLoop* loop,const char* name):
 status_(-1),
 fd_(fd),
-events_(EventType::NoneEvent),
-revents_(EventType::NoneEvent),
 loop_(loop),
 name_(name)
 {
@@ -41,53 +39,53 @@ void EventHandler::handler_revent()
         guard=tie_.lock();
         if(!guard)return;        
     }
-    if(revents_&EventType::HupEvent&&!(revents_&EventType::ReadEvent))
+    if(revents_&LogicEvent::Hup&&!(revents_&LogicEvent::Read))
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接
         // 但是HupEvent和RdHupEvent的事件分界比较模糊?
         EXCLUDE_BEFORE_COMPILATION( 
-            LOG_EVENT_DEBUG(printName()<<" handler_revent HupEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Hup");
         )
         if(closeCallback_) closeCallback_();
     }  
-    if(revents_&EventType::NvalEvent)
+    if(revents_&LogicEvent::Nval)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent NvalEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Nval");
         )
         if(errorCallback_)errorCallback_();
     }
-    if(revents_&EventType::ErrorEvent)
+    if(revents_&LogicEvent::Error)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ErrorEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Error");
         )
         if(errorCallback_)errorCallback_();
     }
-    if(revents_&EventType::ExceptEvent)
+    if(revents_&LogicEvent::Except)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ExceptEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Except");
         )
         if(exceptCallback_)
         {
             exceptCallback_();
         }
     }
-    if(revents_&EventType::ReadEvent||revents_&EventType::RdHupEvent)
+    if(revents_&LogicEvent::Read||revents_&LogicEvent::RdHup)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ReadEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Read");
         )
         if(readCallback_)
         {
             readCallback_();
         }
     }
-    if(revents_&EventType::WriteEvent)
+    if(revents_&LogicEvent::Write)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent WriteEvent");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent Write");
         )
         if(writeCallback_)writeCallback_();
     }

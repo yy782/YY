@@ -1,14 +1,15 @@
-#ifndef _YY_NET_EVENTHANDLER_
-#define _YY_NET_EVENTHANDLER_
+#ifndef YY_NET_EVENTHANDLER_
+#define YY_NET_EVENTHANDLER_
 
 #include <functional>
+#include <memory>
+#include <string>
 
 #include "Event.h"
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
-#include <memory>
-#include <string>
 #include "sockets.h"
+
 namespace yy
 {
 namespace net
@@ -20,8 +21,6 @@ class EventLoop;
 class EventHandler:public noncopyable
 {
 public:
-    // typedef TimeStamp<LowPrecision> Time_Stamp;
-    // typedef std::function<void(Time_Stamp)> TimeStampEventCallBack;
     typedef std::function<void()> EventCallBack;
 
     typedef EventCallBack ReadCallBack;
@@ -43,28 +42,38 @@ public:
     EventLoop* get_loop()const{return loop_;}
     Event get_event()const{return events_;}
     int get_status()const{return status_;}
-    bool has_ignore()const{return events_==EventType::NoneEvent;}
 
 
-    void set_event(Event event){
-        events_.add_event(event);
+    void set_event(LogicEvent event){
+        events_=event;
         update();
     }
-
-    void set_revent(Event event){revents_.add_event(event);}
-    void set_status(int status){status_=status;}
-    bool isWriting()const{return events_&EventType::WriteEvent;}
-    bool isReading()const{return events_&EventType::ReadEvent;}
-    bool isExcept()const{return events_&EventType::ExceptEvent;}
-    bool isReadingAndExcept()const{return events_&(EventType::ReadEvent|EventType::ExceptEvent);}
-    void setReading(){
-        events_.add_event(EventType::ReadEvent);update();
+    void set_event(Event event){
+        events_=event;
+        update();
     }
-    void cancelReading(){events_.remove_event(EventType::ReadEvent);update();}
-    void setWriting(){events_.add_event(EventType::WriteEvent);update();}
-    void cancelWriting(){events_.remove_event(EventType::WriteEvent);update();}
-    void setExcept(){events_.add_event(EventType::ExceptEvent);update();}
-    void cancelExcept(){events_.remove_event(EventType::ExceptEvent);update();}
+    
+    void set_revent(LogicEvent event)
+    {
+        revents_=event;
+    }
+    void set_revent(uint32_t event)
+    {
+        revents_=event;
+    }
+    void set_status(int status){status_=status;}
+    bool isWriting()const{return events_.has(LogicEvent::Write);}
+    bool isReading()const{return events_.has(LogicEvent::Read);}
+    bool isExcept()const{return events_.has(LogicEvent::Except);}
+    bool isReadingAndExcept()const{return events_&(LogicEvent::Read|LogicEvent::Except);}
+    void setReading(){
+        events_.add(LogicEvent::Read);update();
+    }
+    void cancelReading(){events_.remove(LogicEvent::Read);update();}
+    void setWriting(){events_.add(LogicEvent::Write);update();}
+    void cancelWriting(){events_.remove(LogicEvent::Write);update();}
+    void setExcept(){events_.add(LogicEvent::Except);update();}
+    void cancelExcept(){events_.remove(LogicEvent::Except);update();}
     void setReadingAndExcept()
     {
         setExcept();
@@ -95,7 +104,7 @@ public:
     void handler_revent();
     void disableAll()
     {
-        events_=EventType::NoneEvent;
+        events_=LogicEvent::None;
         update();
     }
     void removeListen();

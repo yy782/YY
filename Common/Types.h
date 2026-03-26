@@ -1,5 +1,5 @@
-#ifndef _YY_TYPES_H_
-#define _YY_TYPES_H_
+#ifndef YY_TYPES_H_
+#define YY_TYPES_H_
 
 #include <cstring>
 #include <type_traits>

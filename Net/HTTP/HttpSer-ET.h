@@ -67,7 +67,7 @@ private:
         LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
         conn->setTcpNoDelay(true);
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
-        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+        conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
         conn->setReadCallBack([this](TcpConnectionPtr conn1){
             conn1->handleETRead([this](TcpConnectionPtr conn2){
                 onMessage(conn2);

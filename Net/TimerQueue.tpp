@@ -24,7 +24,7 @@ handler_()
         handler_.init(fd_,loop,"HTimerQueue");
     }
    
-    handler_.set_event(EventType::ReadEvent|EventType::EV_ET);
+    handler_.set_event(LogicEvent::Read|LogicEvent::Edge);
 }
 template<typename PrecisionTag>
 TimerQueue<PrecisionTag>::~TimerQueue() // 需要强行保证TimerQueue的生命周期不能比loop小，否则需要移除handle监听

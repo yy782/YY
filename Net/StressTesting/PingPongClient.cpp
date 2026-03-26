@@ -184,7 +184,7 @@ void handleTimeout()
 
 void Session::onConnection(const TcpConnectionPtr& conn)
 {
-    conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+    conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
     //conn->setReading();
     conn->setTcpNoDelay(true);
     const std::string& msg=owner_->message();

@@ -49,7 +49,7 @@ private:
         LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->getAddr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+        conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
         conn->context<LTimeStamp>()=LTimeStamp::now();
 
         std::weak_ptr<TcpConnection> weakConn=conn;

@@ -27,7 +27,7 @@ public:
         });
         server_.setConnectCallBack([](TcpConnectionPtr conn){
             std::cout<<"Connect!"<<std::endl;
-            conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
+            conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
         });
     }
     

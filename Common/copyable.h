@@ -1,5 +1,5 @@
-#ifndef _YY_COPYABLE_H_
-#define _YY_COPYABLE_H_
+#ifndef YY_COPYABLE_H_
+#define YY_COPYABLE_H_
 namespace yy
 {
 class copyable

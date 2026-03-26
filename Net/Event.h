@@ -1,15 +1,11 @@
-#ifndef _YY_NET_EVENT_
-#define _YY_NET_EVENT_
+#ifndef YY_NET_EVENT_
+#define YY_NET_EVENT_
 
 #include <cstdint>
 #include <assert.h>
-#include "../Common/copyable.h"
-
-#include "PollerType.h"
-#include <sys/poll.h>
-#include <sys/epoll.h>
 #include <type_traits>
 
+#include "../Common/copyable.h"
 namespace yy {
 namespace net {
 
@@ -58,14 +54,15 @@ inline constexpr bool has_event(LogicEvent lhs, LogicEvent rhs) {
 
 
 // 事件类 - 保持与原有接口兼容
-class Event {
+class Event:copyable 
+{
 public:
 
     constexpr Event() noexcept : events_(LogicEvent::None) {}
     constexpr explicit Event(LogicEvent events) noexcept : events_(events) {
         assert(validate(events_));
     }   
-    explicit Event(uint32_t events) noexcept : events_(static_cast<LogicEvent>(events)) {
+    constexpr explicit Event(uint32_t events) noexcept : events_(static_cast<LogicEvent>(events)) {
         assert(validate(events_));
     }
     constexpr LogicEvent get() const noexcept { return events_; }
@@ -76,7 +73,7 @@ public:
     }
     
     // 兼容原有接口：添加事件（通过 uint32_t）
-    void add(uint32_t event) {
+    constexpr void add(uint32_t event) {
         add(static_cast<LogicEvent>(event));
     }
     
@@ -88,7 +85,7 @@ public:
     }
     
     // 兼容原有接口：移除事件
-    void remove(uint32_t event) {
+    constexpr void remove(uint32_t event) {
         remove(static_cast<LogicEvent>(event));
     }
     
@@ -97,19 +94,33 @@ public:
     }
     
     // 兼容原有接口：检查事件
-    bool has(uint32_t event) const {
+    constexpr bool has(uint32_t event) const {
         return has(static_cast<LogicEvent>(event));
     }
     
     constexpr bool is_none() const noexcept {
         return events_ == LogicEvent::None;
     }
+    // 赋值运算符
+    constexpr Event& operator=(LogicEvent other) noexcept {
+        assert(validate(other));
+        events_ = other;
+        return *this;
+    }
     
+    // 从 uint32_t 赋值（兼容原有代码）
+    Event& operator=(uint32_t other) noexcept {
+        LogicEvent le = static_cast<LogicEvent>(other);
+        assert(validate(le));
+        events_ = le;
+        return *this;
+    }   
+
     // 运算符重载 - 保持与原有代码兼容
     constexpr bool operator==(LogicEvent other) const noexcept {
         return events_ == other;
     }
-    
+
     constexpr bool operator!=(LogicEvent other) const noexcept {
         return !(*this == other);
     }

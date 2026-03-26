@@ -1,5 +1,5 @@
-#ifndef _TOOL_H_
-#define _TOOL_H_ 
+#ifndef YY_NONCOPYABLE_H_
+#define YY_NONCOPYABLE_H_ 
 
 namespace yy{
 class noncopyable
