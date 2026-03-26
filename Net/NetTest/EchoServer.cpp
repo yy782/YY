@@ -56,20 +56,20 @@ public:
 private:
     void onConnection(TcpConnectionPtr conn)
     {
-        auto addr=conn->getAddr();
+        auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);// @note 对方连接是否决定监听由业务层决定
         conn->setReading();
     }
     void onMessage(TcpConnectionPtr conn)
     {
-        TcpBuffer& buffer=conn->getRecvBuffer();
+        TcpBuffer& buffer=conn->recvBuffer();
         stringPiece msg;
 
         while(true)
         {
             const char* last=buffer.findBorder("\n");
-            if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+            if(last == buffer.peek() + buffer.readable_size()) // 没有找到\n
             {
                 return;
             }
@@ -83,7 +83,7 @@ private:
     }
     void onClose(TcpConnectionPtr conn)
     {
-        auto addr=conn->getAddr();
+        auto addr=conn->addr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
     }
     TcpServer server_;

@@ -127,18 +127,18 @@ private:
     }
     
     void onMessage(TcpConnectionPtr conn) {
-        TcpBuffer& buffer = conn->getRecvBuffer();
+        TcpBuffer& buffer = conn->recvBuffer(); 
         
         while(true)
         {
             Http::ParseResult result = response_.tryDecode(
-                stringPiece(buffer.peek(), buffer.get_readable_size()),
+                stringPiece(buffer.peek(), buffer.readable_size()),
                 true  // copy body
             );
             
             if (result == Http::ParseResult::Error) {
                 std::cerr<<"HTTP response parse error"<<std::endl;
-                buffer.consume(buffer.get_readable_size());
+                buffer.consume(buffer.readable_size());
                 return;
             }
             

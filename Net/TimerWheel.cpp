@@ -32,7 +32,7 @@ handler_(fd_,loop,"TimerWheel")
         slots_[i]=nullptr;
     }
     
-    int fd=handler_.get_fd();
+    int fd=handler_.fd();
     struct itimerspec new_ts;
     memZero(&new_ts,sizeof new_ts);
     new_ts.it_value.tv_sec=1;
@@ -40,7 +40,7 @@ handler_(fd_,loop,"TimerWheel")
     sockets::timerfd_settime(fd,0,new_ts);
 
     handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
-    handler_.set_event(LogicEvent::Read|LogicEvent::Edge); // 本身是线程安全的
+    handler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge)); // 本身是线程安全的
         
 }
 TimerWheel::~TimerWheel() //// 需要强行保证生命周期不能比loop小，否则需要移除handle监听
@@ -143,7 +143,7 @@ void TimerWheel::tick()
 void TimerWheel::ReadTimerfd()
 {
     uint64_t howmany;
-    ssize_t n=sockets::read(handler_.get_fd(),&howmany,sizeof howmany);
+    ssize_t n=sockets::read(handler_.fd(),&howmany,sizeof howmany);
     if(n!=sizeof howmany){
         EXCLUDE_BEFORE_COMPILATION(
             LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");

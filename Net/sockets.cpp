@@ -99,7 +99,7 @@ int timerfd_settime(int fd,int flags,const struct itimerspec& new_ts)
 
 void bindOrDie(int fd,const Address& addr)
 {
-    if(::bind(fd,addr.getSockAddr(),addr.get_len())==-1)
+    if(::bind(fd,addr.sockAddr(),addr.len())==-1)
     {
         LOG_ERRNO(errno);
         LOG_SYSFATAL("sockets::bindOrDie");
@@ -119,7 +119,7 @@ void listenOrDie(int fd,int queue_size)
 }
 int connect(int fd,const Address& addr)
 {
-    return ::connect(fd,addr.getSockAddr(),addr.get_len());
+    return ::connect(fd,addr.sockAddr(),addr.len());
 }
 struct sockaddr_in6 getLocalAddr(int sockfd)
 {
@@ -220,26 +220,13 @@ void setTcpNoDelay(int fd,bool on)
         LOG_ERRNO(errno);
     }  
 }
-void setSocketBufferSize(int fd,int recvBufSize,int sendBufSize)
+bool setSocketBufferSize(int fd,size_t BufSize)
 {
-    if(recvBufSize>0)
-    {
-        int ret=::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &recvBufSize, static_cast<socklen_t>(sizeof recvBufSize));
-        if(ret<0)
-        {
-            LOG_ERRNO(errno);
-        }
-    }
-    if(sendBufSize>0)
-    {
-        int ret=::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sendBufSize, static_cast<socklen_t>(sizeof sendBufSize));
-        if(ret<0)
-        {
-            LOG_ERRNO(errno);
-        }
-    }
+    assert(BufSize>0);
+    int ret=::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &BufSize, static_cast<socklen_t>(sizeof BufSize));
+    return ret>=0;
 }
-void reuse_addr(int fd,bool on)
+void reuseAddrOrDie (int fd,bool on)
 {
     // 根据on参数设置optval的值，1表示启用，0表示禁用
     int optval=on?1:0;
@@ -248,9 +235,10 @@ void reuse_addr(int fd,bool on)
     if(ret<0)
     {
         LOG_ERRNO(errno);
+        LOG_SYSFATAL("sockets::reuseAddrOrDie");
     }
 }
-void reuse_port(int fd,bool on)
+void reusePortOrDie(int fd,bool on)
 {
     int optval = on ? 1 : 0;
     int ret = ::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
@@ -258,17 +246,10 @@ void reuse_port(int fd,bool on)
     if(ret<0)
     {
         LOG_ERRNO(errno);
+        LOG_SYSFATAL("sockets::reusePortOrDie");
     }                               
 }
-void set_nonblock(int fd){
-    int flags=fcntl(fd,F_GETFL,0);
-    if(flags==-1){
-        LOG_ERRNO(errno);
-    }
-    if(fcntl(fd,F_SETFL,flags|O_NONBLOCK)==-1){
-        LOG_ERRNO(errno);
-    }
-}
+
 void set_CloseOnExec(int fd)
 {
     int flags=fcntl(fd,F_GETFL,0);
@@ -311,13 +292,14 @@ int sockfd_has_error(int fd)
     assert(false&&"不可能执行到这");
     return -2;
 }
-void OnlyIpv6(int fd,bool ipv6_only)
+void OnlyIpv6OrDie(int fd,bool ipv6_only)
 {
     int optval=ipv6_only?1:0;
     auto ret=::setsockopt(fd,SOL_IPV6,IPV6_V6ONLY,&optval,sizeof(optval));
     if(ret<0)
     {
         LOG_ERRNO(errno);
+        LOG_SYSFATAL("sockets::OnlyIpv6OrDie");
     }
 } 
 void close(int fd)
@@ -391,233 +373,19 @@ ssize_t send(int fd,const void* buf,size_t len,int flags)
     return ::send(fd,buf,len,flags|MSG_NOSIGNAL);
 }
 
-/**
- * ET模式下的read函数 - recvn风格
- * 特点：内部循环，尽可能读取数据，遇到EAGAIN返回已读取字节数
- * @param fd 文件描述符
- * @param buf 缓冲区
- * @param len 期望读取的长度
- * @return >0 实际读取的字节数，0 对端关闭，-1 错误
- */
-ssize_t readET(int fd, void* buf, size_t len)
-{
-    assert(len);
-    
-    char* ptr = static_cast<char*>(buf);
-    size_t left = len;
-    
-    while (left > 0) {
-        ssize_t n = ::read(fd, ptr, left);
-        
-        if (n == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 没有数据可读了，返回已经读取的字节数
-                return len - left;
-            } else if (errno == EINTR) {
-                // 被信号中断，继续读取
-                continue;
-            } else {
-                LOG_ERRNO(errno);
-                // 如果已经读取了一些数据，返回已读取的字节数；否则返回-1
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else if (n == 0) {
-            // 对端关闭连接，返回已读取的字节数
-            return len - left;
-        } else {
-            // 成功读取n字节
-            ptr += n;
-            left -= n;
-            // 注意：不判断left是否为0，继续循环直到left==0或出错
-        }
-    }
-    
-    return len;  
-}
-
-ssize_t writeET(int fd, const void* buf, size_t len)
-{
-    assert(len);
-    
-    const char* ptr = static_cast<const char*>(buf);
-    size_t left = len;
-    
-    while (left > 0) {
-        ssize_t n = ::write(fd, ptr, left);
-        
-        if (n == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 缓冲区满，返回已经写入的字节数
-                return len - left;
-            } else if (errno == EINTR) {
-                // 被信号中断，继续写入
-                continue;
-            } else {
-                LOG_ERRNO(errno);
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else {
-            // 成功写入n字节
-            ptr += n;
-            left -= n;
-        }
-    }
-    
-    return len;  // 完全写入了len字节
-}
-
-/**
- * ET模式下的recv函数 - recvn风格
- */
-ssize_t recvET(int fd, void* buf, size_t len, int flags)
-{
-    assert(len);
-    
-    char* ptr = static_cast<char*>(buf);
-    size_t left = len;
-    while (left > 0) {
-        ssize_t n = ::recv(fd, ptr, left, flags);
-        
-        if (n == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if(len-left!=0)
-                    return len - left;
-                else 
-                    return -1; 
-            } else if (errno == EINTR) {
-                continue;
-            } else {
-                LOG_ERRNO(errno);
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else if (n == 0) 
-        {
-            return len - left;
-        } else {
-            ptr += n;
-            left -= n;
-        }
-    }
-    
-    return len;
-}
-
-/**
- * ET模式下的send函数 - recvn风格
- */
-ssize_t sendET(int fd, const void* buf, size_t len, int flags)
-{
-    assert(len);
-    
-    const char* ptr = static_cast<const char*>(buf);
-    size_t left = len;
-    
-    while (left > 0) {
-        ssize_t n = ::send(fd, ptr, left, flags); 
-        if (n == -1) 
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) 
-            {
-                return len - left;
-            } else if (errno == EINTR) 
-            {
-                continue;
-            } else {
-                LOG_ERRNO(errno);
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else {
-            ptr += n;
-            left -= n;
-        }
-    }
-    
-    return len;
-}
 ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
 {
     socklen_t size=sizeof(peerAddr);
-    ssize_t n=::recvfrom(fd,buf,len,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
-    if(n<0)
-    {
-        LOG_ERRNO(errno);
-    }
-    return n;
-}
-ssize_t recvfromET(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)
-{
-    socklen_t size=sizeof(peerAddr);
-    assert(len);
-    
-    char* ptr = static_cast<char*>(buf);
-    size_t left = len;
-    
-    while (left > 0) 
-    {
-        ssize_t n =::recvfrom(fd,ptr,left,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
-        if (n == -1) 
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return len - left;
-            } else if (errno == EINTR) {
-                continue;
-            } else {
-                LOG_ERRNO(errno);
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else if (n == 0) 
-        {
-            assert(false);
-            return len-left;
-        } else {
-            ptr += n;
-            left -= n;
-        }
-    }
+    return ::recvfrom(fd,buf,len,flags,reinterpret_cast<struct sockaddr*>(&peerAddr),&size);
 
-    return len;
 }
 ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address)
 {
-    socklen_t address_len=address.get_len();
+    socklen_t address_len=address.len();
     assert(len);
     
-    ssize_t n=::sendto(fd, buf, len, flags,address.getSockAddr(),address_len);
-    if (n == -1) 
-    {
-        LOG_ERRNO(errno); 
-    }
-    return n;
-}
-ssize_t sendtoET(int fd,const void* buf,size_t len,int flags,const Address& address)
-{
-    socklen_t address_len=address.get_len();
-    assert(len);
-    
-    const char* ptr = static_cast<const char*>(buf);
-    size_t left = len;
-    
-    while (left > 0) {
-        ssize_t n=::sendto(fd, ptr, left, flags,address.getSockAddr(),address_len);
-        if (n == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) 
-            {
-                return len - left;
-            } else if (errno == EINTR) 
-            {
-                continue;
-            } else 
-            {
-                LOG_ERRNO(errno);
-                return (len - left) > 0 ? (len - left) : -1;
-            }
-        } else {
-            ptr += n;
-            left -= n;
-        }
-    }
-    
-    return len;
+    return ::sendto(fd, buf, len, flags,address.sockAddr(),address_len);
+
 }
 
 }   

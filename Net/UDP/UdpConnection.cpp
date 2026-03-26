@@ -13,11 +13,8 @@ UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
 {
     
     Address addr(host, port);
-    int fd=sockets::createUdpSocketOrDie(addr.get_family());
+    int fd=sockets::createUdpSocketOrDie(addr.family());
     sockets::set_CloseOnExec(fd);
-    
-    sockets::connect(fd, addr);
-
     UdpConnectionPtr conn(new UdpConnection(loop,fd,Address()));
     conn->peer_=addr;
     conn->isServer_=false;
@@ -28,7 +25,7 @@ UdpConnection::UdpConnectionPtr UdpConnection::createServer(
     {
     
     Address addr(bindHost, port);
-    int fd=sockets::createUdpSocketOrDie(addr.get_family());
+    int fd=sockets::createUdpSocketOrDie(addr.family());        
 
     sockets::bindOrDie(fd,addr);
     UdpConnectionPtr conn(new UdpConnection(loop,fd,addr));
@@ -64,20 +61,6 @@ void UdpConnection::onError(UdpErrorCallBack cb)
 {
     errorCallback_=std::move(cb);
 }
-
-// void UdpConnection::send(const char* buf, size_t len) {
-//     assert(!isServer_);
-//     sendInLoop(buf,len,nullptr);
-// }
-
-// void UdpConnection::send(const std::string& s) {
-//     send(s.data(), s.size());
-// }
-
-// void UdpConnection::send(const char* s) 
-// {
-//     send(s, strlen(s));
-// }
 
 void UdpConnection::sendTo(const char* buf, size_t len, const Address* dest) {
 
@@ -136,7 +119,7 @@ void UdpConnection::handleRead() {
   
     struct sockaddr_storage peerAddr;
 
-    ssize_t n=sockets::recvfrom(handler_.get_fd(), buf, kUdpPacketSize, 0,peerAddr);
+    ssize_t n=sockets::recvfrom(handler_.fd(), buf, kUdpPacketSize, 0,peerAddr);
 
 
     messageCallback_(shared_from_this(),stringPiece(buf,n),peerAddr);
@@ -148,12 +131,12 @@ void UdpConnection::sendInLoop(const char* buf, size_t len, const Address* dest)
     ssize_t n;
     if (dest) 
     {
-        n=sockets::sendto(handler_.get_fd(), buf, len, 0,
+        n=sockets::sendto(handler_.fd(), buf, len, 0,
                      *dest);
     }else 
     {
        
-        n=sockets::sendto(handler_.get_fd(), buf, len, 0,
+        n=sockets::sendto(handler_.fd(), buf, len, 0,   
                      peer_);
     }
     if (n<0)

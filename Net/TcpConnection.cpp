@@ -30,16 +30,25 @@ handler_(fd,loop,name)
 }
 TcpConnection::~TcpConnection()
 {
-    if(RecvBuffer_.get_readable_size()!=0)
+    if(RecvBuffer_.readable_size()!=0)
     {
         LOG_TCP_WARN("had data not read!");
     }
     sockets::close(fd_);
 }
-
+void TcpConnection::ConnectSuccess()
+{
+    assert(Connstatus_==ConnectStatus::Connecting);
+    Connstatus_=ConnectStatus::Connected;
+    handler_.tie(shared_from_this());
+    if(SconnectCallback_)
+    {
+        SconnectCallback_(shared_from_this());
+    }
+}
 void TcpConnection::disconnect()
 {
-    if(SendBuffer_.get_readable_size()==0)
+    if(SendBuffer_.readable_size()==0)
     {
         loop_->submit([c=weak_from_this()](){
             auto con=c.lock();
@@ -60,9 +69,9 @@ void TcpConnection::disconnectInLoop()
     if(Connstatus_==ConnectStatus::Connected)
     {
         Connstatus_=ConnectStatus::DisConnecting;
-        if(SendBuffer_.get_readable_size()==0)
+        if(SendBuffer_.readable_size()==0)
         {
-           sockets::shutdown(handler_.get_fd(),SHUT_WR);  
+            sockets::shutdown(fd_,SHUT_WR);  
         }
         else 
         {
@@ -93,24 +102,6 @@ void TcpConnection::send(const char* message,size_t len)
         });
     }      
 }
-// void TcpConnection::send(const std::string& message)
-// {
-//     send(std::string(message));
-// }
-// void TcpConnection::send(std::string&& message)
-// {
-//     if(Connstatus_!=ConnectStatus::Connected)return;
-    
-//     loop_->submit([c=weak_from_this(),msg=std::move(message)](){
-//         auto con=c.lock();
-//         if(con)
-//             con->sendInLoop(msg.c_str(),msg.size());
-//     });     
-// }
-void TcpConnection::send(const std::string& message)
-{
-    send(std::string(message));
-}
 void TcpConnection::send(std::string&& message)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
@@ -121,26 +112,6 @@ void TcpConnection::send(std::string&& message)
             con->sendInLoop(msg.c_str(),msg.size());
     });     
 }
-// void TcpConnection::send(const std::string_view& msg)
-// {
-//     if(loop_->isInLoopThread())
-//     {
-//         sendInLoop(msg.data(),msg.size());
-//     }
-//     else 
-//     {
-//         loop_->submit([c=weak_from_this(),s=std::string(msg)]()
-//         {
-//             auto con=c.lock();
-//             if(con)
-//             {
-//                 con->sendInLoop(s.c_str(),s.size());
-//             }
-//         });
-//     }
-// }
-
-
 void TcpConnection::sendOutput()
 {
     loop_->submit([c=weak_from_this()](){
@@ -160,7 +131,7 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
     // LOG_SYSTEM_DEBUG("semdInLoop happen"<<" time:"<<Now.nowToString());    
 
     assert(loop_->isInLoopThread());
-    ssize_t n=sockets::send(handler_.get_fd(),message,len,0);
+    ssize_t n=sockets::send(handler_.fd(),message,len,0);
     // LOG_TCP_DEBUG("sendInLoop: 尝试发送"<<len<<"字节，实际发送"<<n<<"字节");
     if(n>=0&&n<static_cast<ssize_t>(len))
     {
@@ -194,13 +165,13 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
     int ReadNum=0;
     while(ReadNum<MaxReadNum)
     {
-        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+        auto n=RecvBuffer_.appendFormFd(handler_.fd());
         if(n>0)
         {
-            updateWaterMark();
+            //updateWaterMark();
             cb(shared_from_this());
             ++ReadNum;
-            handleBackpressureAfterRead();
+//             handleBackpressureAfterRead();
         }  
         else if(n==0)
         {
@@ -224,7 +195,7 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
             }  
         }            
     }
-    handler_.get_loop()->submit([c=weak_from_this()](){
+    loop_->submit([c=weak_from_this()](){
         auto con=c.lock();
         if(con)
         {
@@ -240,18 +211,18 @@ void TcpConnection::handleRead()
     if(SreadCallback_)
     {
         SreadCallback_(shared_from_this());
-    }
+    }   
     else 
     {
         assert(SmessageCallBack_);
-        auto n=RecvBuffer_.appendFormFd(handler_.get_fd());
+        auto n=RecvBuffer_.appendFormFd(handler_.fd());
         if(n>0)
         {
 
-            updateWaterMark();
+            //updateWaterMark();
             SmessageCallBack_(shared_from_this());
-            handleBackpressureAfterRead();
-            // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.get_readable_size()<<"字节");
+            // handleBackpressureAfterRead();
+            // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.readable_size()<<"字节");
         }  
         else if(n==0)
         {
@@ -271,8 +242,8 @@ void TcpConnection::handleRead()
 void TcpConnection::handleWrite()
 {
     assert(loop_->isInLoopThread());
-    ssize_t len=static_cast<ssize_t>(SendBuffer_.get_readable_size());
-    auto fd=handler_.get_fd();
+    ssize_t len=static_cast<ssize_t>(SendBuffer_.readable_size());
+    auto fd=handler_.fd();
     ssize_t n=sockets::send(fd,SendBuffer_.peek(),len,0);
     if(n>0)
     {
@@ -290,8 +261,8 @@ void TcpConnection::handleWrite()
             }
         }
         SendBuffer_.consume(n);
-        updateWaterMark();
-        handleBackpressureAfterSend();            
+        //updateWaterMark();
+//         handleBackpressureAfterSend();            
     }
     else 
     {
@@ -333,7 +304,7 @@ void TcpConnection::handleException()
 {
     while(true)
     {
-        auto n=sockets::recv(handler_.get_fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.get_writable_size(),MSG_OOB);
+        auto n=sockets::recv(handler_.fd(),RecvBuffer_.BeginWrite(),RecvBuffer_.writable_size(),MSG_OOB);   
         if(n>0)
         {
             char oob_buf[1];
@@ -356,107 +327,107 @@ void TcpConnection::handleException()
     }   
 
 }
-void TcpConnection::handleBackpressureAfterSend()
-{
-    if(!BackpressureAfterSend_)return;
-    else
-        return BackpressureAfterSend_(shared_from_this());
-}
-void TcpConnection::handleBackpressureAfterRead()
-{
-    if(!BackpressureAfterRead_)return;
-    else 
-        return BackpressureAfterRead_(shared_from_this());
-}
+// void TcpConnection::handleBackpressureAfterSend()
+// {
+//     if(!BackpressureAfterSend_)return;
+//     else
+//         return BackpressureAfterSend_(shared_from_this());
+// }        
+// void TcpConnection::handleBackpressureAfterRead()
+// {
+//     if(!BackpressureAfterRead_)return;
+//     else 
+//         return BackpressureAfterRead_(shared_from_this());
+// }
 
-void TcpConnection::updateWaterMark()
-{
-    if(RecvBuffer_.get_readable_size()>BackpressureConfig::highWaterMark)
-        RecvbpState_=BackpressureState::kHighWaterMark;
-    else if(RecvBuffer_.get_readable_size()<BackpressureConfig::lowWaterMark)
-        RecvbpState_=BackpressureState::kNormal;
+// void TcpConnection::updateWaterMark()
+// {
+//     if(RecvBuffer_.readable_size()>BackpressureConfig::highWaterMark)
+//         RecvbpState_=BackpressureState::kHighWaterMark;
+//     else if(RecvBuffer_.readable_size()<BackpressureConfig::lowWaterMark)
+//         RecvbpState_=BackpressureState::kNormal;
         
-    if(SendBuffer_.get_readable_size()>BackpressureConfig::highWaterMark)
-        SendbpState_=BackpressureState::kHighWaterMark;
-    else if(SendBuffer_.get_readable_size()<BackpressureConfig::lowWaterMark)
-        SendbpState_=BackpressureState::kNormal;  
+//     if(SendBuffer_.readable_size()>BackpressureConfig::highWaterMark)
+//         SendbpState_=BackpressureState::kHighWaterMark;
+//     else if(SendBuffer_.readable_size()<BackpressureConfig::lowWaterMark)
+//         SendbpState_=BackpressureState::kNormal;  
 
-}
-template<>
-void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
-{
-    if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-        return;
-    else
-        return;    
-}
+// }
+// template<>
+// void handleAfterSend<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
+// {
+//     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
+//         return;
+//     else
+//         return;    
+// }
 
-template<>
-void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
-{
-    if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-    {
-        if(conn->isConnected())
-            conn->disconnect();
-        return;        
-    }
-    else 
-        return;
-}
+// template<>
+// void handleAfterSend<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
+// {
+//     if(conn->getSendBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
+//     {
+//         if(conn->isConnected())
+//             conn->disconnect();
+//         return;        
+//     }
+//     else 
+//         return;
+// }
 
-template<>
-void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
-{
-    return;
-}
+// template<>
+// void handleAfterSend<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
+// {
+//     return;
+// }
 
-template<>
-void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
-{
-    if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-        return;
-    else
-        return;    
-}
+// template<>
+// void handleAfterRecv<BufferBackpressureStrategy::kDiscard>(TcpConnectionPtr conn)
+// {
+//     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
+//         return;
+//     else
+//         return;    
+// }
 
-template<>
-void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
-{
-    if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-    {
-        if(conn->isConnected())
-            conn->disconnect();
-        return;        
-    }
-    else 
-        return;
-}
+// template<>
+// void handleAfterRecv<BufferBackpressureStrategy::kCloseConnection>(TcpConnectionPtr conn)
+// {
+//     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
+//     {
+//         if(conn->isConnected())
+//             conn->disconnect();
+//         return;        
+//     }
+//     else 
+//         return;
+// }
 
-template<>
-void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
-{
-    return;
-}
+// template<>
+// void handleAfterRecv<BufferBackpressureStrategy::kPass>(TcpConnectionPtr)
+// {
+//     return;
+// }
 
-template<>
-void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnectionPtr conn)
-{
-    if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
-    {
-        if(conn->getHandler()->isReadingAndExcept())
-        {
-            conn->getHandler()->cancelReadingAndExcept();
-        }
-        return;        
-    }
-    else
-    {
-        if(!conn->getHandler()->isReadingAndExcept())
-        {
-            conn->getHandler()->setReadingAndExcept();
-        }
-        return;
-    }    
-}
+// template<>
+// void handleAfterRecv<BufferBackpressureStrategy::kBackoff>(TcpConnectionPtr conn)
+// {
+//     if(conn->getRecvBufferState() == TcpConnection::BackpressureState::kHighWaterMark)
+//     {
+//         if(conn->isReadingAndExcept())
+//         {
+//             conn->cancelReadingAndExcept();
+//         }
+//         return;        
+//     }
+//     else
+//     {
+//         if(!conn->isReadingAndExcept())
+//         {
+//             conn->setReadingAndExcept();
+//         }
+//         return;
+//     }    
+// }
 }
 }

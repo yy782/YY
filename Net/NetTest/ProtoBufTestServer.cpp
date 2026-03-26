@@ -27,7 +27,7 @@ public:
         });
         server_.setConnectCallBack([](TcpConnectionPtr conn){
             std::cout<<"Connect!"<<std::endl;
-            conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
+            conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
         });
     }
     
@@ -43,10 +43,10 @@ public:
 private:
     void onMessage(TcpConnectionPtr conn) {
         std::cout<<"onMessage "<<std::endl;
-        TcpBuffer& buf = conn->getRecvBuffer();
+        TcpBuffer& buf = conn->recvBuffer();
         while (ProtoMsgCodec::msgComplete(buf)) {
             Message* msg = ProtoMsgCodec::decode(buf);
-            if (msg) {
+            if (msg) {  
                 dispatcher_.handle(conn,msg);
             }
         }
@@ -61,7 +61,7 @@ private:
         response.set_success(true);
         response.set_message("收到学生信息: " + student->name());
         
-        ProtoMsgCodec::encode(&response, conn->getSendBuffer());
+        ProtoMsgCodec::encode(&response, conn->sendBuffer());   
         conn->sendOutput();
     }
     

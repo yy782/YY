@@ -12,7 +12,7 @@ namespace yy
 namespace net 
 {
 void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
-    size_t len_pos=buf.get_readable_size();
+    size_t len_pos=buf.readable_size();
     
     // 2. 先占位长度字段（4字节）和名字长度字段（4字节）
     buf.FluentAppend(htonl(0)).  // 总长度占位
@@ -33,7 +33,7 @@ void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
     }
     
     // 6. 计算各部分长度
-    size_t total_len=buf.get_readable_size()-len_pos;
+    size_t total_len=buf.readable_size()-len_pos;
     size_t name_len=typeName.size();
     
     // 7. 回头修改长度字段
@@ -58,7 +58,7 @@ Message* ProtoMsgCodec::createMessage(const std::string& typeName)
 // name string not null ended
 // protobuf data
 Message* ProtoMsgCodec::decode(Buffer& buf) {
-    if(buf.get_readable_size()<8) 
+    if(buf.readable_size()<8) 
     {
         return NULL;
     }
@@ -74,7 +74,7 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
         return NULL;
     }
     
-    if (buf.get_readable_size()<total_len) {
+    if (buf.readable_size()<total_len) {
         return NULL;  // 数据不足
     }
     

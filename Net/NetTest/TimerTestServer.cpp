@@ -47,9 +47,9 @@ private:
     {
         ++ConnNum;
         LOG_SYSTEM_INFO("连接数:"<<ConnNum);
-        auto addr=conn->getAddr();
+        auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
+        conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
         conn->context<LTimeStamp>()=LTimeStamp::now();
 
         std::weak_ptr<TcpConnection> weakConn=conn;
@@ -72,7 +72,7 @@ private:
             if(auto c=weakConn.lock())
             {
                 c->send("You had connected ten s",26);
-                LOG_SYSTEM_DEBUG(c->getAddr().sockaddrToString()<<" had connected two min");
+                LOG_SYSTEM_DEBUG(c->addr().sockaddrToString()<<" had connected two min");   
                 ++MsgCount;
                 LOG_SYSTEM_DEBUG("MsgCount=="<<MsgCount);
             }
@@ -90,20 +90,20 @@ private:
         {
             
             conn->disconnect();
-            LOG_TCP_DEBUG(conn->getAddr().sockaddrToString()<<" Close!");
+            LOG_TCP_DEBUG(conn->addr().sockaddrToString()<<" Close!");
         }            
     }
     void onMessage(TcpConnectionPtr conn)
     {
         conn->context<LTimeStamp>()=LTimeStamp::now();
 
-        LOG_SYSTEM_INFO("recv msg! from"<<conn->getAddr().sockaddrToString());
+        LOG_SYSTEM_INFO("recv msg! from"<<conn->addr().sockaddrToString());
     }
     void onClose(TcpConnectionPtr conn)
     {
         --ConnNum;
         LOG_SYSTEM_INFO("连接数:"<<ConnNum);
-        auto addr=conn->getAddr();
+        auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
         conn->context<LTimerPtr>()->cancel();
     }

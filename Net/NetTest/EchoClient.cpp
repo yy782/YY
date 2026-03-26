@@ -26,7 +26,7 @@ public:
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
         stdIn_.setReadCallBack([this](){handleRead();});
        
-        stdIn_.set_event(LogicEvent::Edge|LogicEvent::Read);
+        stdIn_.set_event(Event(LogicEvent::Edge|LogicEvent::Read));
          
     }
     ~EchoClient()
@@ -44,12 +44,12 @@ public:
     }
     void handleMessage(TcpConnectionPtr conn) 
     {
-        TcpBuffer& buffer=conn->getRecvBuffer();
+        TcpBuffer& buffer=conn->recvBuffer();   
         stringPiece msg;
         while(true)
         {
             const char* last=buffer.findBorder("\n",1);
-            if(last == buffer.peek() + buffer.get_readable_size()) // 没有找到\n
+            if(last == buffer.peek() + buffer.readable_size()) // 没有找到\n
             {
                 return;
             }

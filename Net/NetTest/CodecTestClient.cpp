@@ -36,7 +36,7 @@ public:
     }
     void send(const std::string& msg,TcpConnectionPtr con)
     {
-        LineCodec::encode(stringPiece(msg),con->getSendBuffer());
+        LineCodec::encode(stringPiece(msg),con->sendBuffer());
         con->sendOutput();
     }
     void connect()
@@ -50,12 +50,12 @@ public:
     }
     void handleMessage(TcpConnectionPtr conn) // @note 如果需要，要判断对端断开连接的消息
     {
-        TcpBuffer& buffer=conn->getRecvBuffer();
+        TcpBuffer& buffer=conn->recvBuffer();
         stringPiece msg;
         int p=1;
         while(p>0)
         {
-            p=LineCodec::tryDecode(buffer.getReadView(),msg);
+            p=LineCodec::tryDecode(buffer.readView(),msg);
             if(p<=0)
             {
                 return;

@@ -42,7 +42,7 @@ public:
         student.set_age(20);
         student.set_school("北京大学");
         
-        ProtoMsgCodec::encode(&student,conn->getSendBuffer());
+        ProtoMsgCodec::encode(&student,conn->sendBuffer()); 
         conn->sendOutput();
         
         std::cout << "客户端发送Student消息: " << student.name() << std::endl;
@@ -53,7 +53,7 @@ private:
     void onMessage(TcpConnectionPtr conn) 
     {
         // 接收服务器响应
-        TcpBuffer& buf = conn->getRecvBuffer();
+        TcpBuffer& buf = conn->recvBuffer();    
         while (ProtoMsgCodec::msgComplete(buf)) 
         {
             auto msg =std::unique_ptr<Message>(ProtoMsgCodec::decode(buf));

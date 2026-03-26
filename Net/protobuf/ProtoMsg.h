@@ -44,7 +44,7 @@ inline bool ProtoMsgCodec::msgComplete(Buffer& buf)
     (void)num;
 #endif
 
-    return buf.get_readable_size()>=4&&buf.get_readable_size()>=ntohl(*reinterpret_cast<const uint32_t*>(buf.peek()));
+    return buf.readable_size()>=4&&buf.readable_size()>=ntohl(*reinterpret_cast<const uint32_t*>(buf.peek()));
 }     
 }   
 }

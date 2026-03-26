@@ -63,11 +63,11 @@ private:
     };
     
     void onConnection(TcpConnectionPtr conn) {
-        auto addr = conn->getAddr();
+        auto addr = conn->addr();
         LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
         conn->setTcpNoDelay(true);
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
-        conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
+        conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
         conn->setReadCallBack([this](TcpConnectionPtr conn1){
             conn1->handleETRead([this](TcpConnectionPtr conn2){
                 onMessage(conn2);
@@ -75,13 +75,13 @@ private:
         });
     }
     void onMessage(TcpConnectionPtr conn) {
-        TcpBuffer& buffer = conn->getRecvBuffer();
+            TcpBuffer& buffer = conn->recvBuffer();
         HTTPConnectionContext& ctx=conn->context<HTTPConnectionContext>();
         while(true)
         {
             Http::ParseResult result = ctx.parser.parseRequest(
                 buffer.peek(), 
-                buffer.get_readable_size(),
+                buffer.readable_size(),
                 true  // copy body
             );
             
@@ -150,7 +150,7 @@ private:
     }
     
     void onClose(TcpConnectionPtr conn) {
-        auto addr = conn->getAddr();
+        auto addr = conn->addr();   
         LOG_SYSTEM_INFO("HTTP connection closed! " << addr.sockaddrToString());
 
     }

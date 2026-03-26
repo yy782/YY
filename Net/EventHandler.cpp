@@ -6,7 +6,6 @@ namespace yy
 namespace net
 {
 EventHandler::EventHandler(int fd,EventLoop* loop,const char* name):
-status_(-1),
 fd_(fd),
 loop_(loop),
 name_(name)

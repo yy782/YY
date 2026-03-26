@@ -61,13 +61,13 @@ namespace net
 //     size_t idx=pollfds_.size();
 //     struct pollfd pfd;
 //     pfd.events=safe_static_cast<short>(handler.get_event().get_event());
-//     pfd.fd=handler.get_fd();
+//     pfd.fd=handler.fd();
 //     pfd.revents=0;
 //     pollfds_.push_back(pfd);
 //     assert(idx==pollfds_.size()-1);
 //     handler.set_status(safe_static_cast<int>(idx));
 
-//     assert(handlers_.find(handler.get_fd())==handlers_.end());
+//     assert(handlers_.find(handler.fd())==handlers_.end());       
 //     handlers_[handler.get_fd()]=handler;
 // }
 // void Poll::update_listen(EventHandler& handler)

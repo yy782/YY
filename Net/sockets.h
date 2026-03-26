@@ -38,17 +38,17 @@ int timerfd_settime(int fd,int flags,const Timer<T>& timer);
 
 int connect(int fd,const Address& addr);
 
-template<bool isIpv6=false>
+template<bool isIpv6>
 int acceptAutoOrDie(int fd,Address& address);
 void setKeepAlive(int fd,bool on,int idleSeconds=7200, 
                   int intervalSeconds=75,int maxProbes=9);
 void setTcpNoDelay(int fd,bool on);//控制TCP的Nagle算法开关
-void setSocketBufferSize(int fd,int recvBufSize,int sendBufSize);
+bool setSocketBufferSize(int fd,size_t BufSize);
 // @brief 设置端口重用
-void reuse_addr(int fd,bool on=true);
+void reuseAddrOrDie(int fd,bool on=true);
 bool setNonBlocking(int fd);
 // @brief 设置端口复用
-void reuse_port(int fd,bool on=true);
+void reusePortOrDie(int fd,bool on=true);
 //void set_nonblock(int fd);
 void set_CloseOnExec(int fd); // 这些报错极为罕见，选择不检查
 ssize_t read(int fd,void* buf,size_t len);
@@ -60,7 +60,7 @@ ssize_t send(int fd,const void* buf,size_t len,int flags);
 ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr);
 ssize_t sendto(int fd,const void* buf,size_t len,int flags,const Address& address);
 int sockfd_has_error(int fd);
-void OnlyIpv6(int fd,bool ipv6_only=true);
+void OnlyIpv6OrDie(int fd,bool ipv6_only=true);
 void close(int fd);
 void shutdown(int fd,int how);
 void daemonize();
@@ -78,7 +78,7 @@ int yy::net::sockets::acceptAutoOrDie(int fd,Address& address)
         memZero(&addr6_,sizeof addr6_);
         address.set_ipv6_addr(addr6_);
         socklen_t addrlen = static_cast<socklen_t>(sizeof(addr6_));
-        connfd=::accept(fd,address.getSockAddr(),&addrlen);        
+        connfd=::accept(fd,address.sockAddr(),&addrlen);        
     }
     else
     {
@@ -86,7 +86,7 @@ int yy::net::sockets::acceptAutoOrDie(int fd,Address& address)
         memZero(&addr4_,sizeof addr4_);
         address.set_ipv4_addr(addr4_);
         socklen_t addrlen = static_cast<socklen_t>(sizeof(addr4_));
-        connfd=::accept(fd,address.getSockAddr(),&addrlen);
+        connfd=::accept(fd,address.sockAddr(),&addrlen);    
     }
 
     

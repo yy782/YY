@@ -132,33 +132,33 @@ EventHandler* Poller<PollerTag>::get_event_handler(int fd)
     auto it=handlers_.find(fd);
     assert(it!=handlers_.end()&&"监听的套接字不存在");
     auto handler=it->second;
-    assert(handler->get_fd()==fd&&"奇怪的套接字");
+    assert(handler->fd()==fd&&"奇怪的套接字");
     return handler;
 }
 
 template<class PollerTag>
 void Poller<PollerTag>::add_handler(EventHandler* handler)
 {
-    assert(handlers_.find(handler->get_fd())==handlers_.end());
-    handlers_[handler->get_fd()]=handler;
+    assert(handlers_.find(handler->fd())==handlers_.end());
+    handlers_[handler->fd()]=handler;
 }
 
 template<class PollerTag>
 void Poller<PollerTag>::remove_handler(EventHandler* handler)
 {
-    assert(handlers_.find(handler->get_fd())!=handlers_.end());
+    assert(handlers_.find(handler->fd())!=handlers_.end());
 #ifndef NDEBUG
-    size_t n=handlers_.erase(handler->get_fd());
+    size_t n=handlers_.erase(handler->fd());
     assert(n==1);        
 #else
-    handlers_.erase(handler->get_fd());  
+    handlers_.erase(handler->fd());  
 #endif
 }
 
 template<class PollerTag>
 bool Poller<PollerTag>::has_handler(EventHandler* event_handler)
 {
-    auto it=handlers_.find(event_handler->get_fd());
+    auto it=handlers_.find(event_handler->fd());    
     return it!=handlers_.end();
 }
 }    

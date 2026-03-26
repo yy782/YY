@@ -35,7 +35,7 @@ ssize_t TcpBuffer::appendFormFd(int fd)
     
     char extrabuf[65536];
     struct iovec vec[2];
-    const size_t writable=get_writable_size();
+    const size_t writable=writable_size();
     vec[0].iov_base=begin_write();
     vec[0].iov_len=writable;
     vec[1].iov_base=extrabuf;
@@ -45,7 +45,7 @@ ssize_t TcpBuffer::appendFormFd(int fd)
     const ssize_t n = sockets::readv(fd, vec, iovcnt);
     if(n>0)
     {
-        if(static_cast<size_t>(n)<=get_writable_size())
+        if(static_cast<size_t>(n)<=writable_size())
         {
             move_write_index(n);
         }
@@ -74,7 +74,7 @@ char* TcpBuffer::BeginWrite()
 }
 char* TcpBuffer::retrieve(size_t size)
 {
-    if(size<=get_readable_size())
+    if(size<=readable_size())
     {
         char* r=begin_read();
         move_read_index(size);
@@ -84,7 +84,7 @@ char* TcpBuffer::retrieve(size_t size)
 }
 char* TcpBuffer::retrieveAll()
 {
-    auto size=get_readable_size();
+    auto size=readable_size();
     return retrieve(size);
 }
 
@@ -95,28 +95,28 @@ std::string TcpBuffer::retrieveAllToString()
 }    
 void TcpBuffer::ensureWritableBytes(size_t len)
 {
-    if (get_writable_size()<len)
+    if (writable_size()<len)
     {
         expend(len);
     }
-    assert(get_writable_size() >= len&&"可写尺寸小于需写尺寸");
+    assert(writable_size() >= len&&"可写尺寸小于需写尺寸");
     check_index_validity();
 }
 void TcpBuffer::hasWritten(size_t len)
 {
-    assert(len<=get_writable_size());
+    assert(len<=writable_size());
     write_index_+=len;
     check_index_validity();
 }
 void TcpBuffer::unwrite(size_t len)
 {
-    assert(len<=get_readable_size());
+    assert(len<=readable_size());
     write_index_-=len;
     check_index_validity();
 }
 void TcpBuffer::shrink(size_t reserve)
 {
-    buffer_.resize(get_readable_size()+reserve+prepend_size_);
+    buffer_.resize(readable_size()+reserve+prepend_size_);
     buffer_.shrink_to_fit();
 }
 
@@ -136,17 +136,17 @@ void TcpBuffer::check_index_validity()const
 }
 void TcpBuffer::ensure_appendable(size_t size)
 {
-    if(get_writable_size()<size)
+    if(writable_size()<size)
     {
         expend(size);
     }
-    assert(get_writable_size()>=size&&"可写尺寸小于需写尺寸");
+    assert(writable_size()>=size&&"可写尺寸小于需写尺寸");
     check_index_validity();
 }
 void TcpBuffer::move_read_index(size_t size)
 {
-    assert(size<=get_readable_size());
-    if(size<get_readable_size())
+    assert(size<=readable_size());
+    if(size<readable_size())
     {
         read_index_+=size;
         check_index_validity();            
@@ -161,13 +161,13 @@ void TcpBuffer::move_read_index(size_t size)
 }
 void TcpBuffer::move_write_index(size_t size)
 {
-    assert(size<=get_writable_size()&&"可写尺寸不够");
+    assert(size<=writable_size()&&"可写尺寸不够");
     write_index_+=size;
 }
 void TcpBuffer::expend(size_t size)
 {
     check_index_validity();
-    if(get_writable_size()+get_prependable_size()>size+prepend_size_)
+    if(writable_size()+prependable_size()>size+prepend_size_)
     {
         //复用
         reuse_prependable_space();
@@ -182,7 +182,7 @@ void TcpBuffer::expend(size_t size)
 }
 void TcpBuffer::reuse_prependable_space()
 {
-    size_t readable=get_readable_size();
+    size_t readable=readable_size();
     std::copy(begin()+read_index_,
                 begin()+write_index_,
                 begin()+prepend_size_);

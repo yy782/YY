@@ -28,44 +28,42 @@ public:
     typedef EventCallBack CloseCallBack;
     typedef EventCallBack ErrorCallBack;
     typedef EventCallBack ExceptCallBack;
-    EventHandler():
-    status_(-1)
-    {}
-    ~EventHandler()
-    {
-     
-    }
-    void tie(const std::shared_ptr<void>&);
+    EventHandler()=default;
     EventHandler(int fd,EventLoop* loop,const  char* name);
+    ~EventHandler()=default;
     void init(int fd,EventLoop* loop,const char* name);
-    int get_fd()const{return fd_;}
-    EventLoop* get_loop()const{return loop_;}
-    Event get_event()const{return events_;}
-    int get_status()const{return status_;}
+    void tie(const std::shared_ptr<void>&);
 
-
-    void set_event(LogicEvent event){
-        events_=event;
-        update();
-    }
-    void set_event(Event event){
-        events_=event;
-        update();
-    }
     
-    void set_revent(LogicEvent event)
+    int fd() const noexcept{return fd_;}
+    EventLoop* loop() const noexcept{return loop_;}
+    Event event() const noexcept{return events_;}
+    int status() const noexcept{return status_;}
+    const std::string& printName()
     {
-        revents_=event;
+        if(name_.empty())
+        {
+            static const std::string NoName="NoName";
+            return NoName;
+        }
+        return name_;
     }
-    void set_revent(uint32_t event)
+
+
+
+    void set_event(Event event)
     {
-        revents_=event;
+        events_=event;
+        update();
     }
+    void set_revent(Event event){revents_=event;}
     void set_status(int status){status_=status;}
-    bool isWriting()const{return events_.has(LogicEvent::Write);}
-    bool isReading()const{return events_.has(LogicEvent::Read);}
-    bool isExcept()const{return events_.has(LogicEvent::Except);}
-    bool isReadingAndExcept()const{return events_&(LogicEvent::Read|LogicEvent::Except);}
+
+    bool isWriting()const noexcept{return events_.has(LogicEvent::Write);}
+    bool isReading()const noexcept{return events_.has(LogicEvent::Read);}
+    bool isExcept()const noexcept{return events_.has(LogicEvent::Except);}
+    bool isReadingAndExcept()const noexcept{return events_&(LogicEvent::Read|LogicEvent::Except);}
+
     void setReading(){
         events_.add(LogicEvent::Read);update();
     }
@@ -84,36 +82,47 @@ public:
         cancelExcept();
         cancelReading();
     }
-
-    void setReadCallBack(EventCallBack cb){readCallback_=std::move(cb);}
-    void setWriteCallBack(EventCallBack cb){writeCallback_=std::move(cb);}
-    void setCloseCallBack(EventCallBack cb){closeCallback_=std::move(cb);}
-    void setErrorCallBack(EventCallBack cb){errorCallback_=std::move(cb);}
-    void setExceptCallBack(EventCallBack cb){exceptCallback_=std::move(cb);}
-
-    const std::string& printName()
-    {
-        if(name_.empty())
-        {
-            static const std::string NoName="NoName";
-            return NoName;
-        }
-        return name_;
-    }
-
-    void handler_revent();
     void disableAll()
     {
         events_=LogicEvent::None;
         update();
     }
+
+    template<typename Callable>
+    void setReadCallBack(Callable&& cb) { 
+        readCallback_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setWriteCallBack(Callable&& cb) { 
+        writeCallback_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setCloseCallBack(Callable&& cb) { 
+        closeCallback_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setErrorCallBack(Callable&& cb) { 
+        errorCallback_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setExceptCallBack(Callable&& cb) { 
+        exceptCallback_ = std::forward<Callable>(cb);
+    }
+
+
+
+    void handler_revent();
     void removeListen();
 
 
 
 private:
     void update();
-    int status_;// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
+    int status_={-1};// @brief 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释
     std::weak_ptr<void> tie_;
     bool tied_={false};
     int fd_={-1};

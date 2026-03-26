@@ -16,19 +16,19 @@ class ProtoBufOutputStream : public google::protobuf::io::ZeroCopyOutputStream {
 public:
     ProtoBufOutputStream(Buffer* buf) 
         : buffer_(buf)
-        , originalSize_(buffer_->get_readable_size())
+        , originalSize_(buffer_->readable_size())
         , byte_count_(0)
     {}
 
     // Next: 获取下一块可写内存
     bool Next(void** data, int* size) override {
         // 每次至少分配 4KB，但也要考虑当前可写空间
-        size_t free_space = buffer_->get_writable_size();
+        size_t free_space = buffer_->writable_size();
         if (free_space < 4096) {
             buffer_->ensureWritableBytes(4096);
         }
         *data = buffer_->BeginWrite();
-        *size = static_cast<int>(buffer_->get_writable_size());
+        *size = static_cast<int>(buffer_->writable_size());
         
         // 标记这些空间已被使用
         buffer_->hasWritten(*size);
@@ -67,7 +67,7 @@ public:
     ProtoBufInputStream(Buffer* buffer) 
         : buffer_(buffer)
         , position_(0)
-        , total_bytes_(buffer_->get_readable_size())
+        , total_bytes_(buffer_->readable_size())
     {}
 
     bool Next(const void** data, int* size) override {

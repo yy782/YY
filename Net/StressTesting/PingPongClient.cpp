@@ -37,7 +37,7 @@ class Session : noncopyable
         std::bind(&Session::onMessage,this,_1));
     client_.setCloseCallBack(bind(&Session::handleClose,this,_1));
     client_.setErrorCallback([](TcpConnectionPtr con){
-        LOG_SYSTEM_ERROR(con->getAddr().sockaddrToString()<<" errno:"<<errno);
+        LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
     });
   }
 
@@ -67,14 +67,14 @@ void onConnection(const TcpConnectionPtr& conn);
 
   void onMessage(const TcpConnectionPtr& conn)
   {
-    auto& buf=conn->getRecvBuffer();
-    auto size=buf.get_readable_size();
+    auto& buf=conn->recvBuffer();
+    auto size=buf.readable_size();
     assert(size==4096);
     ++messagesRead_;
     bytesRead_+=size;
     bytesWritten_+=size;
     conn->send(buf.retrieve(size),size);      
-    assert(buf.get_readable_size()==0);
+    assert(buf.readable_size()==0);
   }
 
 
@@ -184,7 +184,7 @@ void handleTimeout()
 
 void Session::onConnection(const TcpConnectionPtr& conn)
 {
-    conn->setEvent(LogicEvent::Read|LogicEvent::Edge);
+    conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
     //conn->setReading();
     conn->setTcpNoDelay(true);
     const std::string& msg=owner_->message();

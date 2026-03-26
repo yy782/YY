@@ -56,25 +56,25 @@ public:
 private:
     void onConnection(TcpConnectionPtr conn)
     {
-        auto addr=conn->getAddr();
+        auto addr=conn->addr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
         conn->setReading();
     }
     void onMessage(TcpConnectionPtr conn)
     {
-        TcpBuffer& buffer=conn->getRecvBuffer();
+        TcpBuffer& buffer=conn->recvBuffer();
         stringPiece msg;
         
         int p=1;
         while(p>0)
         {
-            p=LineCodec::tryDecode(buffer.getReadView(),msg);
+            p=LineCodec::tryDecode(buffer.readView(),msg);
             if(p<=0)return;
 
 
             // 使用LineCodec::encode来正确编码消息
-            LineCodec::encode(msg, conn->getSendBuffer());
+            LineCodec::encode(msg, conn->sendBuffer());
             // 检查连接是否仍然是连接状态
             if(conn->isConnected())
             {
@@ -93,7 +93,7 @@ private:
     }
     void onClose(TcpConnectionPtr conn)
     {
-        auto addr=conn->getAddr();
+        auto addr=conn->addr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
         loop_->quit();
         server_.stop();

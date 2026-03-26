@@ -21,13 +21,13 @@ public:
     typedef std::function<void(int fd,const Address&)> NewConnectCallBack;
     Acceptor(const Address& addr,EventLoop* loop);
     ~Acceptor();
-    int get_fd()const{return handler_.get_fd();}
+    int fd()const{return handler_.fd();}
     void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
     void listen()
     {
-        handler_.set_event(LogicEvent::Read|LogicEvent::Edge);
+        handler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge));
        
-        sockets::listenOrDie(handler_.get_fd());
+        sockets::listenOrDie(handler_.fd());
         
     }
 private:
@@ -45,7 +45,7 @@ void Acceptor::accept()
     Address addr;
     while(true)
     {
-        int fd=sockets::acceptAutoOrDie<isIpv6>(handler_.get_fd(),addr);
+        int fd=sockets::acceptAutoOrDie<isIpv6>(handler_.fd(),addr);
        
         if(fd>0)
         {

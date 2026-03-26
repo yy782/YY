@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
     server.setConnectCallBack([&server](TcpConnectionPtr con)mutable
     { 
-        // if(!sockets::setNonBlocking(con->get_fd()))
+        // if(!sockets::setNonBlocking(con->fd()))
         // {
         //     LOG_ERRNO(errno);
         //     server.removeConnection(con);
@@ -50,14 +50,14 @@ int main(int argc, char* argv[])
 
     server.setMessageCallBack([](TcpConnectionPtr con)
     {
-        auto& buf=con->getRecvBuffer();
-        auto size=buf.get_readable_size();
+        auto& buf=con->recvBuffer();
+        auto size=buf.readable_size();
         assert(size==4096);
         con->send(buf.retrieve(size),size);
         
     });
     server.setErrorCallBack([](TcpConnectionPtr con){
-        LOG_SYSTEM_ERROR(con->getAddr().sockaddrToString()<<" errno:"<<errno);
+        LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
     });
     server.loop();
     loop.loop();

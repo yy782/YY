@@ -48,7 +48,7 @@ void TcpServer::newConnection(int fd,const Address& addr)
     
 void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
-    conn->getHandler()->get_loop()->submit([this,&conn](){
+    conn->loop()->submit([this,&conn](){ 
         assert(connects_.find(conn)!=connects_.end());
         connects_.erase(conn);
     });

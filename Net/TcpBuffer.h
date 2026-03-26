@@ -44,13 +44,13 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     
     std::string retrieveAllToString();
     const char* peek()const {return begin()+read_index_;}
-    stringPiece getReadView()const{return stringPiece(peek(),get_readable_size()+1);}
+    stringPiece readView()const{return stringPiece(peek(),readable_size()+1);}
     char* ModifyData(){return begin()+read_index_;}
 
     void shrink(size_t reserve);
-    size_t get_readable_size()const{return write_index_-read_index_;}
-    size_t get_writable_size()const{return buffer_.size()-write_index_;}
-    size_t get_prependable_size()const{return read_index_;}
+    size_t readable_size()const{return write_index_-read_index_;}
+    size_t writable_size()const{return buffer_.size()-write_index_;}
+    size_t prependable_size()const{return read_index_;}
 
     char* findBorder(const char* border) 
     {
@@ -70,7 +70,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     
     void prepend(const char* data,size_t size)
     {
-        assert(size <= get_prependable_size());
+        assert(size <= prependable_size());
         read_index_ -= size;
         std::copy(data, data + size, begin_read());
     }

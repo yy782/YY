@@ -62,7 +62,6 @@ void Epoll::poll(int timeout,HandlerList& event_handlers)
 
         for(int i=0;i<ready_fds;++i)
         {
-           
             
             uint32_t revents=events_[i].events;
             
@@ -72,7 +71,7 @@ void Epoll::poll(int timeout,HandlerList& event_handlers)
 
 
 
-            handler->set_revent(revents);
+            handler->set_revent(Event(revents));
             // @note 这里是uint32_t到int的隐形转换，但是epollfd_返回的就绪事件是在0X00000000-0x0000001F,不会溢出
 
             event_handlers.push_back(handler);
@@ -91,17 +90,17 @@ void Epoll::add_listen(EventHandler* handler)
         LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
     )
 
-    assert((handler->get_status()==New||
-            handler->get_status()==Delete));
-    assert(handlers_.find(handler->get_fd())==handlers_.end());
-    handlers_[handler->get_fd()]=handler;
+    assert((handler->status()==New||
+            handler->status()==Delete));
+    assert(handlers_.find(handler->fd())==handlers_.end());
+    handlers_[handler->fd()]=handler;       
     handler->set_status(Added);
     operator_epoll(EPOLL_CTL_ADD,handler);
 }
 void Epoll::update_listen(EventHandler* handler)
 {
     assert(handler);
-    assert(handler->get_status()==Added);
+    assert(handler->status()==Added);
 
     assert(has_handler(handler));
 
@@ -110,7 +109,7 @@ void Epoll::update_listen(EventHandler* handler)
 void Epoll::remove_listen(EventHandler* handler)
 {
     assert(handler);
-    assert(handler->get_status()==Added);
+    assert(handler->status()==Added);
     assert(has_handler(handler));
     operator_epoll(EPOLL_CTL_DEL,handler);
     remove_handler(handler);
@@ -121,9 +120,9 @@ void Epoll::operator_epoll(int operation,EventHandler* handler)
     assert(handler);
     struct epoll_event ev;
     memZero(&ev,sizeof ev);
-    ev.events=handler->get_event().value();
+    ev.events=handler->event().value();
     ev.data.ptr=handler;
-    if(::epoll_ctl(epollfd_,operation,handler->get_fd(),&ev)==-1)
+    if(::epoll_ctl(epollfd_,operation,handler->fd(),&ev)==-1)   
     {
             if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK))
             {
