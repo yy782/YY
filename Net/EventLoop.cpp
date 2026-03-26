@@ -67,8 +67,7 @@ void EventLoop::loop()
     {
         activeHandlers_.clear();
         poller_.poll(PollTimeMs,activeHandlers_);
-        // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
-        // LOG_SYSTEM_DEBUG(name_<<" 第"<<(++LoopNum)<<"次事件循环"<<" Timer:"<<Now.nowToString());
+
 
         status_|=EventLoopStatus::EventHandling;
         assert(CheckeEventLoopStatus());
@@ -103,18 +102,7 @@ void EventLoop::quit()
     assert(n==sizeof one);
 }
 
-void EventLoop::submit(Functor cb)
-{
-    if(isInLoopThread())
-    {
-        cb();
-    }
-    else 
-    {
 
-        FunctionList_.blockappend(std::move(cb));
-    }
-}
 void EventLoop::DelayedExecutionInLoop(Functor cb)
 {
     assert(isInLoopThread());
@@ -145,50 +133,12 @@ void EventLoop::doPendingFunctions()
         Functor cb;
         FunctionList_.retrieve(cb);
 
-        // if(cb.getName()!="NoName")
-        // {
-        //     LOG_SYSTEM_DEBUG("loopAddr:"<<this<<" handle "<<cb.getName()<<" had pop:"<<(++num2));
-    
-        // }
         
         cb(); 
         ++FinishNum;
     }
     status_&=~EventLoopStatus::PendingFunctions;
 }   
-// void EventLoop::doPendingFunctions()
-// {
-//   FunctionList functors;
-//   status_|=EventLoopStatus::PendingFunctions;
 
-//   {
-//     std::lock_guard<std::mutex> l(mtx_);
-//     functors.swap(FunctionList_);
-//   }
-
-//   for (const Functor& functor : functors)
-//   {
-//         functor();
-//   }
-// status_&=~EventLoopStatus::PendingFunctions;
-// }
-// void EventLoop::doPendingFunctions()
-// {
-//   FunctionList functors;
-//   status_|=EventLoopStatus::PendingFunctions;
-
-//   {
-//     std::lock_guard<std::mutex> l(mtx_);
-//     functors.swap(FunctionList_);
-//   }
-
-//   for (Functor& functor : functors)
-//   {
-//         // TimeStamp<HighPrecision> Now=TimeStamp<HighPrecision>::now();
-//         // LOG_SYSTEM_DEBUG(name_<<"handle "<<functor.getName()<<" Timer:"<<Now.nowToString());        
-//         functor();
-//   }
-// status_&=~EventLoopStatus::PendingFunctions;
-// }
 }    
 }

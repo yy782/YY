@@ -56,7 +56,9 @@ public:
     // std::atomic<int> num2={0};
 
     bool isInLoopThread();
-    void submit(Functor cb);
+
+    template<typename Callable>
+    void submit(Callable&& cb);
     void DelayedExecutionInLoop(Functor cb);
     template<class PrecisionTag>
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
@@ -106,7 +108,19 @@ private:
     
 };
 
+template<typename Callable>
+void EventLoop::submit(Callable&& cb)
+{
+    if(isInLoopThread())
+    {
+        cb();
+    }
+    else 
+    {
 
+        FunctionList_.blockappend(std::move(cb));
+    }
+}
 
 }    
 }
