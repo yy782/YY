@@ -13,18 +13,29 @@ namespace net
 
 
 const int MaxReadNum=100;
-TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop,const char* name):
+TcpConnection::TcpConnection(int fd,const Address& addr,EventLoop* loop,Event events):
 fd_(fd),
 addr_(addr),
 loop_(loop),
-Connstatus_(ConnectStatus::Connecting),
-handler_(fd,loop,name) 
+Connstatus_(ConnectStatus::Connected),
+handler_(fd,loop,addr.sockaddrToString().c_str(),events),
+isET(events.has(LogicEvent::Edge)?true:false)
 {
-
-    handler_.setReadCallBack([this]()
+    if(isET)
     {
-        handleRead();
-    });
+        handler_.setReadCallBack([this]()
+        {
+            handleETRead();
+        });         
+    }
+    else 
+    {
+        handler_.setReadCallBack([this]()
+        {
+            handleRead();
+        });        
+    }
+
     handler_.setExceptCallBack([this]()
     {
         handleException();
@@ -41,8 +52,11 @@ handler_(fd,loop,name)
     {
         handleError();
     });
-    //handler_.tie(shared_from_this()); 对象没创建不能shared_from_this()
+    loop_->DelayedExecution<false>([this](){
+        handler_.tie(shared_from_this()); //对象没创建不能shared_from_this()/////////////////////////////////////////
+    });
 }
+
 TcpConnection::~TcpConnection()
 {
     if(RecvBuffer_.readable_size()!=0)
@@ -71,17 +85,17 @@ void TcpConnection::setEvent(Event e)
         isET=false;            
     }
 }
-void TcpConnection::ConnectSuccess()
-{
-    // add();
-    assert(Connstatus_==ConnectStatus::Connecting);
-    Connstatus_=ConnectStatus::Connected;
-    handler_.tie(shared_from_this());
-    if(SconnectCallback_)
-    {
-        SconnectCallback_(shared_from_this());
-    }
-}
+// void TcpConnection::ConnectSuccess()
+// {
+//     // add();
+//     assert(Connstatus_==ConnectStatus::Connecting);
+//     Connstatus_=ConnectStatus::Connected;
+//     handler_.tie(shared_from_this());
+//     if(SconnectCallback_)
+//     {
+//         SconnectCallback_(shared_from_this());
+//     }
+// }
 void TcpConnection::disconnect()
 {
     if(SendBuffer_.readable_size()==0)
@@ -316,6 +330,8 @@ void TcpConnection::handleClose()
     handler_.removeListen();
     Connstatus_=ConnectStatus::DisConnected;
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
+    assert(destructCallBack_);
+    destructCallBack_(shared_from_this());///////////////////////一定要放到最后  
 }
 void TcpConnection::handleError()   
 {

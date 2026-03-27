@@ -33,16 +33,12 @@ void TcpServer::newConnection(int fd,const Address& addr)
     
     assert(loop_->isInLoopThread());
     EventLoop* loop=threadpool_.getEventLoop();
-    TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop,addr.sockaddrToString().c_str());
-    conn->setMessageCallBack(SmessageCallback_);
-    conn->setCloseCallBack([this](TcpConnectionPtr con)
+    assert(SconnectionCallBack_);
+    auto conn=SconnectionCallBack_(fd,addr,loop);
+    conn->setDestructorCallBack([this](TcpConnectionPtr con)
     {
-        ScloseCallback_(con);
         removeConnection(con);
     });
-    conn->setErrorCallBack(SerrorCallback_);
-    conn->setConnectCallBack(SconnectCallback_);
-    conn->ConnectSuccess();
     assert(!connects_.contains(conn));
     connects_.insert(conn);    
 }

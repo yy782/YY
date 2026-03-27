@@ -14,23 +14,22 @@ public:
     CodecTestClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setMessageCallBack([this](TcpConnectionPtr conn)
+        client_.setConnectionCallback([this](int fd,const Address& addr,EventLoop* loop)
         {
-            handleMessage(conn);
-        });
-        client_.setCloseCallBack([this](TcpConnectionPtr conn)
-        {
-            handleClose(conn);
-        });
-        client_.setConnectionCallback([this](TcpConnectionPtr conn)
-        {
+            auto conn=TcpConnection::accept(fd,addr,loop,Event(LogicEvent::Read));
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                handleMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr con){
+                handleClose(con);
+            });
             handleConnected(conn);
+            return conn;
         });
     }
-    void handleConnected(TcpConnectionPtr con)
+    TcpConnectionPtr handleConnected(TcpConnectionPtr con)
     {
-        //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
-        con->setReading();
+        
         std::cout<<"Connected to server"<<std::endl;
         // 连接成功后发送消息
         std::cout<<"Sending Hello 1"<<std::endl;

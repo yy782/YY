@@ -36,19 +36,19 @@ public:
     loop_(loop)
     
     {
-        server_.setConnectCallBack([this](TcpConnectionPtr conn)
+        server_.setConnectCallBack([this](int fd,const Address& addr,EventLoop* loop)
         {
+            auto conn=TcpConnection::accept(fd,addr,loop,Event(LogicEvent::Read));
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr con)
+            {
+                onClose(con);
+            });
             onConnection(conn);
-        });
-        server_.setMessageCallBack([this](TcpConnectionPtr conn)
-        {
-            onMessage(conn);
-        });
-        server_.setCloseCallBack([this](TcpConnectionPtr conn)
-        {
-            onClose(conn);
-        });
-        
+            return conn;
+        });     
     }
     void start()
     {
@@ -67,8 +67,6 @@ private:
     {
         auto addr=conn->addr();
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
-        conn->setReading();
     }
     void onMessage(TcpConnectionPtr conn)
     {
@@ -85,15 +83,17 @@ private:
             // 使用LineCodec::encode来正确编码消息
             LineCodec::encode(msg, conn->sendBuffer());
             // 检查连接是否仍然是连接状态
-            if(conn->isConnected())
-            {
-                LOG_SYSTEM_INFO("send msg: "<<msg);
-                conn->sendOutput();
-            }
-            else
-            {
-                LOG_SYSTEM_INFO("connection closed, skip send msg: "<<msg);
-            }
+            // if(conn->isConnected())
+            // {
+            //     LOG_SYSTEM_INFO("send msg: "<<msg);
+            //     conn->sendOutput();
+            // }
+            // else
+            // {
+            //     LOG_SYSTEM_INFO("connection closed, skip send msg: "<<msg);
+            // }
+            LOG_SYSTEM_INFO("send msg: "<<msg);
+            conn->sendOutput();            
             LOG_SYSTEM_INFO("recv msg: "<<msg);
             // 消费掉缓冲区中的数据
             buffer.consume(p); // 使用tryDecode返回的完整长度，包含\r\n    

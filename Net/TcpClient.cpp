@@ -75,7 +75,8 @@ struct TcpClient::Connector:noncopyable,
         retryDelayMs_ = kInitRetryDelayMs;
         startInLoop();
     }
-
+    bool isConnected()const noexcept{return state_==State::kDisconnected;}
+    bool isConnecting()const noexcept{return state_==State::kConnecting;}
 private:
     void startInLoop() 
     {
@@ -218,7 +219,7 @@ private:
     void resetHandler()
     {
         EventHandler* p=handler_;
-        loop_->DelayedExecution([p,c=weak_from_this()]()
+        loop_->DelayedExecution<true>([p,c=weak_from_this()]()
         {
             delete p;
             auto con=c.lock();
@@ -299,12 +300,13 @@ void TcpClient::stop()
 
 bool TcpClient::isConnected() const noexcept
 {
-    return connection_ && connection_->isConnected();
+    return connection_?true:false;
 }
 
 bool TcpClient::isConnecting() const noexcept
 {
-    return connection_ && connection_->isConnecting();
+    assert(connector_);
+    return connector_->isConnecting();
 }
 
 // void TcpClient::newConnection(int sockfd) 
@@ -327,28 +329,19 @@ void TcpClient::newConnection(int sockfd)
 {
     
     assert(loop_->isInLoopThread());
-    connection_=std::make_shared<TcpConnection>(sockfd,serverAddr_,loop_);
+    assert(SconnectionCallback_);
+    connection_=SconnectionCallback_(sockfd,addr_,loop_);
 
 
-
-    connection_->setConnectCallBack(SconnectionCallback_);
-    connection_->setMessageCallBack(SmessageCallback_);
-    connection_->setErrorCallBack(SerrorCallback_);
-    connection_->setCloseCallBack([this](TcpConnectionPtr /*conn*/)
+    connection_->setDestructorCallBack([this](TcpConnectionPtr)
     {
         removeConnection();
     });
-
-    connection_->ConnectSuccess();
 }
 void TcpClient::removeConnection() {
     assert(loop_->isInLoopThread());
    
 
-    // 先调用用户回调
-    if (ScloseCallback_) {
-        ScloseCallback_(connection_);      
-    }
     connection_.reset();
 
     // 如果需要自动重连

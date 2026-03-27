@@ -125,7 +125,7 @@ public:
      * 
      * 如果任务队列已满，将任务放入定时器，延迟执行。
      */
-    template<typename Callable>
+    template<bool isInLoop,typename Callable>
     void DelayedExecution(Callable&& cb);
     
     /**
@@ -289,16 +289,24 @@ void EventLoop::submit(Callable&& cb)
  * 
  * 如果任务队列已满，将任务放入定时器，延迟执行。
  */
-template<typename Callable>
+template<bool isInLoop,typename Callable>
 void EventLoop::DelayedExecution(Callable&& cb)
 {
-    assert(isInLoopThread());
-    if(!FunctionList_.append(cb))
+    if constexpr (isInLoop)
     {
-        runTimer<LowPrecision>([Fun=std::forward<Callable>(cb),this]()mutable
+        assert(isInLoopThread());
+        if(!FunctionList_.append(std::forward<Callable>(cb)))
         {
-            DelayedExecution(std::forward<Callable>(Fun));
-        },5s,1);
+            runTimer<LowPrecision>([Fun=std::forward<Callable>(cb),this]()mutable
+            {
+                DelayedExecution<true>(std::forward<Callable>(Fun));
+            },5s,1);
+        }
+    }
+    else 
+    {
+        assert(!isInLoopThread());
+        FunctionList_.blockappend(std::forward<Callable>(cb));
     }
 }
 }    

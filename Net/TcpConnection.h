@@ -35,10 +35,7 @@ public:
      * @brief 字符容器类型
      */
     typedef Buffer::CharContainer CharContainer;
-    /**
-     * @brief 连接回调函数类型
-     */
-    typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
+
     /**
      * @brief 关闭回调函数类型
      */
@@ -52,13 +49,10 @@ public:
      */
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     /**
-     * @brief 写完成回调函数类型
-     */
-    typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
-    /**
      * @brief 错误回调函数类型
      */
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
+    typedef std::function<void(TcpConnectionPtr)> DestructorCallBack;
     // typedef std::function<void(TcpConnectionPtr)> BackpressureAfterSendCallBack;
     // typedef std::function<void(TcpConnectionPtr)> BackpressureAfterReadCallBack; 
     /**
@@ -71,7 +65,6 @@ public:
      */
     enum class ConnectStatus
     {
-        Connecting,    /**< 连接中 */
         Connected,     /**< 已连接 */
         DisConnecting, /**< 断开连接中 */
         DisConnected   /**< 已断开连接 */
@@ -81,7 +74,6 @@ public:
      * @brief 删除默认构造函数
      */
     TcpConnection()=delete;
-    
     /**
      * @brief 构造函数
      * 
@@ -90,21 +82,26 @@ public:
      * @param loop 事件循环
      * @param name 连接名称
      */
-    TcpConnection(int fd,const Address& addr,EventLoop* loop,const char* name="NoName");
-    
+    TcpConnection(int fd,const Address& addr,EventLoop* loop,Event events=Event(LogicEvent::None));
+
     /**
      * @brief 析构函数
      * 
      * 构析函数不能触发回调了，TcpConnectionPtr不允许
      */
-    ~TcpConnection();
+    virtual ~TcpConnection();
+    static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop,Event events=Event(LogicEvent::None))
+    {
+        return std::make_shared<TcpConnection>(fd,addr,loop,events);
+    }
+
     
-    /**
-     * @brief 连接成功
-     * 
-     * 当连接建立成功时调用。
-     */
-    void ConnectSuccess();
+    // /**
+    //  * @brief 连接成功
+    //  * 
+    //  * 当连接建立成功时调用。
+    //  */
+    // void ConnectSuccess();
     
     /**
      * @brief 获取事件处理器
@@ -147,21 +144,6 @@ public:
      * @return Buffer& 接收缓冲区
      */
     Buffer& recvBuffer(){return RecvBuffer_;}
-    
-    /**
-     * @brief 检查是否正在连接
-     * 
-     * @return bool 是否正在连接
-     */
-    bool isConnecting()const noexcept{return Connstatus_==ConnectStatus::Connecting;}
-    
-    /**
-     * @brief 检查是否已连接
-     * 
-     * @return bool 是否已连接
-     */
-    bool isConnected() noexcept{return Connstatus_==ConnectStatus::Connected;}
-
     /**
      * @brief 扩展功能
      * 
@@ -196,16 +178,6 @@ public:
      */
     void setEvent(Event e);
     
-    /**
-     * @brief 设置连接回调函数
-     * 
-     * @tparam Callable 可调用对象类型
-     * @param cb 连接回调函数
-     */
-    template<typename Callable>
-    void setConnectCallBack(Callable&& cb) {
-        SconnectCallback_ = std::forward<Callable>(cb);
-    }
 
     /**
      * @brief 设置消息回调函数
@@ -217,29 +189,6 @@ public:
     void setMessageCallBack(Callable&& cb) {
         SmessageCallBack_ = std::forward<Callable>(cb);
     }
-
-    /**
-     * @brief 设置写完成回调函数
-     * 
-     * @tparam Callable 可调用对象类型
-     * @param cb 写完成回调函数
-     */
-    template<typename Callable>
-    void setWriteCompleteCallBack(Callable&& cb) {
-        SwriteCompleteCallBack_ = std::forward<Callable>(cb);
-    }
-
-    /**
-     * @brief 设置关闭回调函数
-     * 
-     * @tparam Callable 可调用对象类型
-     * @param cb 关闭回调函数
-     */
-    template<typename Callable>
-    void setCloseCallBack(Callable&& cb) {
-        ScloseCallBack_ = std::forward<Callable>(cb);
-    }
-
     /**
      * @brief 设置错误回调函数
      * 
@@ -261,7 +210,11 @@ public:
     void setExceptCallBack(Callable&& cb) {
         SexceptCallBack_ = std::forward<Callable>(cb);
     }
-
+    
+    template<typename Callable>
+    void setCloseCallBack(Callable&& cb) {
+        ScloseCallBack_ = std::forward<Callable>(cb);
+    }
     // void setBackpressureCallback(BackpressureAfterSendCallBack cb1,BackpressureAfterReadCallBack cb2)
     // {
     //     BackpressureAfterSend_=std::move(cb1);
@@ -348,6 +301,8 @@ public:
     // void handleBackpressureAfterSend();
     // void handleBackpressureAfterRead();
 private:
+
+
     void sendInLoop(const char* message,size_t len);
     void disconnectInLoop();
     void handleRead();
@@ -357,12 +312,17 @@ private:
     void handleException();
     //void parseMessagesWithCodec();
 
-
+    friend class TcpServer;
+    friend class TcpClient;
+    template<typename Callable>
+    void setDestructorCallBack(Callable&& cb) {
+        destructCallBack_= std::forward<Callable>(cb);
+    }    
     
 
-    int fd_;
-    Address addr_; // @prief 对端的地址
-    EventLoop* loop_;
+    const int fd_;
+    const Address addr_; // @prief 地址 如果是ser,则是对端的，如果是Cli,则是我端的
+    EventLoop* const loop_;//////////////////////////////////////////////
     Buffer RecvBuffer_;
     //BackpressureState RecvbpState_{BackpressureState::kNormal};
     //BackpressureAfterSendCallBack BackpressureAfterSend_;
@@ -370,10 +330,10 @@ private:
     //BackpressureState SendbpState_{BackpressureState::kNormal};
     //BackpressureAfterReadCallBack BackpressureAfterRead_;
 
-    ServicesConnectionCallBack SconnectCallback_;
+
     ServicesMessageCallBack SmessageCallBack_;
-    ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
-    CloseCallBack ScloseCallBack_; 
+    CloseCallBack ScloseCallBack_;
+    DestructorCallBack destructCallBack_; 
     ServicesErrorCallBack SerrorCallBack_;
     ServicesExceptCallBack SexceptCallBack_;
     ServicesData data_;

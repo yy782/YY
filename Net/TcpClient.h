@@ -19,10 +19,7 @@ namespace net
 class TcpClient : noncopyable
                      {
 public:
-    /**
-     * @brief 连接回调函数类型
-     */
-    typedef TcpConnection::ServicesConnectionCallBack ServicesConnectionCallBack;
+    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectionCallBack;
     /**
      * @brief 连接失败回调函数类型
      */
@@ -135,32 +132,6 @@ public:
      * @param cb 连接失败回调函数
      */
     void setConnectFailCallback(ServicesConnectFailCallback cb) { SconnectFailCallback_ = std::move(cb); }
-    
-    /**
-     * @brief 设置消息回调函数
-     * 
-     * @param cb 消息回调函数
-     */
-    void setMessageCallBack(ServicesMessageCallBack cb) { SmessageCallback_ = std::move(cb); }
-    
-    /**
-     * @brief 设置关闭回调函数
-     * 
-     * @param cb 关闭回调函数
-     */
-    void setCloseCallBack(ServicesCloseCallback cb) { ScloseCallback_ = std::move(cb); }
-    
-    /**
-     * @brief 设置错误回调函数
-     * 
-     * @param cb 错误回调函数
-     */
-    void setErrorCallback(ServicesErrorCallBack cb) {SerrorCallback_ = std::move(cb); }
-
-    // 发送数据
-    // void send(std::string&& message);
-    // void send(const char* data, size_t len);
-    // void sendOutput();
 
     /**
      * @brief 获取连接对象
@@ -228,18 +199,6 @@ private:
      * @brief 连接失败回调函数
      */
     ServicesConnectFailCallback SconnectFailCallback_;
-    /**
-     * @brief 消息回调函数
-     */
-    ServicesMessageCallBack SmessageCallback_;
-    /**
-     * @brief 关闭回调函数
-     */
-    ServicesCloseCallback ScloseCallback_;
-    /**
-     * @brief 错误回调函数
-     */
-    ServicesErrorCallBack SerrorCallback_;
 
     /**
      * @brief 新连接回调

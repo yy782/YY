@@ -43,19 +43,7 @@ public:
     /**
      * @brief 连接回调函数类型
      */
-    typedef TcpConnection::ServicesConnectionCallBack ServicesConnectCallBack;
-    /**
-     * @brief 消息回调函数类型
-     */
-    typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-    /**
-     * @brief 关闭回调函数类型
-     */
-    typedef TcpConnection::CloseCallBack ServicesCloseCallBack;
-    /**
-     * @brief 错误回调函数类型
-     */
-    typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
+    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectionCallBack;
     /**
      * @brief 字符容器类型
      */
@@ -74,40 +62,15 @@ public:
      * @brief 析构函数
      */
     ~TcpServer()=default;
-    
-    /**
-     * @brief 设置连接回调函数
-     * 
-     * @param cb 连接回调函数
-     */
-    void setConnectCallBack(ServicesConnectCallBack cb){SconnectCallback_=std::move(cb);}
-    
-    /**
-     * @brief 设置消息回调函数
-     * 
-     * @param cb 消息回调函数
-     */
-    void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallback_=std::move(cb);}
-    
-    /**
-     * @brief 设置关闭回调函数
-     * 
-     * @param cb 关闭回调函数
-     */
-    void setCloseCallBack(ServicesCloseCallBack cb){ScloseCallback_=std::move(cb);}
-    
-    /**
-     * @brief 设置错误回调函数
-     * 
-     * @param cb 错误回调函数
-     */
-    void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallback_=std::move(cb);}
-
     /**
      * @brief 启动服务器
      * 
      * 启动服务器，开始接受客户端连接。
      */
+    void setConnectCallBack(ServicesConnectionCallBack cb)
+    {
+        SconnectionCallBack_=std::move(cb);
+    }
     void loop();
     
     /**
@@ -156,29 +119,7 @@ private:
      */
     ConnectMap connects_;
 
-    // TimerQueue<LowPrecision> LTimerQueue_;
-    // TimerQueue<HighPrecision> HTimerQueue_;
-    // TimerWheel TimerWheel_;
-
-    /**
-     * @brief 连接回调函数
-     */
-    ServicesConnectCallBack SconnectCallback_;
-    
-    /**
-     * @brief 消息回调函数
-     */
-    ServicesMessageCallBack SmessageCallback_;
-    
-    /**
-     * @brief 关闭回调函数
-     */
-    ServicesCloseCallBack ScloseCallback_;
-    
-    /**
-     * @brief 错误回调函数
-     */
-    ServicesErrorCallBack SerrorCallback_;
+    ServicesConnectionCallBack SconnectionCallBack_;
 }; 
 
 }    
