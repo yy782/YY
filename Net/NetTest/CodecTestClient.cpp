@@ -14,9 +14,18 @@ public:
     CodecTestClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setMessageCallBack(bind(&CodecTestClient::handleMessage,this,_1));
-        client_.setCloseCallBack(bind(&CodecTestClient::handleClose,this,_1));
-        client_.setConnectionCallback(bind(&CodecTestClient::handleConnected,this,_1));
+        client_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            handleMessage(conn);
+        });
+        client_.setCloseCallBack([this](TcpConnectionPtr conn)
+        {
+            handleClose(conn);
+        });
+        client_.setConnectionCallback([this](TcpConnectionPtr conn)
+        {
+            handleConnected(conn);
+        });
     }
     void handleConnected(TcpConnectionPtr con)
     {

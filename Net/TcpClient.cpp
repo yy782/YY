@@ -46,7 +46,8 @@ struct TcpClient::Connector:noncopyable,
     void start() 
     {
 
-        loop_->submit([c=weak_from_this()](){
+        loop_->submit([c=weak_from_this()]()
+        {
             auto con=c.lock();
             if(con)
             {
@@ -58,7 +59,8 @@ struct TcpClient::Connector:noncopyable,
     void stop() 
     {
 
-        loop_->submit([c=weak_from_this()](){
+        loop_->submit([c=weak_from_this()]()
+        {
             auto con=c.lock();
             if(con)
             {
@@ -116,10 +118,12 @@ private:
         state_=State::kConnecting;
         handler_=new EventHandler(fd_,loop_,"ConnectorHandler");
         handler_->tie(shared_from_this());
-        handler_->setWriteCallBack([this](){
+        handler_->setWriteCallBack([this]()
+        {
             handleWrite();
         });
-        handler_->setErrorCallBack([this](){
+        handler_->setErrorCallBack([this]()
+        {
             handleError();
         });
         handler_->setWriting();
@@ -182,7 +186,8 @@ private:
                 LOG_CLIENT_INFO("Retry connecting to "<<serverAddr_.sockaddrToString()<<" in "<<
                 retryDelayMs_.getTimes()<<" ms");
             )
-            loop_->runTimer<HighPrecision>([c=weak_from_this()](){
+            loop_->runTimer<HighPrecision>([c=weak_from_this()]()
+            {
                 auto p=c.lock();
                 if(p)
                 {
@@ -213,7 +218,8 @@ private:
     void resetHandler()
     {
         EventHandler* p=handler_;
-        loop_->DelayedExecution([p,c=weak_from_this()](){
+        loop_->DelayedExecution([p,c=weak_from_this()]()
+        {
             delete p;
             auto con=c.lock();
             if(con)
@@ -252,9 +258,11 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_shared<Connector>(loop, serverAddr,&retry_,[this](int fd){
+    connector_(std::make_shared<Connector>(loop, serverAddr, &retry_, [this](int fd)
+    {
         newConnection(fd);
-    },[this](){
+    }, [this]()
+    {
         removeConnection();
     })
     )
@@ -326,8 +334,10 @@ void TcpClient::newConnection(int sockfd)
     connection_->setConnectCallBack(SconnectionCallback_);
     connection_->setMessageCallBack(SmessageCallback_);
     connection_->setErrorCallBack(SerrorCallback_);
-    connection_->setCloseCallBack(std::bind(&TcpClient::removeConnection, 
-                                            this));
+    connection_->setCloseCallBack([this](TcpConnectionPtr /*conn*/)
+    {
+        removeConnection();
+    });
 
     connection_->ConnectSuccess();
 }

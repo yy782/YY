@@ -30,8 +30,14 @@ public:
             }
             
         });
-        client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
-        client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
+        client_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            handleMessage(conn);
+        });
+        client_.setCloseCallBack([this](TcpConnectionPtr conn)
+        {
+            handleClose(conn);
+        }); 
         stdIn_.setReadCallBack([this](){handleRead();});
        
         stdIn_.set_event(Event(LogicEvent::Edge|LogicEvent::Read));

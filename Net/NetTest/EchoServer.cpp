@@ -36,9 +36,18 @@ public:
     server_(addr,thread_num,loop)
     
     {
-        server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1,isET));
-        server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
-        server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
+        server_.setConnectCallBack([this, isET](TcpConnectionPtr conn)
+        {
+            onConnection(conn, isET);
+        });
+        server_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            onMessage(conn);
+        });
+        server_.setCloseCallBack([this](TcpConnectionPtr conn)
+        {
+            onClose(conn);
+        });
         
     }
     void start()

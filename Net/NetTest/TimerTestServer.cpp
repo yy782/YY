@@ -25,9 +25,18 @@ public:
     timerWheel_(loop,2,5),
     LtimerQueue_(loop)
     {
-        server_.setConnectCallBack(std::bind(&TimerServer::onConnection,this,_1));
-        server_.setMessageCallBack(std::bind(&TimerServer::onMessage,this,_1));
-        server_.setCloseCallBack(std::bind(&TimerServer::onClose,this,_1));
+        server_.setConnectCallBack([this](TcpConnectionPtr conn)
+        {
+            onConnection(conn);
+        });
+        server_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            onMessage(conn);
+        });
+        server_.setCloseCallBack([this](TcpConnectionPtr conn)
+        {
+            onClose(conn);
+        });
     }
     void start()
     {

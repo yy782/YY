@@ -22,11 +22,17 @@ idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
     sockets::bindOrDie(fd,addr_);
     if(addr_.family()==AF_INET6)    
     {
-        handler_.setReadCallBack(std::bind(&Acceptor::accept<true>,this));
+        handler_.setReadCallBack([this]()
+        {
+            accept<true>();
+        });
     }
     else 
     {
-        handler_.setReadCallBack(std::bind(&Acceptor::accept<false>,this));
+        handler_.setReadCallBack([this]()
+        {
+            accept<false>();
+        });
     }
     
 }

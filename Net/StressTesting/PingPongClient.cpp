@@ -34,11 +34,18 @@ class Session : noncopyable
       bytesWritten_(0),
       messagesRead_(0)
   {
-    client_.setConnectionCallback(
-        std::bind(&Session::onConnection,this,_1));
-    client_.setMessageCallBack(
-        std::bind(&Session::onMessage,this,_1));
-    client_.setCloseCallBack(bind(&Session::handleClose,this,_1));
+    client_.setConnectionCallback([this](TcpConnectionPtr conn)
+    {
+        onConnection(conn);
+    });
+    client_.setMessageCallBack([this](TcpConnectionPtr conn)
+    {
+        onMessage(conn);
+    });
+    client_.setCloseCallBack([this](TcpConnectionPtr conn)
+    {
+        handleClose(conn);
+    });
     client_.setErrorCallback([](TcpConnectionPtr con){
         LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
     });

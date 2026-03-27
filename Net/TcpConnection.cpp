@@ -21,11 +21,26 @@ Connstatus_(ConnectStatus::Connecting),
 handler_(fd,loop,name) 
 {
 
-    handler_.setReadCallBack(std::bind(&TcpConnection::handleRead,this));
-    handler_.setExceptCallBack(std::bind(&TcpConnection::handleException,this));
-    handler_.setWriteCallBack(std::bind(&TcpConnection::handleWrite,this));
-    handler_.setCloseCallBack(std::bind(&TcpConnection::handleClose,this));
-    handler_.setErrorCallBack(std::bind(&TcpConnection::handleError,this));
+    handler_.setReadCallBack([this]()
+    {
+        handleRead();
+    });
+    handler_.setExceptCallBack([this]()
+    {
+        handleException();
+    });
+    handler_.setWriteCallBack([this]()
+    {
+        handleWrite();
+    });
+    handler_.setCloseCallBack([this]()
+    {
+        handleClose();
+    });
+    handler_.setErrorCallBack([this]()
+    {
+        handleError();
+    });
     //handler_.tie(shared_from_this()); 对象没创建不能shared_from_this()
 }
 TcpConnection::~TcpConnection()
@@ -41,14 +56,16 @@ void TcpConnection::setEvent(Event e)
     handler_.set_event(e);  
     if(e.has(LogicEvent::Edge)&&!isET)
     {
-        handler_.setReadCallBack([this](){
+        handler_.setReadCallBack([this]()
+        {
             handleETRead();
         });
         isET=true;
     }
     else if(!e.has(LogicEvent::Edge)&&isET)
     {
-        handler_.setReadCallBack([this](){
+        handler_.setReadCallBack([this]()
+        {
             handleRead();
         });
         isET=false;            
@@ -69,12 +86,14 @@ void TcpConnection::disconnect()
 {
     if(SendBuffer_.readable_size()==0)
     {
-        loop_->submit([c=weak_from_this()](){
+        loop_->submit([c=weak_from_this()]()
+        {
             auto con=c.lock();
             if(con)
                 con->disconnectInLoop();
         });
-    }else 
+    }
+    else 
     {
         if(!handler_.isWriting())
         {
@@ -125,7 +144,8 @@ void TcpConnection::send(std::string&& message)
 {
     if(Connstatus_!=ConnectStatus::Connected)return;
     
-    loop_->submit([c=weak_from_this(),msg=std::move(message)](){
+    loop_->submit([c=weak_from_this(),msg=std::move(message)]()
+    {
         auto con=c.lock();
         if(con)
             con->sendInLoop(msg.c_str(),msg.size());
@@ -133,7 +153,8 @@ void TcpConnection::send(std::string&& message)
 }
 void TcpConnection::sendOutput()
 {
-    loop_->submit([c=weak_from_this()](){
+    loop_->submit([c=weak_from_this()]()
+    {
         auto con=c.lock();
         if(con)
         {
@@ -215,7 +236,8 @@ void TcpConnection::handleETRead()
             }  
         }            
     }
-    loop_->submit([c=weak_from_this()](){
+    loop_->submit([c=weak_from_this()]()
+    {
         auto con=c.lock();
         if(con)
         {

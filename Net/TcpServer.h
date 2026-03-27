@@ -14,6 +14,7 @@
 #include <set>
 #include <memory>
 #include <vector>
+//#include <boost/unordered/concurrent_flat_set.hpp>
 namespace yy
 {
 namespace net
@@ -25,7 +26,7 @@ class TcpServer:public noncopyable
 {
 public:
     
-    typedef std::set<TcpConnectionPtr> ConnectMap;
+    //typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
     //typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
     typedef std::unique_ptr<Acceptor> AcceptorPtr;
     typedef TcpConnection::ServicesConnectionCallBack ServicesConnectCallBack;
@@ -55,7 +56,7 @@ private:
     EventLoop* loop_;
     AcceptorPtr acceptor_;
     EventLoopThreadPool threadpool_;
-    ConnectMap connects_;
+    //ConnectMap connects_;
 
     // TimerQueue<LowPrecision> LTimerQueue_;
     // TimerQueue<HighPrecision> HTimerQueue_;

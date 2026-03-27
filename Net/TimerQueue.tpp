@@ -14,7 +14,10 @@ TimerQueue<PrecisionTag>::TimerQueue(EventLoop* loop):
 fd_(sockets::createTimerFdOrDie(CLOCK_MONOTONIC,TFD_CLOEXEC|TFD_NONBLOCK)),
 handler_()
 {
-    handler_.setReadCallBack(std::bind(&TimerQueue::handlerRead,this));
+    handler_.setReadCallBack([this]()
+    {
+        handlerRead();
+    });
     if constexpr (std::is_same_v<PrecisionTag,LowPrecision>)
     {
         handler_.init(fd_,loop,"LTimerQueue");

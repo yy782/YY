@@ -18,9 +18,18 @@ public:
         loop_(loop)
         {
         
-        server_.setConnectCallBack(std::bind(&HTTPServer::onConnection, this, _1));
-        server_.setMessageCallBack(std::bind(&HTTPServer::onMessage, this, _1));
-        server_.setCloseCallBack(std::bind(&HTTPServer::onClose, this, _1));
+        server_.setConnectCallBack([this](TcpConnectionPtr conn)
+        {
+            onConnection(conn);
+        });
+        server_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            onMessage(conn);
+        });
+        server_.setCloseCallBack([this](TcpConnectionPtr conn)
+        {
+            onClose(conn);
+        });
     }
     
     // 路由注册

@@ -20,8 +20,14 @@ filter_()
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.append(p,strlen(p));
 
-    filter_.set_callback(std::bind(&AsyncLog::append,this,_1));
-    thread_.run(std::bind(&AsyncLog::loop,this));
+    filter_.set_callback([this](const std::string& log)
+    {
+        append(log);
+    });
+    thread_.run([this]()
+    {
+        loop();
+    });
 }  
 AsyncLog::~AsyncLog()
 {

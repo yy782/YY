@@ -11,7 +11,10 @@ appender_(filename,flush_interval),
 filter_()
 {
     g_log_filter=&filter_;
-    filter_.set_callback(std::bind(&SyncLog::append,this,_1));
+    filter_.set_callback([this](const std::string& log)
+    {
+        append(log);
+    });
     char p []="==================================== 日志启动 ==================================== \n";
     appender_.safeAppend(p,strlen(p));
     appender_.flush(); // 立即flush

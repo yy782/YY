@@ -39,7 +39,10 @@ handler_(fd_,loop,"TimerWheel")
     new_ts.it_interval.tv_sec=SI_;
     sockets::timerfd_settime(fd,0,new_ts);
 
-    handler_.setReadCallBack(std::bind(&TimerWheel::tick,this));
+    handler_.setReadCallBack([this]()
+    {
+        tick();
+    });
     handler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge)); // 本身是线程安全的
         
 }
@@ -63,7 +66,9 @@ void TimerWheel::insert(LTimerPtr timer)
     if(timeout<SI_)
     {
         ticks=1;
-    }else{
+    }
+    else
+    {
         ticks=timeout/SI_;
     }
     int rotation=ticks/maxSlots_;
@@ -75,16 +80,18 @@ void TimerWheel::insert(LTimerPtr timer)
     node->time_slot=ts;        
 
     LOG_TIME_DEBUG("node rotation:"<<rotation<<" time_slot:"<<ts);
-    loop_->submit([this,ts,node](){ 
+    loop_->submit([this,ts,node]()
+    {
         if(!slots_[ts])
         {
             slots_[ts]=node;
-        }else
+        }
+        else
         {
             node->next=slots_[ts];
             slots_[ts]->prev=node;
             slots_[ts]=node;
-        } 
+        }
     });
 
     
@@ -107,14 +114,17 @@ void TimerWheel::tick()
     //LOG_TIME_DEBUG("cur_slot_: "<<cur_slot_);
 
     auto tmp=slots_[cur_slot_];
-    while(tmp){
-        if(tmp->rotation>0){
+    while(tmp)
+    {
+        if(tmp->rotation>0)
+        {
             tmp->rotation--;
             tmp=tmp->next;
-        }else{
+        }
+        else
+        {
             auto timer=tmp->data;
             assert(timer);
-
 
             timer->execute();
 
@@ -125,20 +135,24 @@ void TimerWheel::tick()
             auto next=tmp->next;//可能是nullptr,但是在接下来的操作不可能被释放，因为还保持引用
             auto prev=tmp->prev.lock();
             
-            if(tmp==slots_[cur_slot_]){
+            if(tmp==slots_[cur_slot_])
+            {
                 slots_[cur_slot_]=next;
-                if(next){
+                if(next)
+                {
                     prev=nullptr;
                 }
-            }else{
+            }
+            else
+            {
                 prev->next=next; 
                 if(next) 
                 {
                     next->prev=prev;
-                }                        
+                }
             }
-            tmp=next;    
-        }    
+            tmp=next;
+        }
     }
     ++cur_slot_;
     cur_slot_%=maxSlots_;     
@@ -147,11 +161,12 @@ void TimerWheel::ReadTimerfd()
 {
     uint64_t howmany;
     ssize_t n=sockets::read(handler_.fd(),&howmany,sizeof howmany);
-    if(n!=sizeof howmany){
+    if(n!=sizeof howmany)
+    {
         EXCLUDE_BEFORE_COMPILATION(
             LOG_TIME_ERROR("TimerWheel::ReadTimerfd() read error");
         )
     }
-}     
+} 
 }    
 }

@@ -73,7 +73,10 @@ private:
         if(isInLoopThread())
             poller_.add_listen(handler);
         else
-            submit(std::bind(&PollerType::add_listen,&poller_,handler));
+            submit([this, handler]()
+            {
+                poller_.add_listen(handler);
+            });
 
     }
     void update_listen(EventHandler* handler)
@@ -82,7 +85,10 @@ private:
         if(isInLoopThread())
             poller_.update_listen(handler);
         else
-            submit(std::bind(&PollerType::update_listen,&poller_,handler));
+            submit([this, handler]()
+            {
+                poller_.update_listen(handler);
+            });
     }
     void remove_listen(EventHandler* handler)
     {
@@ -90,7 +96,10 @@ private:
         if(isInLoopThread())
             poller_.remove_listen(handler);
         else
-            submit(std::bind(&PollerType::remove_listen,&poller_,handler));
+            submit([this, handler]()
+            {
+                poller_.remove_listen(handler);
+            });
     }        
     void doPendingFunctions();
     

@@ -11,7 +11,10 @@ threadpool_(threadnum,loop)
 {
     LOG_SYSTEM_INFO(addr.sockaddrToString());
 
-    acceptor_->setNewConnectCallBack(std::bind(&TcpServer::newConnection,this,_1,_2));
+    acceptor_->setNewConnectCallBack([this](int fd, const Address& address)
+    {
+        newConnection(fd, address);
+    });
         
 }   
 
@@ -32,15 +35,16 @@ void TcpServer::newConnection(int fd,const Address& addr)
     EventLoop* loop=threadpool_.getEventLoop();
     TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop,addr.sockaddrToString().c_str());
     conn->setMessageCallBack(SmessageCallback_);
-    conn->setCloseCallBack([this](TcpConnectionPtr con){
+    conn->setCloseCallBack([this](TcpConnectionPtr con)
+    {
         ScloseCallback_(con);
         removeConnection(con);
     });
     conn->setErrorCallBack(SerrorCallback_);
     conn->setConnectCallBack(SconnectCallback_);
     conn->ConnectSuccess();
-    assert(connects_.find(conn)==connects_.end());
-    connects_.insert(conn);    
+    // assert(!connects_.contains(conn));
+    // connects_.insert(conn);    
 }
     
 void TcpServer::removeConnection(TcpConnectionPtr conn)
@@ -53,7 +57,7 @@ void TcpServer::removeConnection(TcpConnectionPtr conn)
     // });
     
     
-
+    // connects_.erase(conn);
 }
 }    
 }

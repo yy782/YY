@@ -18,7 +18,10 @@ public:
         : client_(serverAddr, loop)
          {
         
-        client_.setMessageCallBack(std::bind(&HTTPCliET::onMessage, this, _1));
+        client_.setMessageCallBack([this](TcpConnectionPtr conn)
+        {
+            onMessage(conn);
+        });
         client_.setCloseCallBack([this](TcpConnectionPtr){
             closeCb_();
         });
