@@ -7,18 +7,14 @@ namespace net
 {
 namespace 
 {
-enum EventLoopStatus
-{
-    Init=1<<0,
-
-    Looping=1<<1,
-    EventHandling=1<<2,
-    PendingFunctions=1<<3,
-
-    Quiting=1<<4,
-    
-    Quited=1<<5
-};
+namespace EventLoopStatus {
+    constexpr int Init = 1 << 0;
+    constexpr int Looping = 1 << 1;
+    constexpr int EventHandling = 1 << 2;
+    constexpr int PendingFunctions = 1 << 3;
+    constexpr int Quiting = 1 << 4;
+    constexpr int Quited = 1 << 5;
+}
 
 const int PollTimeMs=100;
 }
@@ -49,7 +45,7 @@ wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeu
         return;
     };
     wakeHandler_.setReadCallBack(eventCallBack);
-    wakeHandler_.setReading();
+    wakeHandler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge));
 }
 bool EventLoop::isQuit()
 {
@@ -59,7 +55,7 @@ void EventLoop::loop()
 {
 
     
-
+    assert(isInLoopThread());
     status_&=~EventLoopStatus::Init;
     status_|=EventLoopStatus::Looping;
     assert(CheckeEventLoopStatus());
@@ -95,6 +91,7 @@ void EventLoop::quit()
     assert(CheckeEventLoopStatus());
     
     submit([this](){
+        assert(isInLoopThread());
         status_=EventLoopStatus::Quiting;     
     });
     uint64_t one =1;
@@ -103,17 +100,7 @@ void EventLoop::quit()
 }
 
 
-void EventLoop::DelayedExecutionInLoop(Functor cb)
-{
-    assert(isInLoopThread());
-    if(!FunctionList_.append(cb))
-    {
-        runTimer<LowPrecision>([Fun=std::move(cb),this]()
-        {
-            DelayedExecutionInLoop(std::move(Fun));
-        },5s,1);
-    }
-}
+
 
 void EventLoop::wakeup()
 {
@@ -126,6 +113,7 @@ void EventLoop::wakeup()
 }
 void EventLoop::doPendingFunctions()
 {
+    assert(isInLoopThread());
     size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
     while(!FunctionList_.empty()&&FinishNum<30) 

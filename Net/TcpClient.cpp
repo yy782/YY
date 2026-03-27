@@ -213,7 +213,7 @@ private:
     void resetHandler()
     {
         EventHandler* p=handler_;
-        loop_->DelayedExecutionInLoop([p,c=weak_from_this()](){
+        loop_->DelayedExecution([p,c=weak_from_this()](){
             delete p;
             auto con=c.lock();
             if(con)

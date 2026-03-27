@@ -1,29 +1,9 @@
 #include <cassert>
 #include <cstddef>
-
+#include "ThreadPool.h"
 namespace yy {
 
-// ==================== BaseTask 实现 ====================
 
-inline size_t BaseTask::generate_id() {
-    static std::atomic<size_t> counter{0};
-    return ++counter;
-}
-
-inline BaseTask::BaseTask(std::function<void()> func)
-    : task_id(generate_id())
-    , function_(std::move(func)) {}
-
-inline void BaseTask::add_dependency(std::shared_ptr<BaseTask> task) {
-    {
-        std::lock_guard<std::mutex> lock(task_mutex);
-        unresolved_dependencies++;
-    }
-    {
-        std::lock_guard<std::mutex> lock(task->task_mutex);
-        task->dependents.insert(shared_from_this());
-    }
-}
 
 template<typename Strategy>
 inline void BaseTask::execute(ThreadPool<Strategy>* pool) {
@@ -178,11 +158,7 @@ ThreadPool<Strategy>::ThreadPool(size_t min_threads, size_t max_threads)
             LOG_THREAD_INFO("工作线程:" << "[" << i << "]" << "添加成功");
         )
     }
-    monitor.start();
-    EXCLUDE_BEFORE_COMPILATION(
-        LOG_THREAD_INFO("监控线程启动成功");
-        LOG_THREAD_INFO("线程池成功启动");
-    )
+
 }
 
 template<class Strategy>
@@ -259,8 +235,8 @@ std::shared_ptr<BaseTask> ThreadPool<Strategy>::try_steal_task(size_t thief_id) 
         auto& victim = workers[i];
         if (!victim) continue;
         
-        std::unique_lock<std::mutex> lock(victim->queue_mutex, std::try_to_lock);
-        if (lock.owns_lock() && !victim->local_queue.empty()) {
+        std::unique_lock<std::mutex> lk(victim->queue_mutex, std::try_to_lock);
+        if (lk.owns_lock() && !victim->local_queue.empty()) {
             auto task = victim->local_queue.back();
             victim->local_queue.pop_back();
             if (task) {
@@ -425,7 +401,15 @@ template<typename Strategy_Pattern>
 void ThreadPool<Strategy>::set_monitor_strategy(Strategy_Pattern&& pattern) {
     monitor.set_strategy(std::forward<Strategy_Pattern>(pattern));
 }
-
+template<class Strategy>
+void ThreadPool<Strategy>::monitorRun()
+{
+    monitor.start();
+    EXCLUDE_BEFORE_COMPILATION(
+        LOG_THREAD_INFO("监控线程启动成功");
+        LOG_THREAD_INFO("线程池成功启动");
+    )
+}
 // ==================== ThreadPool::MonitorThread 实现 ====================
 
 template<class Strategy>

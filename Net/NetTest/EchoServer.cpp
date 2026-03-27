@@ -32,11 +32,11 @@ class EchoServer
 public:
 
     typedef TcpConnection::CharContainer CharContainer;
-    EchoServer(const Address& addr,int thread_num,EventLoop* loop):
+    EchoServer(const Address& addr,int thread_num,EventLoop* loop,bool isET):
     server_(addr,thread_num,loop)
     
     {
-        server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1));
+        server_.setConnectCallBack(std::bind(&EchoServer::onConnection,this,_1,isET));
         server_.setMessageCallBack(std::bind(&EchoServer::onMessage,this,_1));
         server_.setCloseCallBack(std::bind(&EchoServer::onClose,this,_1));
         
@@ -54,12 +54,20 @@ public:
         LOG_SYSTEM_INFO("server stop!");
     }
 private:
-    void onConnection(TcpConnectionPtr conn)
+    void onConnection(TcpConnectionPtr conn,bool isET)
     {
         auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);// @note 对方连接是否决定监听由业务层决定
-        conn->setReading();
+        if(isET)
+        {
+            conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+        }
+        else 
+        {
+            conn->setReading();
+        }
+        
+        
     }
     void onMessage(TcpConnectionPtr conn)
     {
@@ -111,7 +119,7 @@ int main()
     std::string logLevel=config.get("log","logLevel");
     std::string logPath=config.get("log","logPath");
     std::list<std::string> modules=config.getStrings("log","modules");
-    
+    bool isET=config.getBoolean("server","isET");
     if(isAsync)
     {
         auto async_flush_interval=config.getDuration("AsyncLog","flush_interval");
@@ -135,7 +143,7 @@ int main()
     Address serverAddr(host.c_str(),port);
     
     EventLoop loop;
-    EchoServer server(serverAddr,thread_nums,&loop);
+    EchoServer server(serverAddr,thread_nums,&loop,isET);
     server.start();
     Signal::signal(SIGTERM,[&server,&loop](){
         LOG_SYSTEM_DEBUG("Siganal handle exit");

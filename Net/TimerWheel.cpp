@@ -60,7 +60,8 @@ void TimerWheel::insert(LTimerPtr timer)
     int ticks=0;
     int timeout=static_cast<int>(timer->getTimeInterval().getTimes());
     //计算超时值在多少个滴答后被触发，并把滴答数存储在ticks里，如果待插入定时器的超时值小于时间轮的槽间隔SI,ticks向上折合为1，否则向下折合timeout/SI_
-    if(timeout<SI_){
+    if(timeout<SI_)
+    {
         ticks=1;
     }else{
         ticks=timeout/SI_;
@@ -75,9 +76,11 @@ void TimerWheel::insert(LTimerPtr timer)
 
     LOG_TIME_DEBUG("node rotation:"<<rotation<<" time_slot:"<<ts);
     loop_->submit([this,ts,node](){ 
-        if(!slots_[ts]){
+        if(!slots_[ts])
+        {
             slots_[ts]=node;
-        }else{
+        }else
+        {
             node->next=slots_[ts];
             slots_[ts]->prev=node;
             slots_[ts]=node;

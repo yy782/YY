@@ -44,13 +44,14 @@ public:
 
 
 
-    void removeConnection(TcpConnectionPtr conn);
+    
     
     
     void loop();
     void stop();
 private:
     void newConnection(int fd,const Address& addr);
+    void removeConnection(TcpConnectionPtr conn);
     EventLoop* loop_;
     AcceptorPtr acceptor_;
     EventLoopThreadPool threadpool_;

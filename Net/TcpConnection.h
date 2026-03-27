@@ -26,7 +26,6 @@ public:
     typedef std::function<void(TcpConnectionPtr)> ServicesConnectionCallBack;
     typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesMessageCallBack;
-    typedef std::function<void(TcpConnectionPtr)> ServicesReadCallback;
     typedef std::function<void(TcpConnectionPtr,char oob_buf[1])> ServicesExceptCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesWriteCompleteCallBack;
     typedef std::function<void(TcpConnectionPtr)> ServicesErrorCallBack;
@@ -62,17 +61,36 @@ public:
     {
         handler_.setExcept();
     }
-    void setEvent(Event e)
-    {   
-        handler_.set_event(e);  
+    void setEvent(Event e);
+    template<typename Callable>
+    void setConnectCallBack(Callable&& cb) {
+        SconnectCallback_ = std::forward<Callable>(cb);
     }
-    void setConnectCallBack(ServicesConnectionCallBack cb){SconnectCallback_=std::move(cb);}
-    void setMessageCallBack(ServicesMessageCallBack cb){SmessageCallBack_=std::move(cb);}
-    void setReadCallBack(ServicesReadCallback cb){SreadCallback_=std::move(cb);}
-    void setWriteCompleteCallBack(ServicesWriteCompleteCallBack cb){SwriteCompleteCallBack_=std::move(cb);}
-    void setCloseCallBack(CloseCallBack cb){ScloseCallBack_=std::move(cb);} // @brief 这是对端关闭的回调
-    void setErrorCallBack(ServicesErrorCallBack cb){SerrorCallBack_=std::move(cb);}
-    void setExceptCallBack(ServicesExceptCallBack cb){SexceptCallBack_=std::move(cb);}
+
+    template<typename Callable>
+    void setMessageCallBack(Callable&& cb) {
+        SmessageCallBack_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setWriteCompleteCallBack(Callable&& cb) {
+        SwriteCompleteCallBack_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setCloseCallBack(Callable&& cb) {
+        ScloseCallBack_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setErrorCallBack(Callable&& cb) {
+        SerrorCallBack_ = std::forward<Callable>(cb);
+    }
+
+    template<typename Callable>
+    void setExceptCallBack(Callable&& cb) {
+        SexceptCallBack_ = std::forward<Callable>(cb);
+    }
 
     // void setBackpressureCallback(BackpressureAfterSendCallBack cb1,BackpressureAfterReadCallBack cb2)
     // {
@@ -123,9 +141,7 @@ public:
     // BackpressureState getSendBufferState()const{return SendbpState_;}
     //void updateWaterMark();
 
-    void handleETRead(ServicesReadCallback cb);
-    void RhandleClose(){handleClose();}
-    void RhandleError(){handleError();}
+    void handleETRead();
     // void handleBackpressureAfterSend();
     // void handleBackpressureAfterRead();
 private:
@@ -152,7 +168,6 @@ private:
     //BackpressureAfterReadCallBack BackpressureAfterRead_;
 
     ServicesConnectionCallBack SconnectCallback_;
-    ServicesReadCallback SreadCallback_;
     ServicesMessageCallBack SmessageCallBack_;
     ServicesWriteCompleteCallBack SwriteCompleteCallBack_;
     CloseCallBack ScloseCallBack_; 
@@ -164,6 +179,9 @@ private:
 
     
     EventHandler handler_;
+    bool isET={false};
+
+
 };
 
 

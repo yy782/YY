@@ -16,15 +16,18 @@
 #include "../TimerQueue.h"
 using namespace yy;
 using namespace yy::net;
-//./PingPongClient 4 4096 100 60 
+//./PingPongClient 4 4096 100 60 0
+//./PingPongClient 4 4096 10000 10 0
+template<bool isET>
 class Client;
 
+template<bool isET>
 class Session : noncopyable
 {
  public:
   Session(EventLoop* loop,
           const Address& serverAddr,
-          Client* owner)
+          Client<isET>* owner)
     : client_(serverAddr,loop),
       owner_(owner),
       bytesRead_(0),
@@ -79,12 +82,12 @@ void onConnection(const TcpConnectionPtr& conn);
 
 
   TcpClient client_;
-  Client* owner_;
+  Client<isET>* owner_;
   int64_t bytesRead_;
   int64_t bytesWritten_;
   int64_t messagesRead_;
 };
-
+template<bool isET>
 class Client : noncopyable
 {
  public:
@@ -113,7 +116,7 @@ class Client : noncopyable
     {
       char buf[32];
       snprintf(buf, sizeof buf, "C%05d", i);
-      Session* session = new Session(threadPool_.getEventLoop(), serverAddr,this);
+      Session<isET>* session = new Session<isET>(threadPool_.getEventLoop(), serverAddr,this);
       session->start();
       sessions_.emplace_back(session);
     }
@@ -177,42 +180,55 @@ void handleTimeout()
   EventLoopThreadPool threadPool_;
   int sessionCount_;
   int timeout_;
-  std::vector<std::unique_ptr<Session>> sessions_;
+  std::vector<std::unique_ptr<Session<isET> >> sessions_;
   std::string message_;
   std::atomic<int> numConnected_;
 };
-
-void Session::onConnection(const TcpConnectionPtr& conn)
+template<bool isET>
+void Session<isET>::onConnection(const TcpConnectionPtr& conn)
 {
-    conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
-    //conn->setReading();
+  if constexpr (isET)
+  {
+      conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+  }
+  else 
+  {
+      conn->setReading();
+  }
     conn->setTcpNoDelay(true);
     const std::string& msg=owner_->message();
    
     conn->send(msg.c_str(),msg.size());
     owner_->onConnect();
 }
-void Session::handleClose(TcpConnectionPtr)
+template<bool isET>
+void Session<isET>::handleClose(TcpConnectionPtr)
 {
     owner_->onDisconnect();
 }
 int main(int argc, char* argv[])
 {
-    // SyncLog::getInstance("../CliLog.log").getFilter() 
-    //   .set_global_level(LOG_LEVEL_DEBUG) 
-    //   .set_module_enabled("TCP")
-    //   .set_module_enabled("SYSTEM")
-
-    //   ;
+    SyncLog::getInstance("../CliLog.log").getFilter() 
+      .set_global_level(LOG_LEVEL_ERROR) ;
+      
+        // SyncLog::getInstance("../CliLog.log").getFilter() 
+        // .set_global_level(LOG_LEVEL_DEBUG) 
+        // .set_module_enabled("TCP")
+        // .set_module_enabled("SYSTEM")
+        // .set_module_enabled("HTTP")
+        // .set_module_enabled("CLIENT")
+        // .set_module_enabled("EVENT")
+        // ;
     int threadCount;
     int blockSize;
     int sessionCount ;
     int timeout ;
+    bool isET=true;
     if(argc<5)
     {
-      threadCount = 1;
+      threadCount = 4;
       blockSize = 4096;
-      sessionCount =1;
+      sessionCount =100;
       timeout = 10;        
     }
     else
@@ -221,13 +237,21 @@ int main(int argc, char* argv[])
       blockSize = atoi(argv[2]);
       sessionCount = atoi(argv[3]);
       timeout = atoi(argv[4]);
+      isET=std::atoi(argv[5])==1?true:false;
     } 
 
 
     EventLoop loop;
     Address serverAddr("0.0.0.0",8080);
-
-    Client client(&loop, serverAddr, blockSize, sessionCount, timeout, threadCount);
-    loop.loop();
+    if(isET)
+    {
+      Client<true> client(&loop, serverAddr, blockSize, sessionCount, timeout, threadCount);
+      loop.loop();
+    }
+    else 
+    {
+      Client<false> client(&loop, serverAddr, blockSize, sessionCount, timeout, threadCount);
+      loop.loop();      
+    }
     
 }

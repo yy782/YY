@@ -27,71 +27,11 @@
 #include "../Common/TimeStamp.h"
 #include "../Common/locker.h"
 #include "../Common/copyable.h"
-
+#include "Strategy.h"
 namespace yy {
 
 // 前向声明
-template<typename Strategy>
-class ThreadPool;
 
-// 枚举类定义
-enum class TaskStatus {
-    DEPENDENCY,
-    PENDING,
-    RUNNING,
-    COMPLETED,
-    FAILED,
-};
-
-// TaskResult 模板特化
-template<typename ResultType>
-class TaskResult : public copyable {
-public:
-    TaskStatus status;
-    std::exception_ptr exception;
-    std::optional<ResultType> value;
-    
-    inline TaskResult() : status(TaskStatus::PENDING) {}
-    inline TaskResult(ResultType val) : status(TaskStatus::COMPLETED), value(std::move(val)) {}
-    inline TaskResult(std::exception_ptr e) : status(TaskStatus::FAILED), exception(e) {}
-};
-
-template<>
-class TaskResult<void> : public copyable {
-public:
-    TaskStatus status;
-    std::exception_ptr exception;
-    
-    inline TaskResult() : status(TaskStatus::PENDING) {}
-    inline TaskResult(std::nullptr_t) : status(TaskStatus::COMPLETED) {}
-    inline explicit TaskResult(std::exception_ptr e) : status(TaskStatus::FAILED), exception(e) {}
-};
-
-// BaseTask 定义
-class BaseTask : public copyable, public std::enable_shared_from_this<BaseTask> {
-protected:
-    std::atomic<TaskStatus> status{TaskStatus::PENDING};
-    std::atomic<int> unresolved_dependencies{0};
-    std::set<std::shared_ptr<BaseTask>> dependents;
-    mutable std::mutex task_mutex;
-    const size_t task_id;
-    std::function<void()> function_;
-
-public:
-    explicit BaseTask(std::function<void()> func);
-    virtual ~BaseTask() = default;
-    
-    template<typename Strategy>
-    void execute(ThreadPool<Strategy>* pool);
-    
-    void add_dependency(std::shared_ptr<BaseTask> task);
-    bool is_ready() const { return status.load() == TaskStatus::PENDING; }
-    TaskStatus get_status() const { return status.load(); }
-    size_t get_id() const { return task_id; }
-
-private:
-    static size_t generate_id();
-};
 
 // ThreadPool 主类
 template<class Strategy>
@@ -122,6 +62,7 @@ public:
     
     template<typename Strategy_Pattern>
     void set_monitor_strategy(Strategy_Pattern&& pattern);
+    void monitorRun();
     
 private:
     // ==================== WorkerManager 组件 ====================
@@ -234,10 +175,7 @@ struct Adjust_Worker_Strategy {
     template<typename MonitorType>
     void operator()(MonitorType* monitor);
 };
-
 } // namespace yy
-
 #include "ThreadPool.tpp"
-
 #endif // THREAD_POOL_H
 

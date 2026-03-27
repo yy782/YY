@@ -43,28 +43,30 @@ public:
     
     typedef Thread::Pid_t Pid_t;
     typedef std::function<void()> Functor;
-    //typedef Fun Functor;
-
     typedef RingBuffer<Functor> FunctionList;
-    //typedef std::vector<Functor> FunctionList;
+
     EventLoop();
-    ~EventLoop()=default;
+    ~EventLoop()
+    {
+        assert(isInLoopThread());
+    }
     void loop();
     void quit();
     bool isQuit();
-    // std::atomic<int> num={0};
-    // std::atomic<int> num2={0};
+
 
     bool isInLoopThread();
 
     template<typename Callable>
     void submit(Callable&& cb);
-    void DelayedExecutionInLoop(Functor cb);
+    template<typename Callable>
+    void DelayedExecution(Callable&& cb);
     template<class PrecisionTag>
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
 private:
     friend class EventHandler;
     void wakeup();
+    
     void addListen(EventHandler* handler)
     {
         assert(handler);
@@ -117,11 +119,22 @@ void EventLoop::submit(Callable&& cb)
     }
     else 
     {
-
-        FunctionList_.blockappend(std::move(cb));
+        assert(!isInLoopThread());
+        FunctionList_.blockappend(std::forward<Callable>(cb));
     }
 }
-
+template<typename Callable>
+void EventLoop::DelayedExecution(Callable&& cb)
+{
+    assert(isInLoopThread());
+    if(!FunctionList_.append(cb))
+    {
+        runTimer<LowPrecision>([Fun=std::forward<Callable>(cb),this]()mutable
+        {
+            DelayedExecution(std::forward<Callable>(Fun));
+        },5s,1);
+    }
+}
 }    
 }
 #endif // _YY_NET_EVENTLOOP_H_

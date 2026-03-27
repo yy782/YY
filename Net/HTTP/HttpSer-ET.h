@@ -18,7 +18,7 @@ public:
         {
         
         server_.setConnectCallBack(std::bind(&HTTPSerET::onConnection, this, _1));
-        //server_.setMessageCallBack(std::bind(&HTTPSerET::onMessage, this, _1));
+        server_.setMessageCallBack(std::bind(&HTTPSerET::onMessage, this, _1));
         server_.setCloseCallBack(std::bind(&HTTPSerET::onClose, this, _1));
     }
     
@@ -68,11 +68,6 @@ private:
         conn->setTcpNoDelay(true);
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
         conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
-        conn->setReadCallBack([this](TcpConnectionPtr conn1){
-            conn1->handleETRead([this](TcpConnectionPtr conn2){
-                onMessage(conn2);
-            });
-        });
     }
     void onMessage(TcpConnectionPtr conn) {
             TcpBuffer& buffer = conn->recvBuffer();

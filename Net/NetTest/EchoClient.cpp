@@ -11,16 +11,24 @@ std::atomic<bool> isConnected=true;
 class EchoClient// stdout是线程不安全的
 {
 public:
-    EchoClient(const Address& serverAddr,EventLoopThread* thread):
+    EchoClient(const Address& serverAddr,EventLoopThread* thread,bool isET):
     loop_(thread->run()),
     client_(serverAddr,loop_),
     stdIn_(0,loop_,"stdIn"),
     thread_(thread)
     {
         client_.enableRetry();
-        client_.setConnectionCallback([this](TcpConnectionPtr con){
-            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
-            con->setReading();
+        client_.setConnectionCallback([this,isET](TcpConnectionPtr con){
+
+            if(isET)
+            {
+               con->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+            }
+            else 
+            {
+                con->setReading();
+            }
+            
         });
         client_.setMessageCallBack(bind(&EchoClient::handleMessage,this,_1));
         client_.setCloseCallBack(bind(&EchoClient::handleClose,this,_1)); 
@@ -100,11 +108,21 @@ int main()
         return 1;
     }
     EventLoopThread thread;
-    
+    // SyncLog::getInstance("../CliLog.log").getFilter() 
+    //     .set_global_level(LOG_LEVEL_DEBUG) 
+    //     .set_module_enabled("TCP")
+    //     .set_module_enabled("SYSTEM")
+    //     .set_module_enabled("HTTP")
+    //     .set_module_enabled("CLIENT")
+    //     .set_module_enabled("EVENT")
+    //     .set_module_enabled("LOOP")
+    //     ;
+
     std::string host=config.get("server","host");
     int port=static_cast<int>(config.getInteger("server","port"));
+    bool isET=config.getBoolean("server","isET");
     Address addr(host.c_str(),port);
-    EchoClient client(addr,&thread);
+    EchoClient client(addr,&thread,isET);
     client.connect(); 
     while(isConnected.load())
     {

@@ -28,7 +28,7 @@ public:
                 loop_ = &loop;        
                 cond_.notify_one();    
             }
-            loop.loop();                      
+            loop.loop();         
         });
         {
             std::unique_lock<std::mutex> lock(mutex_);

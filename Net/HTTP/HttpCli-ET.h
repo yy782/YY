@@ -18,7 +18,7 @@ public:
         : client_(serverAddr, loop)
          {
         
-        //client_.setMessageCallBack(std::bind(&HTTPCliET::onMessage, this, _1));
+        client_.setMessageCallBack(std::bind(&HTTPCliET::onMessage, this, _1));
         client_.setCloseCallBack([this](TcpConnectionPtr){
             closeCb_();
         });
@@ -26,11 +26,7 @@ public:
             con->setTcpNoDelay(true);
             con->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
             //con->setReading();
-            con->setReadCallBack([this](TcpConnectionPtr con1){
-                con1->handleETRead([this](TcpConnectionPtr con2){
-                    onMessage(con2);
-                });
-            });
+            
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
             conCb_();
         });

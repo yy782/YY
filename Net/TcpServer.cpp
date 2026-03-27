@@ -28,14 +28,9 @@ void TcpServer::newConnection(int fd,const Address& addr)
 {
 
     
-
+    assert(loop_->isInLoopThread());
     EventLoop* loop=threadpool_.getEventLoop();
     TcpConnectionPtr conn=std::make_shared<TcpConnection>(fd,addr,loop,addr.sockaddrToString().c_str());
-    connects_.insert(conn);
-    
-    
-    
-   
     conn->setMessageCallBack(SmessageCallback_);
     conn->setCloseCallBack([this](TcpConnectionPtr con){
         ScloseCallback_(con);
@@ -44,14 +39,20 @@ void TcpServer::newConnection(int fd,const Address& addr)
     conn->setErrorCallBack(SerrorCallback_);
     conn->setConnectCallBack(SconnectCallback_);
     conn->ConnectSuccess();
+    assert(connects_.find(conn)==connects_.end());
+    connects_.insert(conn);    
 }
     
 void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
-    conn->loop()->submit([this,&conn](){ 
-        assert(connects_.find(conn)!=connects_.end());
-        connects_.erase(conn);
-    });
+    assert(conn->loop()->isInLoopThread()); 
+    
+    // loop_->submit([this,conn](){//////////////////connects_是公共数据结构 会导致死锁，accept线程向IO池提交连接，IO池向accept线程移除连接
+    //     assert(connects_.find(conn)!=connects_.end());
+    //     connects_.erase(conn);
+    // });
+    
+    
 
 }
 }    

@@ -13,8 +13,8 @@ enum class LogicEvent : uint32_t
 {
     None   = 0,
     Read   = 1 << 0,
-    Write  = 1 << 1,
-    Except = 1 << 2,
+    Except = 1 << 1,    
+    Write  = 1 << 2,
     Error  = 1 << 3,
     Hup    = 1 << 4,
     Nval   = 1 << 5,

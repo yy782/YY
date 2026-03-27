@@ -96,6 +96,7 @@ void Epoll::add_listen(EventHandler* handler)
     handlers_[handler->fd()]=handler;       
     handler->set_status(Added);
     operator_epoll(EPOLL_CTL_ADD,handler);
+  
 }
 void Epoll::update_listen(EventHandler* handler)
 {
@@ -105,6 +106,11 @@ void Epoll::update_listen(EventHandler* handler)
     assert(has_handler(handler));
 
     operator_epoll(EPOLL_CTL_MOD,handler);
+    LOG_LOOP_DEBUG(handler->printName()<<" 修改监听");
+    if(handler->event()&LogicEvent::Write)
+    {
+        LOG_LOOP_DEBUG(handler->printName()<<" 修改为可写");
+    }
 }
 void Epoll::remove_listen(EventHandler* handler)
 {

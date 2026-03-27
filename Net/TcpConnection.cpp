@@ -4,7 +4,7 @@
 
 
 #include <atomic>
-
+#include "../Common/Assert.h"
 
 namespace yy
 {
@@ -36,8 +36,27 @@ TcpConnection::~TcpConnection()
     }
     sockets::close(fd_);
 }
+void TcpConnection::setEvent(Event e)
+{   
+    handler_.set_event(e);  
+    if(e.has(LogicEvent::Edge)&&!isET)
+    {
+        handler_.setReadCallBack([this](){
+            handleETRead();
+        });
+        isET=true;
+    }
+    else if(!e.has(LogicEvent::Edge)&&isET)
+    {
+        handler_.setReadCallBack([this](){
+            handleRead();
+        });
+        isET=false;            
+    }
+}
 void TcpConnection::ConnectSuccess()
 {
+    // add();
     assert(Connstatus_==ConnectStatus::Connecting);
     Connstatus_=ConnectStatus::Connected;
     handler_.tie(shared_from_this());
@@ -158,7 +177,7 @@ void TcpConnection::sendInLoop(const char* message,size_t len)
         }     
     }         
 }
-void TcpConnection::handleETRead(ServicesReadCallback cb)
+void TcpConnection::handleETRead()
 {
 
     assert(loop_->isInLoopThread());
@@ -169,13 +188,14 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
         if(n>0)
         {
             //updateWaterMark();
-            cb(shared_from_this());
+            SmessageCallBack_(shared_from_this());
             ++ReadNum;
 //             handleBackpressureAfterRead();
         }  
         else if(n==0)
         {
-
+            // ++CloseNum;
+            // assert(CloseNum<2);
             handleClose();
             return;
         }
@@ -199,7 +219,7 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
         auto con=c.lock();
         if(con)
         {
-            con->handleRead();
+            con->handleETRead();
         }
     });
 
@@ -207,36 +227,31 @@ void TcpConnection::handleETRead(ServicesReadCallback cb)
 void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
-    assert(!(SreadCallback_&&SmessageCallBack_));
-    if(SreadCallback_)
-    {
-        SreadCallback_(shared_from_this());
-    }   
-    else 
-    {
-        assert(SmessageCallBack_);
-        auto n=RecvBuffer_.appendFormFd(handler_.fd());
-        if(n>0)
-        {
+  
 
-            //updateWaterMark();
-            SmessageCallBack_(shared_from_this());
-            // handleBackpressureAfterRead();
-            // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.readable_size()<<"字节");
-        }  
-        else if(n==0)
-        {
-            handleClose();
-            return;
-        }
-        else
-        {   if(errno == EAGAIN || errno == EWOULDBLOCK||errno==EINTR)
-            {
-                handleError();
-                return;                
-            }
-        }        
+    assert(SmessageCallBack_);
+    auto n=RecvBuffer_.appendFormFd(handler_.fd());
+    if(n>0)
+    {
+
+        //updateWaterMark();
+        SmessageCallBack_(shared_from_this());
+        // handleBackpressureAfterRead();
+        // LOG_TCP_DEBUG("读取了"<<n<<"字节，buffer可读:"<<RecvBuffer_.readable_size()<<"字节");
+    }  
+    else if(n==0)
+    {
+        handleClose();
+        return;
     }
+    else
+    {   if(errno == EAGAIN || errno == EWOULDBLOCK||errno==EINTR)
+        {
+            handleError();
+            return;                
+        }
+    }        
+    
             
 }
 void TcpConnection::handleWrite()
@@ -286,7 +301,7 @@ void TcpConnection::handleError()
 
     if(errno==EPIPE||errno==ECONNRESET)
     {
-        handleClose();
+        return;
     }
     else if (errno==ESHUTDOWN)
     {

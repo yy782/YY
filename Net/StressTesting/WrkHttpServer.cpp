@@ -10,9 +10,9 @@ extern char favicon[555];
 
 int main(int argc, char* argv[])
 {
-    bool isET=false;
+    bool isET=true;
     Address addr(8080,true);
-    int numThreads=1;
+    int numThreads=4;
     if(argc>1)
     {
        numThreads = atoi(argv[1]); 

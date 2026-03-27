@@ -26,6 +26,7 @@ MODULES = [
     "CLIENT",
     "EVENT",
     "HTTP",
+    "LOOP",
     "DEFAULT"  # 保留默认模块
 ]
 context = ""
@@ -43,9 +44,9 @@ for module in MODULES:
     context +=(f"#define LOG_{module}_INFO(msg) "
                 f"LOG_BASE(LogModule::{module}, LOG_LEVEL_INFO, \"INFO\", msg)\n")
     context +=(f"#define LOG_{module}_WARN(msg) "
-                f"LOG_BASE(LogModule::{module}, LOG_LEVEL_WARN, \"INFO\", msg)\n")            
+                f"LOG_BASE(LogModule::{module}, LOG_LEVEL_WARN, \"WARN\", msg)\n")            
     context +=(f"#define LOG_{module}_ERROR(msg) "
-                f"LOG_BASE(LogModule::{module}, LOG_LEVEL_ERROR, \"INFO\", msg)\n")    
+                f"LOG_BASE(LogModule::{module}, LOG_LEVEL_ERROR, \"ERROR\", msg)\n")    
 context +="}\n"                
 context +=f"#endif"
 write_with_marker("LogFilter.h",context,"//Appendfromhere:")
