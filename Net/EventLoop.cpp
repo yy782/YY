@@ -15,7 +15,7 @@ namespace EventLoopStatus {
     constexpr int Quited = 1 << 5;
 }
 
-thread_local PollerType EventLoop::poller_;
+
 const int PollTimeMs=100;
 
     
