@@ -144,7 +144,7 @@ void Address::fromIpPort(const struct in6_addr& ip, uint16_t port,
     addr->sin6_addr=ip;
 }
 
-const std::string Address::ip()const
+const std::string Address::ip()const noexcept
 {
     char ip[INET6_ADDRSTRLEN];
     const char* result;
@@ -159,7 +159,7 @@ const std::string Address::ip()const
     assert(result!=NULL&&"IP地址转换可读的字符串失败");
     return std::string(ip);
 }
-const std::string Address::port()const
+const std::string Address::port()const noexcept
 {
     uint16_t port;
     if(is_ipv6_)
@@ -172,7 +172,7 @@ const std::string Address::port()const
     }
     return std::to_string(port);
 }
-sa_family_t Address::family()const  
+sa_family_t Address::family()const noexcept
 { 
     if(is_ipv6_)
     {
@@ -183,7 +183,7 @@ sa_family_t Address::family()const
         return AF_INET;
     }
 }
-socklen_t Address::len()const
+socklen_t Address::len()const noexcept
 {
     if(is_ipv6_)
     {
@@ -194,7 +194,7 @@ socklen_t Address::len()const
         return static_cast<socklen_t>(sizeof(sockaddr_in));
     }
 }
-const std::string Address::sockaddrToString()const
+const std::string Address::sockaddrToString()const noexcept
 {
     std::string str="IP: ";
     str+=(ip());
@@ -202,7 +202,7 @@ const std::string Address::sockaddrToString()const
     str+=(port());
     return str;
 }
-const struct sockaddr* Address::sockAddr()const     
+const struct sockaddr* Address::sockAddr()const noexcept     
 {
     const void* tmp=nullptr;
     if(is_ipv6_)
@@ -216,7 +216,7 @@ const struct sockaddr* Address::sockAddr()const
     }
     return static_cast<const struct sockaddr*>(tmp);
 }
-struct sockaddr* Address::sockAddr()
+struct sockaddr* Address::sockAddr() noexcept
 {
     void* tmp=nullptr;
     if(is_ipv6_)

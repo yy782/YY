@@ -56,8 +56,8 @@ public:
         events_=event;
         update();
     }
-    void set_revent(Event event){revents_=event;}
-    void set_status(int status){status_=status;}
+    void set_revent(Event event) noexcept{revents_=event;}
+    void set_status(int status) noexcept{status_=status;}
 
     bool isWriting()const noexcept{return events_.has(LogicEvent::Write);}
     bool isReading()const noexcept{return events_.has(LogicEvent::Read);}

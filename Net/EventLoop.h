@@ -52,10 +52,10 @@ public:
     }
     void loop();
     void quit();
-    bool isQuit();
+    bool isQuit() noexcept;
 
 
-    bool isInLoopThread();
+    bool isInLoopThread() noexcept;
 
     template<typename Callable>
     void submit(Callable&& cb);
@@ -105,7 +105,7 @@ private:
     
     bool CheckeEventLoopStatus();
     
-    PollerType poller_;
+    static thread_local PollerType poller_;
     PollerHandlerList activeHandlers_;
     FunctionList FunctionList_;
     Pid_t threadId_;

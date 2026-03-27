@@ -297,12 +297,12 @@ void TcpClient::stop()
     }
 }
 
-bool TcpClient::isConnected() const 
+bool TcpClient::isConnected() const noexcept
 {
     return connection_ && connection_->isConnected();
 }
 
-bool TcpClient::isConnecting() const 
+bool TcpClient::isConnecting() const noexcept
 {
     return connection_ && connection_->isConnecting();
 }

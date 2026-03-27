@@ -127,10 +127,10 @@ public:
        
         }
     void detach(){thread_.detach();}
-    static bool isSelf(const Pid_t& pid){
+    static bool isSelf(const Pid_t& pid) noexcept{
         return pid==std::this_thread::get_id();
     }
-    Pid_t static getId(){return std::this_thread::get_id();}
+    Pid_t static getId() noexcept{return std::this_thread::get_id();}
 private:
     std::thread thread_;
 };

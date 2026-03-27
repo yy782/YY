@@ -34,11 +34,11 @@ public:
     // 重连控制
     void enableRetry() { retry_ = true; }
     void disableRetry() { retry_ = false; }
-    bool retry() const { return retry_; }
+    bool retry() const noexcept { return retry_; }
 
     // 状态查询
-    bool isConnected() const;
-    bool isConnecting() const;
+    bool isConnected() const noexcept;
+    bool isConnecting() const noexcept;
 
     // 回调设置
     void setConnectionCallback(ServicesConnectionCallBack cb) { SconnectionCallback_ = std::move(cb); }
@@ -52,9 +52,9 @@ public:
     // void send(const char* data, size_t len);
     // void sendOutput();
 
-    TcpConnectionPtr getConnection() const { return connection_; }
-    EventLoop* getLoop() const { return loop_; }
-    const Address& getPeerAddr() const { return serverAddr_; }
+    TcpConnectionPtr getConnection() const noexcept { return connection_; }
+    EventLoop* getLoop() const noexcept { return loop_; }
+    const Address& getPeerAddr() const noexcept { return serverAddr_; }
     // Buffer& getSendBuffer() { return connection_->getSendBuffer(); }
     // Buffer& getRecvBuffer() { return connection_->getRecvBuffer(); }
 

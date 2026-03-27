@@ -23,7 +23,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
 
     explicit TcpBuffer(size_t initial_size=1024,size_t prepend_size=8);
     ~TcpBuffer()=default;
-    void swap(TcpBuffer& other);
+    void swap(TcpBuffer& other) noexcept;
     template<typename T>
     void append(T&& value);
     void append(const char* data,size_t size);
@@ -43,24 +43,24 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     char* retrieveAll();
     
     std::string retrieveAllToString();
-    const char* peek()const {return begin()+read_index_;}
-    stringPiece readView()const{return stringPiece(peek(),readable_size()+1);}
+    const char* peek()const noexcept{return begin()+read_index_;}
+    stringPiece readView()const noexcept{return stringPiece(peek(),readable_size()+1);}
     char* ModifyData(){return begin()+read_index_;}
 
     void shrink(size_t reserve);
-    size_t readable_size()const{return write_index_-read_index_;}
-    size_t writable_size()const{return buffer_.size()-write_index_;}
-    size_t prependable_size()const{return read_index_;}
+    size_t readable_size()const noexcept{return write_index_-read_index_;}
+    size_t writable_size()const noexcept{return buffer_.size()-write_index_;}
+    size_t prependable_size()const noexcept{return read_index_;}
 
-    char* findBorder(const char* border) 
+    char* findBorder(const char* border) noexcept
     {
         return std::search(begin_read(),begin_write(),border,border+strlen(border));
     }
-    char* findBorder(const char* border,size_t size)
+    char* findBorder(const char* border,size_t size) noexcept
     {
         return std::search(begin_read(),begin_write(),border,border+size);
     }
-    char* findBorder(const char* border,size_t size,size_t& len)
+    char* findBorder(const char* border,size_t size,size_t& len) noexcept
     {
         char* last=findBorder(border,size);
         len=last-begin_read();
@@ -68,14 +68,14 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
     }
     
     
-    void prepend(const char* data,size_t size)
+    void prepend(const char* data,size_t size) noexcept
     {
         assert(size <= prependable_size());
         read_index_ -= size;
         std::copy(data, data + size, begin_read());
     }
     
-    void prepend(const void* data,size_t size)
+    void prepend(const void* data,size_t size) noexcept
     {
         prepend(static_cast<const char*>(data), size);
     }
@@ -90,7 +90,7 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
 
 
 
-    void clear()
+    void clear() noexcept
     {
         read_index_=8;
         write_index_=8;

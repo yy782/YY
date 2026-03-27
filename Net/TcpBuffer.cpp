@@ -14,7 +14,7 @@ prepend_size_(prepend_size),
 read_index_(prepend_size),
 write_index_(prepend_size)
 {}
-void TcpBuffer::swap(TcpBuffer& other)
+void TcpBuffer::swap(TcpBuffer& other) noexcept
 {
     buffer_.swap(other.buffer_);
     std::swap(read_index_,other.read_index_);

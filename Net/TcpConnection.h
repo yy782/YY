@@ -40,13 +40,13 @@ public:
     ~TcpConnection();// 构析函数不能触发回调了，TcpConnectionPtr不允许
     void ConnectSuccess();
     EventHandler* handler(){return &handler_;}    
-    int fd()const{return handler_.fd();}
-    const Address& addr()const{return addr_;}
-    EventLoop* loop(){return loop_;}
+    int fd()const noexcept{return handler_.fd();}
+    const Address& addr()const noexcept{return addr_;}
+    EventLoop* loop() noexcept{return loop_;}
     Buffer& sendBuffer(){return SendBuffer_;}
     Buffer& recvBuffer(){return RecvBuffer_;}
     
-    bool isConnecting()const{return Connstatus_==ConnectStatus::Connecting;}
+    bool isConnecting()const noexcept{return Connstatus_==ConnectStatus::Connecting;}
 
 
     template<typename Tag,typename... Args>
@@ -116,7 +116,7 @@ public:
     void sendOutput(); //配合ProtoMsgCodec使用的接口，把缓冲区的数据发送出去 
     template<typename T>
     T& context(){ return data_.context<T>();}
-    bool isConnected(){return Connstatus_==ConnectStatus::Connected;}
+    bool isConnected() noexcept{return Connstatus_==ConnectStatus::Connected;}
 
 
 

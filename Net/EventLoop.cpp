@@ -5,8 +5,7 @@ namespace yy
 {
 namespace net
 {
-namespace 
-{
+
 namespace EventLoopStatus {
     constexpr int Init = 1 << 0;
     constexpr int Looping = 1 << 1;
@@ -16,8 +15,9 @@ namespace EventLoopStatus {
     constexpr int Quited = 1 << 5;
 }
 
+thread_local PollerType EventLoop::poller_;
 const int PollTimeMs=100;
-}
+
     
 bool EventLoop::CheckeEventLoopStatus()
 {
@@ -28,7 +28,6 @@ bool EventLoop::CheckeEventLoopStatus()
 }
 
 EventLoop::EventLoop():
-poller_(),
 activeHandlers_(),
 FunctionList_(),
 threadId_(Thread::getId()),
@@ -46,7 +45,7 @@ wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeu
     wakeHandler_.setReadCallBack(eventCallBack);
     wakeHandler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge));
 }
-bool EventLoop::isQuit()
+bool EventLoop::isQuit() noexcept
 {
     return status_&EventLoopStatus::Quiting;
 }
@@ -80,7 +79,7 @@ void EventLoop::loop()
         doPendingFunctions();
     status_=EventLoopStatus::Quited;
 } 
-bool EventLoop::isInLoopThread()
+bool EventLoop::isInLoopThread() noexcept
 {
     return Thread::isSelf(threadId_);
 }

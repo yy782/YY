@@ -38,16 +38,16 @@ public:
     void set_ipv6_addr(const struct sockaddr_in6& addr6){addr6_=addr6; is_ipv6_=true;}
     void set_ipv4_addr(const struct sockaddr_in& addr){addr_=addr; is_ipv6_=false;}
 
-    const std::string ip()const;
-    const std::string port()const;
-    sa_family_t family()const;
-    socklen_t len()const;
+    const std::string ip()const noexcept;
+    const std::string port()const noexcept;
+    sa_family_t family()const noexcept;
+    socklen_t len()const noexcept;
 
     
 
-    const std::string sockaddrToString()const;
-    const struct sockaddr* sockAddr()const;
-    struct sockaddr* sockAddr();
+    const std::string sockaddrToString()const noexcept;
+    const struct sockaddr* sockAddr()const noexcept;
+    struct sockaddr* sockAddr() noexcept;
     static void fromIpPort(const char* ip, uint16_t port,
         struct sockaddr_in* addr);
     static void fromIpPort(in_addr_t ip,uint16_t port,

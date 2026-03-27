@@ -43,8 +43,8 @@ void TcpServer::newConnection(int fd,const Address& addr)
     conn->setErrorCallBack(SerrorCallback_);
     conn->setConnectCallBack(SconnectCallback_);
     conn->ConnectSuccess();
-    // assert(!connects_.contains(conn));
-    // connects_.insert(conn);    
+    assert(!connects_.contains(conn));
+    connects_.insert(conn);    
 }
     
 void TcpServer::removeConnection(TcpConnectionPtr conn)
@@ -57,7 +57,7 @@ void TcpServer::removeConnection(TcpConnectionPtr conn)
     // });
     
     
-    // connects_.erase(conn);
+    connects_.erase(conn);
 }
 }    
 }
