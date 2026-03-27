@@ -65,7 +65,7 @@ public:
      * @param loop 事件循环
      * @param name 事件处理器名称
      */
-    EventHandler(int fd,EventLoop* loop,const  char* name);
+    EventHandler(int fd,EventLoop* loop,const  char* name,Event events=Event(LogicEvent::None));
     
     /**
      * @brief 析构函数
@@ -79,7 +79,7 @@ public:
      * @param loop 事件循环
      * @param name 事件处理器名称
      */
-    void init(int fd,EventLoop* loop,const char* name);
+    void init(int fd,EventLoop* loop,const char* name,Event events=Event(LogicEvent::None));
     
     /**
      * @brief 绑定对象的生命周期

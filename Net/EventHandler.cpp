@@ -5,23 +5,25 @@ namespace yy
 {
 namespace net
 {
-EventHandler::EventHandler(int fd,EventLoop* loop,const char* name):
+EventHandler::EventHandler(int fd,EventLoop* loop,const char* name,Event events):
 fd_(fd),
 loop_(loop),
 name_(name)
 {
     assert(loop_!=nullptr);
+    events_=events;
     loop_->addListen(this);
     
  
 } 
-void EventHandler::init(int fd,EventLoop* loop,const char* name)
+void EventHandler::init(int fd,EventLoop* loop,const char* name,Event events)
 {
     assert(fd_==-1);
     assert(fd!=-1);
     assert(loop);
     loop_=loop;
     fd_=fd;
+    events_=events;
     loop_->addListen(this); 
     name_=name;
 }  
