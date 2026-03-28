@@ -54,11 +54,6 @@ public:
     typedef EventCallBack ExceptCallBack;
     
     /**
-     * @brief 默认构造函数
-     */
-    EventHandler()=default;
-    
-    /**
      * @brief 构造函数
      * 
      * @param fd 文件描述符
@@ -79,7 +74,8 @@ public:
      * @param loop 事件循环
      * @param name 事件处理器名称
      */
-    void init(int fd,EventLoop* loop,const char* name,Event events=Event(LogicEvent::None));
+    EventHandler(Event events=Event(LogicEvent::None));
+    void init(int fd,EventLoop* loop,const char* name);
     
     // /**
     //  * @brief 绑定对象的生命周期

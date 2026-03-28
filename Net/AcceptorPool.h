@@ -39,10 +39,10 @@ public:
     void setNewConnectCallBack(ServicesConnectCallBack cb){SconnectCallBack_=std::move(cb);}
     void run()
     {
-        for(int i=0;i<threads_.size();++i)
+        for(size_t i=0;i<threads_.size();++i)
         {
             auto loop=threads_[i]->run();
-            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,Ser_,loop));
+            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,loop,Ser_));
             acceptors_[i]->setNewConnectCallBack(SconnectCallBack_);
             acceptors_[i]->listen();
         }

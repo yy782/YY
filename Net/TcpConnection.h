@@ -16,6 +16,8 @@ namespace net
 {
 class TcpConnection;
 typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;    
+template<typename T>
+class ObjectPool;
 /**
  * @brief TCP连接类，负责管理TCP连接的生命周期和数据传输
  * 
@@ -39,7 +41,7 @@ public:
     /**
      * @brief 关闭回调函数类型
      */
-    typedef std::function<void(TcpConnectionPtr)> CloseCallBack;
+    typedef std::function<void(TcpConnectionPtr)> ServicesCloseCallBack;
     /**
      * @brief 消息回调函数类型
      */
@@ -65,6 +67,7 @@ public:
      */
     enum class ConnectStatus
     {
+        Connecting,
         Connected,     /**< 已连接 */
         DisConnecting, /**< 断开连接中 */
         DisConnected   /**< 已断开连接 */
@@ -89,7 +92,7 @@ public:
      * 
      * 构析函数不能触发回调了，TcpConnectionPtr不允许
      */
-    virtual ~TcpConnection();
+    ~TcpConnection();
     static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop,Event events=Event(LogicEvent::None))
     {
         return std::make_shared<TcpConnection>(fd,addr,loop,events);
@@ -130,7 +133,7 @@ public:
      * @return EventLoop* 事件循环
      */
     EventLoop* loop() noexcept{return loop_;}
-    
+    ServicesData& date(){return data_;}
     /**
      * @brief 获取发送缓冲区
      * 
@@ -321,9 +324,14 @@ private:
     }    
     
 
-    const int fd_;
-    const Address addr_; // @prief 地址 如果是ser,则是对端的，如果是Cli,则是我端的
-    EventLoop* const loop_;//////////////////////////////////////////////
+    friend class ObjectPool<TcpConnectionPtr>;
+    TcpConnection(Event events);
+    void init(int fd,const Address& addr,EventLoop* loop);
+    void reset();
+
+    int fd_={-1};/////////////////////////////////////////////////////////////////
+    Address addr_; // @prief 地址 如果是ser,则是对端的，如果是Cli,则是我端的
+    EventLoop* loop_={nullptr};//////////////////////////////////////////////
     Buffer RecvBuffer_;
     //BackpressureState RecvbpState_{BackpressureState::kNormal};
     //BackpressureAfterSendCallBack BackpressureAfterSend_;
@@ -333,7 +341,7 @@ private:
 
 
     ServicesMessageCallBack SmessageCallBack_;
-    CloseCallBack ScloseCallBack_;
+    ServicesCloseCallBack ScloseCallBack_;
     DestructorCallBack destructCallBack_; 
     ServicesErrorCallBack SerrorCallBack_;
     ServicesExceptCallBack SexceptCallBack_;

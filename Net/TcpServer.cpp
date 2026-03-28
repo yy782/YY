@@ -4,8 +4,7 @@ namespace yy
 {
 namespace net
 {   
-TcpServer::TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum,EventLoop* loop):
-loop_(loop),
+TcpServer::TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum):
 AcceptorPool_(addr,this,AcceptorNum),
 WorkThreadPool_(WorkThreadnum)
 {

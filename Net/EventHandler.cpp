@@ -16,16 +16,20 @@ name_(name)
     
  
 } 
-void EventHandler::init(int fd,EventLoop* loop,const char* name,Event events)
+EventHandler::EventHandler(Event events):
+events_(events)
+{
+    
+}
+void EventHandler::init(int fd,EventLoop* loop,const char* name)
 {
     assert(fd_==-1);
     assert(fd!=-1);
     assert(loop);
     loop_=loop;
     fd_=fd;
-    events_=events;
-    loop_->addListen(this); 
     name_=name;
+    loop_->addListen(this); 
 }  
 // void EventHandler::tie(const std::shared_ptr<void>& obj)
 // {

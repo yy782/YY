@@ -31,10 +31,8 @@ class CodecTestServer
 public:
 
     typedef TcpConnection::CharContainer CharContainer;
-    CodecTestServer(const Address& addr,int thread_num,EventLoop* loop):
-    server_(addr,thread_num,loop),
-    loop_(loop)
-    
+    CodecTestServer(const Address& addr,int thread_num):
+    server_(addr,1,thread_num)   
     {
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
@@ -57,6 +55,10 @@ public:
     void stop()
     {
         server_.stop();
+    }
+    void wait()
+    {
+        server_.wait();
     }
     ~CodecTestServer()
     {
@@ -104,12 +106,10 @@ private:
     {
         auto addr=conn->addr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
-        loop_->quit();
         server_.stop();
         exit(0);
     }
     TcpServer server_;
-    EventLoop* loop_;
 };
 
 int main() 
@@ -131,8 +131,7 @@ int main()
     )
     Address serverAddr(8080,true);
     
-    EventLoop loop;
-    CodecTestServer server(serverAddr,1,&loop);
+    CodecTestServer server(serverAddr,1);
     server.start();
-    loop.loop();
+    server.wait();
 }

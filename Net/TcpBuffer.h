@@ -37,7 +37,11 @@ public: // @note 由于IO操作在Loop线程完成，保证了指针不会出乎
      * @param prepend_size 前置空间大小
      */
     explicit TcpBuffer(size_t initial_size=1024,size_t prepend_size=8);
-    
+    void reset()///////////////////////////////////////////////////////////////////
+    {
+        read_index_=8;
+        write_index_=8;
+    }
     /**
      * @brief 析构函数
      */

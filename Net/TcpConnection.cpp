@@ -66,6 +66,65 @@ TcpConnection::~TcpConnection()
     }
     sockets::close(fd_);
 }
+TcpConnection::TcpConnection(Event events):
+Connstatus_(ConnectStatus::Connecting),
+handler_(events),
+isET(events.has(LogicEvent::Edge)?true:false)
+{
+    if(isET)
+    {
+        handler_.setReadCallBack([this]()
+        {
+            handleETRead();
+        });         
+    }
+    else 
+    {
+        handler_.setReadCallBack([this]()
+        {
+            handleRead();
+        });        
+    }
+
+    handler_.setExceptCallBack([this]()
+    {
+        handleException();
+    });
+    handler_.setWriteCallBack([this]()
+    {
+        handleWrite();
+    });
+    handler_.setCloseCallBack([this]()
+    {
+        handleClose();
+    });
+    handler_.setErrorCallBack([this]()
+    {
+        handleError();
+    });    
+}
+void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
+{
+    assert(!handler_.event().has(LogicEvent::Edge)|| 
+        !sockets::isNonBlocking(fd));
+    assert(fd_==-1);
+    assert(loop_==nullptr);
+    assert(Connstatus_==ConnectStatus::Connecting);
+    Connstatus_=ConnectStatus::Connected;
+    fd_=fd;
+    loop_=loop;
+    addr_=addr;
+    handler_.init(fd,loop,addr.sockaddrToString().c_str());
+}
+void TcpConnection::reset()///////////////////////////////////////////
+{
+    fd_=-1;
+    loop_=nullptr;
+    addr_=Address();
+    RecvBuffer_.reset();
+    SendBuffer_.reset();
+    Connstatus_=ConnectStatus::Connecting;
+}
 void TcpConnection::setEvent(Event e)
 {   
     handler_.set_event(e);  

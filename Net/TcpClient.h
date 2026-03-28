@@ -31,7 +31,7 @@ public:
     /**
      * @brief 关闭回调函数类型
      */
-    typedef TcpConnection::CloseCallBack ServicesCloseCallback;
+    typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallback;
     /**
      * @brief 错误回调函数类型
      */

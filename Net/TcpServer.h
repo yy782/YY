@@ -52,7 +52,7 @@ public:
      * @param threadnum 线程池大小
      * @param loop 事件循环
      */
-    TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum,EventLoop* loop);
+    TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum);
     /**
      * @brief 析构函数
      */
@@ -87,11 +87,7 @@ private:
      * 
      * 当连接关闭时调用，清理连接资源。
      */
-    
-    /**
-     * @brief 事件循环
-     */
-    EventLoop* loop_;
+
     
     /**
      * @brief 接收器

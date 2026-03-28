@@ -118,7 +118,6 @@ private:
     {
         state_=State::kConnecting;
         handler_=new EventHandler(fd_,loop_,"ConnectorHandler");
-        handler_->tie(shared_from_this());
         handler_->setWriteCallBack([this]()
         {
             handleWrite();
