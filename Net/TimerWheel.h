@@ -98,7 +98,7 @@ private:
     /**
      * @brief timerfd文件描述符
      */
-    const int fd_;
+    const int fd_;//InOne
     
     /**
      * @brief 最大槽数
@@ -113,7 +113,7 @@ private:
     /**
      * @brief 当前槽位
      */
-    int cur_slot_;
+    int cur_slot_;// 需要保证
     
     /**
      * @brief 槽位数组

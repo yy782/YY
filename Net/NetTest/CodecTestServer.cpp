@@ -106,8 +106,6 @@ private:
     {
         auto addr=conn->addr();
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
-        server_.stop();
-        exit(0);
     }
     TcpServer server_;
 };
@@ -124,13 +122,10 @@ int main()
         .set_module_enabled("TCP")
         .set_module_enabled("SYSTEM")
         .set_module_enabled("TIME");
-    //daemonize(); // 目录被换了
-  
     EXCLUDE_BEFORE_COMPILATION(
         LOG_SYSTEM_INFO("[PID] "<<getpid());
     )
     Address serverAddr(8080,true);
-    
     CodecTestServer server(serverAddr,1);
     server.start();
     server.wait();

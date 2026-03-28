@@ -27,12 +27,13 @@ bool EventLoop::CheckeEventLoopStatus()
     return true;
 }
 
-EventLoop::EventLoop():
+EventLoop::EventLoop(int id):
 activeHandlers_(),
 FunctionList_(),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
-wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeupHandler")
+wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this),
+id_(id)
 {
     auto eventCallBack=[this]() -> void
     {
@@ -119,8 +120,8 @@ void EventLoop::doPendingFunctions()
     {
         Functor cb;
         FunctionList_.retrieve(cb);
-
-        
+        LOG_LOOP_DEBUG("");
+    
         cb(); 
         ++FinishNum;
     }

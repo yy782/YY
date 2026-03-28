@@ -37,8 +37,7 @@ int main(int argc, char* argv[])
     //     .set_module_enabled("SYSTEM")
     //     ;
     Address listenAddr("0.0.0.0",8080);
-    EventLoop loop;
-    TcpServer server(listenAddr,threadNums,&loop);
+    TcpServer server(listenAddr,1,threadNums);
     int ConNum=0;
     if(isET)
     {
@@ -102,7 +101,7 @@ int main(int argc, char* argv[])
     }
 
     server.loop();
-    loop.loop();
+    server.wait();
 
 
   

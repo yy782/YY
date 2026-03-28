@@ -92,7 +92,7 @@ private:
     /**
      * @brief 接收器
      */
-    AcceptorPool AcceptorPool_;
+    AcceptorPool AcceptorPool_;// InOne
     /**
      * @brief 事件循环线程池
      */

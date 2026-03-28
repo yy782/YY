@@ -329,7 +329,7 @@ private:
     void init(int fd,const Address& addr,EventLoop* loop);
     void reset();
 
-    int fd_={-1};/////////////////////////////////////////////////////////////////
+    int fd_={-1};//不用ObjectPool,如果~在InLoop,则是InLoop
     Address addr_; // @prief 地址 如果是ser,则是对端的，如果是Cli,则是我端的
     EventLoop* loop_={nullptr};//////////////////////////////////////////////
     Buffer RecvBuffer_;
@@ -347,11 +347,11 @@ private:
     ServicesExceptCallBack SexceptCallBack_;
     ServicesData data_;
 
-    std::atomic<ConnectStatus> Connstatus_;
+    std::atomic<ConnectStatus> Connstatus_;// Not
 
     
     EventHandler handler_;
-    bool isET={false};
+    bool isET={false};//需要外部强行保证
 
 };
 

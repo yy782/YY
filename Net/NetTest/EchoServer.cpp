@@ -32,8 +32,8 @@ class EchoServer
 public:
 
     typedef TcpConnection::CharContainer CharContainer;
-    EchoServer(const Address& addr,int thread_num,EventLoop* loop,bool isET):
-    server_(addr,thread_num,loop)
+    EchoServer(const Address& addr,int thread_num,bool isET):
+    server_(addr,1,thread_num)
     
     {
         server_.setConnectCallBack([this, isET](int Cfd,const Address& Caddr,EventLoop* Cloop)
@@ -67,6 +67,10 @@ public:
     void stop()
     {
         server_.stop();
+    }
+    void wait()
+    {
+        server_.wait();
     }
     ~EchoServer()
     {
@@ -129,6 +133,7 @@ int main()
     std::string logPath=config.get("log","logPath");
     std::list<std::string> modules=config.getStrings("log","modules");
     bool isET=config.getBoolean("server","isET");
+    bool isDaemonize=config.getBoolean("server","isDaemonize");
     if(isAsync)
     {
         auto async_flush_interval=config.getDuration("AsyncLog","flush_interval");
@@ -144,22 +149,14 @@ int main()
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }
-    //daemonize(); // 目录被换了
-  
+    if(isDaemonize)
+        daemonize(); // 目录被换了
     EXCLUDE_BEFORE_COMPILATION( // 由于部分代码是py脚本写的，要在编译(脚本运行)前抑制
         LOG_SYSTEM_INFO("[PID] "<<getpid());
     )
     Address serverAddr(host.c_str(),port);
     
-    EventLoop loop;
-    EchoServer server(serverAddr,thread_nums,&loop,isET);
+    EchoServer server(serverAddr,thread_nums,isET);
     server.start();
-    Signal::signal(SIGTERM,[&server,&loop](){
-        LOG_SYSTEM_DEBUG("Siganal handle exit");
-        loop.quit();
-        server.stop();
-        
-        sleep(2);
-    });
-    loop.loop();
+    server.wait();
 }

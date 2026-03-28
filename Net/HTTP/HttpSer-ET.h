@@ -12,9 +12,8 @@ class HTTPSerET {
 public:
     typedef std::function<void(Http::HttpRequest&, Http::HttpResponse&)> HttpCallback;
     
-    HTTPSerET(const Address& addr, int thread_num, EventLoop* loop)
-        : server_(addr, thread_num, loop),
-        loop_(loop)
+    HTTPSerET(const Address& addr, int thread_num)
+        : server_(addr, 1, thread_num)
         {
         
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
@@ -166,7 +165,6 @@ private:
     
     TcpServer server_;
     Http::HttpRouter router_;
-    EventLoop* loop_;
 };
 }
 }    

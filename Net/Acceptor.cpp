@@ -5,10 +5,11 @@ namespace yy
 {
 namespace net
 {
-Acceptor::Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser):
+Acceptor::Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser,int id)://主线程构造
 addr_(addr),
+id_(id),
 loop_(loop),
-handler_(sockets::createTcpSocketOrDie(addr.family()),loop_,"Acceptor"),
+handler_(sockets::createTcpSocketOrDie(addr.family()),loop_,std::string("AcceptorID:"+id),Event(LogicEvent::Read|LogicEvent::Edge)),
 idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC)),
 Ser_(Ser)
 {
@@ -55,7 +56,6 @@ void Acceptor::NewConnection(int fd,const Address& addr)
 void Acceptor::removeConnection(TcpConnectionPtr conn)
 {
     assert(conn->loop()->isInLoopThread()); 
-    
     // loop_->submit([this,conn](){//////////////////connects_是公共数据结构 会导致死锁，accept线程向IO池提交连接，IO池向accept线程移除连接
     //     assert(connects_.find(conn)!=connects_.end());
     //     connects_.erase(conn);

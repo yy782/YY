@@ -46,10 +46,6 @@ public:
     {
         return loop_;
     }
-    void join()
-    {
-        thread_.join();
-    }
     bool joinable()
     {
         return thread_.joinable();

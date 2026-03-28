@@ -44,7 +44,7 @@ public:
      * @param addr 地址
      * @param loop 事件循环
      */
-    Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser);
+    Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser,int id=-1);
     
     /**
      * @brief 析构函数
@@ -69,9 +69,7 @@ public:
      * @brief 开始监听
      */
     void listen()
-    {
-        handler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge));
-       
+    {      
         sockets::listenOrDie(handler_.fd());
         
     }
@@ -88,20 +86,21 @@ private:
     /**
      * @brief 地址
      */
-    Address addr_;
-    
+    const Address& addr_;// inOne
+    const int id_;
     /**
      * @brief 事件循环
      */
-    EventLoop* loop_;
+    EventLoop* const loop_;
     
     /**
      * @brief 事件处理器
      */
     EventHandler handler_;
-    ConnectMap connects_;
 
-    ServicesConnectCallBack SconnectCallBack_;
+    ConnectMap connects_;// Not
+
+    ServicesConnectCallBack SconnectCallBack_;// inOne
 
     
     

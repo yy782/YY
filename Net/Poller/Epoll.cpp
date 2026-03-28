@@ -86,10 +86,6 @@ void Epoll::poll(int timeout,HandlerList& event_handlers)
 void Epoll::add_listen(EventHandler* handler)
 {
     assert(handler);
-    EXCLUDE_BEFORE_COMPILATION(
-        LOG_SYSTEM_DEBUG("添加监听 "<<handler->printName());
-    )
-
     assert((handler->status()==New||
             handler->status()==Delete));
     assert(handlers_.find(handler->fd())==handlers_.end());
@@ -106,11 +102,7 @@ void Epoll::update_listen(EventHandler* handler)
     assert(has_handler(handler));
 
     operator_epoll(EPOLL_CTL_MOD,handler);
-    LOG_LOOP_DEBUG(handler->printName()<<" 修改监听");
-    if(handler->event()&LogicEvent::Write)
-    {
-        LOG_LOOP_DEBUG(handler->printName()<<" 修改为可写");
-    }
+
 }
 void Epoll::remove_listen(EventHandler* handler)
 {

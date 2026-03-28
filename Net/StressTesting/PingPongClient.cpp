@@ -124,7 +124,7 @@ class Client : noncopyable
          int timeout,
          int threadCount)
     : loop_(loop),
-      threadPool_(threadCount,loop),
+      threadPool_(threadCount),
       sessionCount_(sessionCount),
       timeout_(timeout)
   {

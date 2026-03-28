@@ -5,31 +5,31 @@ namespace yy
 {
 namespace net
 {
-EventHandler::EventHandler(int fd,EventLoop* loop,const char* name,Event events):
+EventHandler::EventHandler(int fd,EventLoop* loop,const std::string& addInformation,Event events):
+status_(-1),
 fd_(fd),
-loop_(loop),
-name_(name)
+events_(events),
+revents_(Event(LogicEvent::None)),
+loop_(loop)
 {
     assert(loop_!=nullptr);
-    events_=events;
     loop_->addListen(this);
-    
- 
 } 
 EventHandler::EventHandler(Event events):
-events_(events)
+status_(-1),
+events_(events),
+revents_(Event(LogicEvent::None))
 {
-    
+
 }
-void EventHandler::init(int fd,EventLoop* loop,const char* name)
+void EventHandler::init(int fd,const std::string& addInformation,EventLoop* loop)
 {
     assert(fd_==-1);
     assert(fd!=-1);
     assert(loop);
     loop_=loop;
     fd_=fd;
-    name_=name;
-    loop_->addListen(this); 
+    loop_->addListen(this);  
 }  
 // void EventHandler::tie(const std::shared_ptr<void>& obj)
 // {
@@ -38,33 +38,39 @@ void EventHandler::init(int fd,EventLoop* loop,const char* name)
 // }
 void EventHandler::handler_revent()
 {
+    // std::shared_ptr<void> guard;
+    // if(tied_)
+    // {
+    //     guard=tie_.lock();
+    //     if(!guard)return;        
+    // }
     if(revents_&LogicEvent::Hup&&!(revents_&LogicEvent::Read))
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接
         // 但是HupEvent和RdHupEvent的事件分界比较模糊?
         EXCLUDE_BEFORE_COMPILATION( 
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Hup");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent HupEvent");
         )
         if(closeCallback_) closeCallback_();
     }  
     if(revents_&LogicEvent::Nval)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Nval");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent NvalEvent");
         )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&LogicEvent::Error)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Error");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent ErrorEvent");
         )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&LogicEvent::Except)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Except");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent ExceptEvent");
         )
         if(exceptCallback_)
         {
@@ -74,7 +80,7 @@ void EventHandler::handler_revent()
     if(revents_&LogicEvent::Read||revents_&LogicEvent::RdHup)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Read");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent ReadEvent");
         )
         if(readCallback_)
         {
@@ -84,7 +90,7 @@ void EventHandler::handler_revent()
     if(revents_&LogicEvent::Write)
     {
         EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent Write");
+            LOG_EVENT_DEBUG(printName()<<" handler_revent WriteEvent");
         )
         if(writeCallback_)writeCallback_();
     }

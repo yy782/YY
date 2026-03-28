@@ -20,7 +20,7 @@ public:
         threads_.reserve(num);
         for(int i=0;i<num;++i)
         {
-            threads_.emplace_back(std::make_unique<EventLoopThread>());
+            threads_.emplace_back(std::make_unique<EventLoopThread>(i));
         }
     }
     ~EventLoopThreadPool()
@@ -50,14 +50,6 @@ public:
         {
             (*it)->stop();
         } 
-    }
-    void quit()
-    {
-
-        for(auto it=threads_.begin();it!=threads_.end();++it)
-        {
-            (*it)->stop();
-        }         
     }
     ///void addHandler(EventHandler* handler);
     EventLoop* getEventLoop();    

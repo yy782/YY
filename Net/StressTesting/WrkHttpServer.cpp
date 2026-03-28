@@ -21,10 +21,9 @@ int main(int argc, char* argv[])
     {
         isET=(atoi(argv[2])==1?true:false);
     }
-    EventLoop loop;
     if(isET) 
     {
-        HTTPSerET ser(addr,numThreads,&loop);
+        HTTPSerET ser(addr,numThreads);
         ser.get("/",[](Http::HttpRequest&, Http::HttpResponse& resp) {
             resp.setStatus(Http::HttpResponse::Status::OK);
             resp.headers_["Content-Type"] = "text/html";
@@ -45,11 +44,10 @@ int main(int argc, char* argv[])
             resp.body_=std::string("hello, world!\n");
         });
         ser.start();
-        loop.loop();
     }
     else 
     {
-        HTTPServer ser(addr,numThreads,&loop);
+        HTTPServer ser(addr,numThreads);
         ser.get("/",[](Http::HttpRequest&, Http::HttpResponse& resp) {
             resp.setStatus(Http::HttpResponse::Status::OK);
             resp.headers_["Content-Type"] = "text/html";
@@ -70,7 +68,6 @@ int main(int argc, char* argv[])
             resp.body_=std::string("hello, world!\n");
         });
         ser.start();
-        loop.loop();
     }
     
     

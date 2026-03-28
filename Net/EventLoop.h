@@ -19,23 +19,23 @@ namespace yy
 namespace net
 {
 
-// struct Fun
-// {
-//     std::function<void()> Functor_;
-//     std::string name_;
-//     Fun()=default;
-//     template<typename Callable>
-//     Fun(Callable&& callable, std::string name = "NoName")
-//         : Functor_(std::forward<Callable>(callable))
-//         , name_(std::move(name))
-//     {
-//     }  
-//     std::string getName(){return name_;} 
-//     void operator()()
-//     {
-//         Functor_();
-//     }
-// };
+struct Fun
+{
+    std::function<void()> Functor_;
+    std::string name_;
+    Fun()=default;
+    template<typename Callable>
+    Fun(Callable&& callable, std::string name)
+        : Functor_(std::forward<Callable>(callable))
+        , name_(std::move(name))
+    {
+    }  
+    std::string getName(){return name_;} 
+    void operator()()
+    {
+        Functor_();
+    }
+};
 
 /**
  * @brief 事件循环类，负责处理IO事件和任务调度
@@ -55,7 +55,7 @@ public:
     /**
      * @brief 任务函数类型
      */
-    typedef std::function<void()> Functor;
+    typedef Fun Functor;
     /**
      * @brief 函数列表类型
      */
@@ -66,7 +66,7 @@ public:
      * 
      * 创建一个EventLoop实例，初始化事件处理器和唤醒机制。
      */
-    EventLoop();
+    EventLoop(int id=-1);
     
     /**
      * @brief 析构函数
@@ -115,7 +115,7 @@ public:
      * 如果当前线程是事件循环线程，直接执行任务；否则，将任务添加到任务队列。
      */
     template<typename Callable>
-    void submit(Callable&& cb);
+    void submit(Callable&& cb,const std::string& TaskName);
     
     /**
      * @brief 延迟执行任务
@@ -140,6 +140,9 @@ public:
      */
     template<class PrecisionTag>
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
+    template<class PrecisionTag>
+    void runTimer(std::shared_ptr<Timer<PrecisionTag>> timer);
+
 private:
     friend class EventHandler;
     
@@ -157,17 +160,19 @@ private:
      * 
      * 将事件处理器添加到事件监听器中。
      */
-    void addListen(EventHandler* handler)
+    void addListen(EventHandler* handler,const std::string& addInformation)
     {
         assert(handler);
         if(isInLoopThread())
+        {
+            LOG_LOOP_DEBUG("loopID:"<<id_<<addInformation);
             poller_.add_listen(handler);
+        }        
         else
             submit([this, handler]()
             {
                 poller_.add_listen(handler);
-            });
-
+            },addInformation);
     }
     
     /**
@@ -177,7 +182,7 @@ private:
      * 
      * 更新事件处理器在事件监听器中的状态。
      */
-    void update_listen(EventHandler* handler)
+    void update_listen(EventHandler* handler,const std::string& upInformation)
     { 
         assert(handler);    
         if(isInLoopThread())
@@ -186,7 +191,7 @@ private:
             submit([this, handler]()
             {
                 poller_.update_listen(handler);
-            });
+            },upInformation);
     }
     
     /**
@@ -196,7 +201,7 @@ private:
      * 
      * 从事件监听器中移除事件处理器。
      */
-    void remove_listen(EventHandler* handler)
+    void remove_listen(EventHandler* handler,const std::string& removeInformation)
     {
         assert(handler);
         if(isInLoopThread())
@@ -205,7 +210,7 @@ private:
             submit([this, handler]()
             {
                 poller_.remove_listen(handler);
-            });
+            },removeInformation);
     }        
     
     /**
@@ -225,8 +230,8 @@ private:
     /**
      * @brief 事件监听器
      */
-    PollerType poller_;
-    
+    PollerType poller_;// InLoop
+    int id_;
     /**
      * @brief 活跃的事件处理器列表
      */
@@ -235,12 +240,12 @@ private:
     /**
      * @brief 任务队列
      */
-    FunctionList FunctionList_;
+    FunctionList FunctionList_;// Not
     
     /**
      * @brief 事件循环线程ID
      */
-    Pid_t threadId_;
+    Pid_t threadId_;// InLoop
     
     /**
      * @brief 事件循环状态
@@ -268,7 +273,7 @@ private:
  * 如果当前线程是事件循环线程，直接执行任务；否则，将任务添加到任务队列。
  */
 template<typename Callable>
-void EventLoop::submit(Callable&& cb)
+void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
 {
     if(isInLoopThread())
     {
@@ -277,7 +282,7 @@ void EventLoop::submit(Callable&& cb)
     else 
     {
         assert(!isInLoopThread());
-        FunctionList_.blockappend(std::forward<Callable>(cb));
+        FunctionList_.blockappend(std::forward<Callable>(cb),TaskNameInformation);
     }
 }
 
@@ -290,7 +295,7 @@ void EventLoop::submit(Callable&& cb)
  * 如果任务队列已满，将任务放入定时器，延迟执行。
  */
 template<bool isInLoop,typename Callable>
-void EventLoop::DelayedExecution(Callable&& cb)
+void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecution)
 {
     if constexpr (isInLoop)
     {

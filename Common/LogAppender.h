@@ -24,7 +24,7 @@ public:
     const std::string& getName()const{return name_;}
     const std::string& getTyps()const{return type_;}
     FILE* getFp(){return fp_;}
-    constexpr static size_t BUFFER_SIZE=6;
+    constexpr static size_t BUFFER_SIZE=10;
 private:
     const std::string name_;
     const std::string type_; // @param 文件类型

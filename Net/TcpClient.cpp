@@ -3,6 +3,7 @@
 #include "sockets.h"
 #include "TimerQueue.h"
 #include <memory>
+
 namespace yy 
 {
 namespace net 
@@ -36,7 +37,10 @@ struct TcpClient::Connector:noncopyable,
 
     ~Connector() 
     {   
-        if(handler_!=nullptr)delete handler_;
+        if(handler_!=nullptr)
+        {
+            delete handler_;
+        }
         if(state_==kConnected)return;
         if(fd_!=-1)
             sockets::close(fd_);
@@ -117,7 +121,7 @@ private:
     void connecting() 
     {
         state_=State::kConnecting;
-        handler_=new EventHandler(fd_,loop_,"ConnectorHandler");
+        handler_=new EventHandler(fd_,loop_);
         handler_->setWriteCallBack([this]()
         {
             handleWrite();
@@ -238,9 +242,9 @@ private:
     // }
 
   
-    int fd_={-1};
+    int fd_={-1};// InOne
     EventLoop* loop_;
-    Address serverAddr_;
+    const Address& serverAddr_;
     
     State state_;
     EventHandler* handler_;// handlerError和handlerWrite中要延迟释放handler资源，但是要捕捉对象，不一定能保证资源释放，用原始指针

@@ -25,7 +25,7 @@ SI_(SI),
 cur_slot_(0),
 slots_(maxSlots),
 loop_(loop),
-handler_(fd_,loop,"TimerWheel")
+handler_(fd_,loop,"TimerWheel",Event(LogicEvent::Read|LogicEvent::Edge))
 {
     for(int i=0;i<maxSlots_;++i)
     {
@@ -42,9 +42,7 @@ handler_(fd_,loop,"TimerWheel")
     handler_.setReadCallBack([this]()
     {
         tick();
-    });
-    handler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge)); // 本身是线程安全的
-        
+    }); 
 }
 TimerWheel::~TimerWheel() //// 需要强行保证生命周期不能比loop小，否则需要移除handle监听
 {

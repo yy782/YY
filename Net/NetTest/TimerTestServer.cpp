@@ -20,15 +20,14 @@ class TimerServer
 {
 public:
     typedef TcpConnection::CharContainer CharContainer;
-    TimerServer(const Address& addr,int thread_num,EventLoop* loop):
-    server_(addr,thread_num,loop),
-    timerWheel_(loop,2,5),
-    LtimerQueue_(loop)
+    TimerServer(const Address& addr,int thread_num):
+    server_(addr,1,thread_num),
+    timerWheel_(thread_.run(),2,5)
     {
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
-            onConnection(conn);
+            onConnection(conn,Cloop);
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 onMessage(con);
             });
@@ -46,21 +45,23 @@ public:
     {
         server_.stop();
     }
+    void wait()
+    {
+        server_.wait();
+    }
     ~TimerServer()
     {
         LOG_SYSTEM_INFO("server stop!");
         
     }
 private:
-    void onConnection(TcpConnectionPtr conn)
+    void onConnection(TcpConnectionPtr conn,EventLoop* loop)
     {
         ++ConnNum;
         LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
         conn->context<LTimeStamp>()=LTimeStamp::now();
-
         std::weak_ptr<TcpConnection> weakConn=conn;
         auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
         [this,weakConn]()
@@ -89,7 +90,7 @@ private:
         10s,
         1    
         );
-        LtimerQueue_.insert(Ltimer);
+        loop->runTimer<LowPrecision>(Ltimer);
         conn->context<LTimerPtr>()=timer;
     }
     void checkAlive(TcpConnectionPtr conn)
@@ -116,9 +117,9 @@ private:
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
         conn->context<LTimerPtr>()->cancel();
     }
+    EventLoopThread thread_;
     TcpServer server_;
     TimerWheel timerWheel_;
-    TimerQueue<LowPrecision> LtimerQueue_;
 };
 
 int main()
@@ -133,20 +134,8 @@ int main()
         LOG_SYSTEM_INFO("[PID] "<<getpid());
     )        
     Address addr("127.0.0.1",8080);   
-    EventLoop loop;
-    TimerServer server(addr,4,&loop);
-    
-    Signal::signal(SIGTERM,[&server,&loop](){
-        LOG_SYSTEM_DEBUG("Siganal handle exit");
-        loop.quit();
-        server.stop();
-        
-        sleep(2);
-    });
+    TimerServer server(addr,4);
     server.start();
-    loop.runTimer<LowPrecision>([](){
-        LOG_TIME_INFO("server run 5s");
-    },5s,1);
-    loop.loop();
+    server.wait();
 
 }

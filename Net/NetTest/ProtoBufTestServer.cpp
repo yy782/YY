@@ -13,8 +13,8 @@ using namespace yy;
 using namespace yy::net;
 class MyServer {
 public:
-    MyServer(EventLoop* loop) 
-        :loop_(loop) ,server_(Address(8080,true),2,loop)
+    MyServer()
+        :server_(Address(8080,true),1,2)
     {
         dispatcher_.onMsg<demo::Student>(
             [this](TcpConnectionPtr conn, demo::Student* msg) {
@@ -39,6 +39,10 @@ public:
     void stop()
     {
         server_.stop();
+    }
+    void wait()
+    {
+        server_.wait();
     }
     
 private:
@@ -75,11 +79,9 @@ private:
 int main() {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   
-    EventLoop loop;
-    MyServer server(&loop);
+    MyServer server;
     server.start();
-    loop.loop();
+    server.wait();
 
     google::protobuf::ShutdownProtobufLibrary();
     return 0;

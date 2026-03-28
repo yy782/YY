@@ -143,7 +143,7 @@ private:
     /**
      * @brief timerfd文件描述符
      */
-    const int fd_;
+    const int fd_;// InOne
     
     /**
      * @brief 事件处理器
@@ -153,7 +153,7 @@ private:
     /**
      * @brief 定时器列表
      */
-    TimerList timers_;
+    TimerList timers_;// 需要外部保证
     //QuerySet querySet_;
 };
 
@@ -166,13 +166,18 @@ private:
  * @param execute_count 执行次数
  */
 template<class PrecisionTag>
-void EventLoop::runTimer(Timer<Base>::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
+void EventLoop::runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
 {
-    submit([this,cb=std::move(cb),interval=std::move(interval),execute_count]()mutable
+    auto timer=std::make_shared<Timer<PrecisionTag>>(std::move(cb),std::move(interval),execute_count);
+    runTimer<PrecisionTag>(timer);
+}
+template<class PrecisionTag>
+void EventLoop::runTimer(std::shared_ptr<Timer<PrecisionTag>> timer)
+{
+    submit([timer,this]()mutable
     {///////////////////////////////////////////////
-        assert(isInLoopThread());
+        assert(this->isInLoopThread());
         thread_local static TimerQueue<PrecisionTag> queue(this);
-        auto timer=std::make_shared<Timer<PrecisionTag>>(std::move(cb),std::move(interval),execute_count);
         queue.insertInLoop(timer);
     });
 }

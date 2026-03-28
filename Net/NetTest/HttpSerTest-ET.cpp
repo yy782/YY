@@ -10,10 +10,9 @@ using namespace yy::net::Http;
 // ./HttpSerTest-ET
 
 int main() {
-    EventLoop loop;
     Address addr(8080,true);
     
-    HTTPSerET server(addr, 4, &loop);
+    HTTPSerET server(addr, 4);
     // SyncLog::getInstance("../Log.log").getFilter() 
     //     .set_global_level(LOG_LEVEL_DEBUG) 
     //     .set_module_enabled("TCP")
@@ -45,15 +44,8 @@ int main() {
         resp.body_ = "<html><body><h1>404 - " + req.url_ + " not found</h1></body></html>";
         resp.headers_["Content-Type"] = "text/html";
     });
-    Signal::signal(SIGTERM,[&server,&loop](){
-        LOG_SYSTEM_DEBUG("Siganal handle exit");
-        loop.quit();
-        server.stop();
-        
-        sleep(2);
-    });
     LOG_SYSTEM_INFO("HTTP Server starting on port 8080...");
     server.start();
-    loop.loop();
+    
     return 0;
 }

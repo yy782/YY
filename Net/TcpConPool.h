@@ -1,9 +1,10 @@
-#include "../MemoryPool/ObjectPool.h"
 #include "TcpConnection.h"
 #include <algorithm>
 using namespace yy::net;
 namespace yy /////////////////////////////////
 {
+template<typename T>
+class ObjectPool;
 const int ExpendNum=1000;
 template<>
 class ObjectPool<TcpConnectionPtr>: noncopyable 
@@ -62,7 +63,7 @@ class ObjectPool<TcpConnectionPtr>: noncopyable
         free_list_.push_back(conn);
     }
 private:
-    config config_;
+    config config_;// 需外部强行保证
     //std::list<TcpConnectionPtr> active_list_;
     std::list<TcpConnectionPtr> free_list_;
 };

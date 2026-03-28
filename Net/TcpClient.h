@@ -164,7 +164,7 @@ private:
     /**
      * @brief 事件循环
      */
-    EventLoop* loop_;
+    EventLoop* loop_;//InOne
     
     /**
      * @brief 本地地址
@@ -174,24 +174,24 @@ private:
     /**
      * @brief 服务器地址
      */
-    Address serverAddr_;
+    const Address& serverAddr_;
     
     /**
      * @brief 是否启用重连
      */
-    bool retry_;
+    bool retry_;// 需要外部强行保证
 
     /**
      * @brief 连接器
      */
-    std::shared_ptr<Connector> connector_;
+    std::shared_ptr<Connector> connector_;//InLoop
     
     /**
      * @brief 连接对象
      */
     TcpConnectionPtr connection_;
 
-    /**
+    /**you
      * @brief 回调函数
      */
     ServicesConnectionCallBack SconnectionCallback_;

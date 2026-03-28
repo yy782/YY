@@ -371,7 +371,7 @@ private:
     /**
      * @brief 缓冲区
      */
-    CharContainer buffer_;
+    CharContainer buffer_;// inOne
     
     /**
      * @brief 前置空间大小

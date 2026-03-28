@@ -372,11 +372,11 @@ ssize_t write(int fd,const void* buf,size_t len)
 }
 ssize_t recv(int fd,void* buf,size_t len,int flags)
 {
-    return ::recv(fd,buf,len,flags|MSG_DONTWAIT);
+    return ::recv(fd,buf,len,flags);
 }
 ssize_t send(int fd,const void* buf,size_t len,int flags)
 {
-    return ::send(fd,buf,len,flags|MSG_NOSIGNAL);
+    return ::send(fd,buf,len,flags);
 }
 
 ssize_t recvfrom(int fd,void* buf,size_t len,int flags,struct sockaddr_storage& peerAddr)

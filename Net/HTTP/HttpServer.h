@@ -13,9 +13,8 @@ class HTTPServer {
 public:
     typedef std::function<void(Http::HttpRequest&, Http::HttpResponse&)> HttpCallback;
     
-    HTTPServer(const Address& addr, int thread_num, EventLoop* loop)
-        : server_(addr, thread_num, loop),
-        loop_(loop)
+    HTTPServer(const Address& addr, int thread_num)
+        : server_(addr, 1, thread_num)
         {
         
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
@@ -163,7 +162,6 @@ private:
     
     TcpServer server_;
     Http::HttpRouter router_;
-    EventLoop* loop_;
 };
 }
 }    

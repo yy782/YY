@@ -20,9 +20,6 @@ public:
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 handleMessage(con);
             });
-            conn->setCloseCallBack([this](TcpConnectionPtr){
-                handleClose();
-            });
             handleConnected(conn);
             return conn;
         });
@@ -79,11 +76,8 @@ public:
         }
 
     }
-    void handleClose() // 对端主动关闭时的回调
-    {
-        exit(0);
-    }
     bool isConnected(){return client_.isConnected();}
+    bool isConnecting(){return client_.isConnecting();}
 private:
     TcpClient client_;
     
@@ -96,9 +90,10 @@ int main()
     EventLoopThread thread;
     CodecTestClient client(addr,thread.run());
     client.connect(); 
-
-    while(client.isConnected())
+    sleep(1); // 等等线程2处理连接
+    while(client.isConnected()||client.isConnecting())
     {
         sleep(1);
-    }        
+    } 
+    thread.stop();
 }

@@ -60,7 +60,7 @@ public:
      * @param loop 事件循环
      * @param name 事件处理器名称
      */
-    EventHandler(int fd,EventLoop* loop,const  char* name,Event events=Event(LogicEvent::None));
+    EventHandler(int fd,EventLoop* loop,const std::string& addInformation,Event events=Event(LogicEvent::None));
     
     /**
      * @brief 析构函数
@@ -75,7 +75,7 @@ public:
      * @param name 事件处理器名称
      */
     EventHandler(Event events=Event(LogicEvent::None));
-    void init(int fd,EventLoop* loop,const char* name);
+    void init(int fd,const std::string& addInformation,EventLoop* loop);
     
     // /**
     //  * @brief 绑定对象的生命周期
@@ -113,21 +113,6 @@ public:
      * @return int 状态
      */
     int status() const noexcept{return status_;}
-    
-    /**
-     * @brief 获取事件处理器名称
-     * 
-     * @return const std::string& 事件处理器名称
-     */
-    const std::string& printName()
-    {
-        if(name_.empty())
-        {
-            static const std::string NoName="NoName";
-            return NoName;
-        }
-        return name_;
-    }
 
     /**
      * @brief 设置要监听的事件
@@ -323,7 +308,7 @@ private:
      * 
      * 这个状态是关联事件监听器Poller的状态，含义由事件监听器解释。
      */
-    int status_={-1};
+    int status_={-1};// InLoop
     
     // /**
     //  * @brief 绑定的对象
@@ -338,12 +323,12 @@ private:
     /**
      * @brief 文件描述符
      */
-    int fd_={-1};
+    int fd_={-1};// 需外部强行保证InOne,inir和构造
     
     /**
      * @brief 要监听的事件
      */
-    Event events_;
+    Event events_;// InLoop,需外部强行保证
     
     /**
      * @brief 触发的事件
@@ -356,14 +341,9 @@ private:
     EventLoop* loop_;
     
     /**
-     * @brief 事件处理器名称
-     */
-    std::string name_;
-    
-    /**
      * @brief 读事件回调函数
      */
-    ReadCallBack readCallback_;
+    ReadCallBack readCallback_;// 需外部强行保证InOne,init和构造
     
     /**
      * @brief 写事件回调函数

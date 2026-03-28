@@ -16,7 +16,7 @@ public:
         threads_.reserve(num);
         for(int i=0;i<num;++i)
         {
-            threads_.emplace_back(std::make_unique<EventLoopThread>());
+            threads_.emplace_back(std::make_unique<EventLoopThread>(i));
         }
         acceptors_.reserve(num);
         // for(int i=0;i<num;++i)
@@ -42,7 +42,7 @@ public:
         for(size_t i=0;i<threads_.size();++i)
         {
             auto loop=threads_[i]->run();
-            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,loop,Ser_));
+            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,loop,Ser_,i));
             acceptors_[i]->setNewConnectCallBack(SconnectCallBack_);
             acceptors_[i]->listen();
         }
@@ -54,17 +54,9 @@ public:
         {
             (*it)->stop();
         } 
-    }
-    void quit()
-    {
-
-        for(auto it=threads_.begin();it!=threads_.end();++it)
-        {
-            (*it)->stop();
-        }         
-    }   
+    }  
 private:
-    const Address& addr_;///////////////
+    const Address& addr_;//isOne
     TcpServer* Ser_;
     std::vector<std::unique_ptr<Acceptor>> acceptors_; 
     std::vector<std::unique_ptr<EventLoopThread>> threads_;

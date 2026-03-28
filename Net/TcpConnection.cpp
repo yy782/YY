@@ -18,7 +18,7 @@ fd_(fd),
 addr_(addr),
 loop_(loop),
 Connstatus_(ConnectStatus::Connected),
-handler_(fd,loop,addr.sockaddrToString().c_str(),events),
+handler_(fd,loop,events),
 isET(events.has(LogicEvent::Edge)?true:false)
 {
     if(isET)
@@ -64,7 +64,8 @@ TcpConnection::~TcpConnection()
     {
         LOG_TCP_WARN("had data not read!");
     }
-    sockets::close(fd_);
+    if(fd_!=-1)
+        sockets::close(fd_);
 }
 TcpConnection::TcpConnection(Event events):
 Connstatus_(ConnectStatus::Connecting),
@@ -114,10 +115,11 @@ void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
     fd_=fd;
     loop_=loop;
     addr_=addr;
-    handler_.init(fd,loop,addr.sockaddrToString().c_str());
+    handler_.init(fd,loop);
 }
 void TcpConnection::reset()///////////////////////////////////////////
 {
+    sockets::close(fd_);
     fd_=-1;
     loop_=nullptr;
     addr_=Address();
@@ -323,13 +325,10 @@ void TcpConnection::handleETRead()
 void TcpConnection::handleRead()
 {
     assert(loop_->isInLoopThread());
-  
-
     assert(SmessageCallBack_);
     auto n=RecvBuffer_.appendFormFd(handler_.fd());
     if(n>0)
     {
-
         //updateWaterMark();
         SmessageCallBack_(shared_from_this());
         // handleBackpressureAfterRead();
@@ -346,9 +345,7 @@ void TcpConnection::handleRead()
             handleError();
             return;                
         }
-    }        
-    
-            
+    }               
 }
 void TcpConnection::handleWrite()
 {
