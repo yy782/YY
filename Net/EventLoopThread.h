@@ -13,7 +13,10 @@ class EventLoopThread : public noncopyable {
 public:
     typedef EventLoop::Functor Functor;
 
-    EventLoopThread() : loop_(nullptr) {}
+    EventLoopThread(int id=-1):
+    id_(id), 
+    loop_(nullptr) 
+    {}
 
     ~EventLoopThread() {
         assert(!thread_.joinable());
@@ -22,7 +25,7 @@ public:
     {
         thread_.run([this]() mutable 
         {
-            EventLoop loop;          
+            EventLoop loop(id_);          
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 loop_ = &loop;        
@@ -52,6 +55,7 @@ public:
     }
 private:
     Thread thread_;
+    int id_;
     EventLoop* loop_;            
     std::mutex mutex_;              
     std::condition_variable cond_;   

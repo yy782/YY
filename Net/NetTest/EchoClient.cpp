@@ -6,7 +6,7 @@
 #include "../EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
-std::atomic<bool> isConnected=true;
+bool isConnected=true;
 // ./EchoClient 
 class EchoClient// stdout是线程不安全的
 {
@@ -14,10 +14,9 @@ public:
     EchoClient(const Address& serverAddr,EventLoopThread* thread,bool isET):
     loop_(thread->run()),
     client_(serverAddr,loop_),
-    stdIn_(0,loop_,"stdIn"),
+    stdIn_(0,loop_,"stdIn",Event(LogicEvent::Edge|LogicEvent::Read)),
     thread_(thread)
     {
-        client_.enableRetry();
         client_.setConnectionCallback([this,isET](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
@@ -34,9 +33,6 @@ public:
             return conn;
         }); 
         stdIn_.setReadCallBack([this](){handleRead();});
-       
-        stdIn_.set_event(Event(LogicEvent::Edge|LogicEvent::Read));
-         
     }
     ~EchoClient()
     {
@@ -88,7 +84,7 @@ public:
     }
     void handleClose(TcpConnectionPtr) 
     {
-        isConnected.store(false);
+        isConnected=false;
     }
 private:
     EventLoop* loop_;
@@ -125,7 +121,7 @@ int main()
     Address addr(host.c_str(),port);
     EchoClient client(addr,&thread,isET);
     client.connect(); 
-    while(isConnected.load())
+    while(isConnected)
     {
         sleep(1);
     }

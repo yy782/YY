@@ -6,13 +6,49 @@
 using namespace yy;
 using namespace yy::net;
 #include <algorithm>
-const int N=20;
-std::atomic<int> MsgCount=0;
-std::atomic<int> ConnNum=0;
 
-
-
-
+namespace TcpCon 
+{
+struct checkAlive
+{
+    using ReturnType=void;
+};
+struct createAliveTimer
+{
+    using ReturnType=void;
+    TimerWheel& timerWheel_;
+    createAliveTimer(TimerWheel& timerWheel):timerWheel_(timerWheel){}
+}; 
+}
+using namespace TcpCon;
+template<>
+void TcpConnection::Extend<checkAlive>(checkAlive)
+{
+    auto& lastFulsh=context<LTimeStamp>();
+    if(LTimeStamp::now()-lastFulsh>LTimeInterval(10s))
+    {
+        disconnect();//////////////////////////  这里线程不安全
+        LOG_TCP_DEBUG(addr().sockaddrToString()<<" Close!");
+    } 
+}
+template<>
+void TcpConnection::Extend<createAliveTimer>(createAliveTimer cc)
+{
+    auto& timerWheel=cc.timerWheel_;
+    auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
+    [weakConn=weak_from_this(),this]()
+    {
+        if(auto c=weakConn.lock()) 
+        {   
+            Extend<checkAlive>({});               
+        }
+    },
+    30s,
+    BaseTimer::FOREVER
+    );
+    timerWheel.insert(timer);
+    context<LTimerPtr>()=timer;
+}
 
 //./TimerTestServer
 // cd programs/yy/build/bin
@@ -27,7 +63,7 @@ public:
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
-            onConnection(conn,Cloop);
+            onConnection(conn);
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 onMessage(con);
             });
@@ -55,64 +91,21 @@ public:
         
     }
 private:
-    void onConnection(TcpConnectionPtr conn,EventLoop* loop)
+    void onConnection(TcpConnectionPtr conn)
     {
-        ++ConnNum;
-        LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
         conn->context<LTimeStamp>()=LTimeStamp::now();
-        std::weak_ptr<TcpConnection> weakConn=conn;
-        auto timer=std::make_shared<LTimer>( // 如果插入时间轮，则1min是不准确的，以时间轮的时间为准
-        [this,weakConn]()
-        {
-            if(auto c=weakConn.lock()) 
-            {   
-                checkAlive(c);                
-            }
-        },
-        30s,
-        BaseTimer::FOREVER
-        );
+        conn->Extend<createAliveTimer>({timerWheel_});
+    }
 
-        timerWheel_.insert(timer);
-        auto Ltimer=std::make_shared<LTimer>(
-        [this,weakConn]()
-        {
-            if(auto c=weakConn.lock())
-            {
-                c->send("You had connected ten s",26);
-                LOG_SYSTEM_DEBUG(c->addr().sockaddrToString()<<" had connected two min");   
-                ++MsgCount;
-                LOG_SYSTEM_DEBUG("MsgCount=="<<MsgCount);
-            }
-        },
-        10s,
-        1    
-        );
-        loop->runTimer<LowPrecision>(Ltimer);
-        conn->context<LTimerPtr>()=timer;
-    }
-    void checkAlive(TcpConnectionPtr conn)
-    {
-        auto& lastFulsh=conn->context<LTimeStamp>();
-        if(LTimeStamp::now()-lastFulsh>LTimeInterval(10s))
-        {
-            
-            conn->disconnect();
-            LOG_TCP_DEBUG(conn->addr().sockaddrToString()<<" Close!");
-        }            
-    }
     void onMessage(TcpConnectionPtr conn)
     {
         conn->context<LTimeStamp>()=LTimeStamp::now();
-
         LOG_SYSTEM_INFO("recv msg! from"<<conn->addr().sockaddrToString());
     }
     void onClose(TcpConnectionPtr conn)
     {
-        --ConnNum;
-        LOG_SYSTEM_INFO("连接数:"<<ConnNum);
         auto addr=conn->addr(); 
         LOG_SYSTEM_INFO("connection closed! "<<addr.sockaddrToString());
         conn->context<LTimerPtr>()->cancel();

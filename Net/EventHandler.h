@@ -75,7 +75,7 @@ public:
      * @param name 事件处理器名称
      */
     EventHandler(Event events=Event(LogicEvent::None));
-    void init(int fd,const std::string& addInformation,EventLoop* loop);
+    void init(int fd,EventLoop* loop,const std::string& addInformation);
     
     // /**
     //  * @brief 绑定对象的生命周期
@@ -291,7 +291,7 @@ public:
      * 
      * 从事件循环中移除事件监听器。
      */
-    void removeListen();
+    void removeListen(const std::string& removeInformation);
 
 
 

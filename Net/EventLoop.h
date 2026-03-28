@@ -126,7 +126,7 @@ public:
      * 如果任务队列已满，将任务放入定时器，延迟执行。
      */
     template<bool isInLoop,typename Callable>
-    void DelayedExecution(Callable&& cb);
+    void DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation);
     
     /**
      * @brief 运行定时器
@@ -165,7 +165,7 @@ private:
         assert(handler);
         if(isInLoopThread())
         {
-            LOG_LOOP_DEBUG("loopID:"<<id_<<addInformation);
+            LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<addInformation);
             poller_.add_listen(handler);
         }        
         else
@@ -182,7 +182,7 @@ private:
      * 
      * 更新事件处理器在事件监听器中的状态。
      */
-    void update_listen(EventHandler* handler,const std::string& upInformation)
+    void update_listen(EventHandler* handler,const std::string& upInformation="No")
     { 
         assert(handler);    
         if(isInLoopThread())
@@ -282,7 +282,7 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
     else 
     {
         assert(!isInLoopThread());
-        FunctionList_.blockappend(std::forward<Callable>(cb),TaskNameInformation);
+        FunctionList_.blockappend(Fun(std::forward<Callable>(cb),TaskNameInformation));
     }
 }
 
@@ -295,23 +295,23 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
  * 如果任务队列已满，将任务放入定时器，延迟执行。
  */
 template<bool isInLoop,typename Callable>
-void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecution)
+void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation)
 {
     if constexpr (isInLoop)
     {
         assert(isInLoopThread());
-        if(!FunctionList_.append(std::forward<Callable>(cb)))
+        if(!FunctionList_.append(Fun(std::forward<Callable>(cb),DelayedExecutionInformation)))
         {
-            runTimer<LowPrecision>([Fun=std::forward<Callable>(cb),this]()mutable
+            runTimer<LowPrecision>([Cb=std::forward<Callable>(cb),DelayedExecutionInformation,this]()mutable
             {
-                DelayedExecution<true>(std::forward<Callable>(Fun));
+                DelayedExecution<true>(std::forward<Callable>(Cb),DelayedExecutionInformation);
             },5s,1);
         }
     }
     else 
     {
         assert(!isInLoopThread());
-        FunctionList_.blockappend(std::forward<Callable>(cb));
+        FunctionList_.blockappend(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
     }
 }
 }    

@@ -16,7 +16,7 @@ public:
         threads_.reserve(num);
         for(int i=0;i<num;++i)
         {
-            threads_.emplace_back(std::make_unique<EventLoopThread>(i));
+            threads_.emplace_back(std::make_unique<EventLoopThread>(i+1+1000));
         }
         acceptors_.reserve(num);
         // for(int i=0;i<num;++i)
@@ -56,7 +56,7 @@ public:
         } 
     }  
 private:
-    const Address& addr_;//isOne
+    const Address addr_;//isOne
     TcpServer* Ser_;
     std::vector<std::unique_ptr<Acceptor>> acceptors_; 
     std::vector<std::unique_ptr<EventLoopThread>> threads_;

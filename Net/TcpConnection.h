@@ -155,8 +155,8 @@ public:
      * @param args 参数
      * @return typename Tag::ReturnType 返回值
      */
-    template<typename Tag,typename... Args>
-    typename Tag::ReturnType Extend(Tag(Args...));
+    template<typename Tag>
+    typename Tag::ReturnType Extend(Tag);
 
     /**
      * @brief 设置监听读事件

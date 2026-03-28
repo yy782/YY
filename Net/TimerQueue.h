@@ -179,7 +179,7 @@ void EventLoop::runTimer(std::shared_ptr<Timer<PrecisionTag>> timer)
         assert(this->isInLoopThread());
         thread_local static TimerQueue<PrecisionTag> queue(this);
         queue.insertInLoop(timer);
-    });
+    },std::string("EventLoop::runTimer"));
 }
 }    
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(yy LANGUAGES CXX)
-
+# make -j4 2> error.txt
 # @learn 
     # project必须在cmake_minimum_required之后,其他文件之前
 #

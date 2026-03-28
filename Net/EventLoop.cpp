@@ -28,12 +28,13 @@ bool EventLoop::CheckeEventLoopStatus()
 }
 
 EventLoop::EventLoop(int id):
+id_(id),
 activeHandlers_(),
 FunctionList_(),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
-wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this),
-id_(id)
+wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeHandler",Event(LogicEvent::Read|LogicEvent::Edge))
+
 {
     auto eventCallBack=[this]() -> void
     {
@@ -44,7 +45,6 @@ id_(id)
         return;
     };
     wakeHandler_.setReadCallBack(eventCallBack);
-    wakeHandler_.set_event(Event(LogicEvent::Read|LogicEvent::Edge));
 }
 bool EventLoop::isQuit() noexcept
 {
@@ -93,15 +93,11 @@ void EventLoop::quit()
     {
         assert(isInLoopThread());
         status_ = EventLoopStatus::Quiting;     
-    });
+    },std::string("loopID:"+std::to_string(id_)+"quit"));
     uint64_t one =1;
     ssize_t n=sockets::write(wakeHandler_.fd(), &one, sizeof one);
     assert(n==sizeof one);
 }
-
-
-
-
 void EventLoop::wakeup()
 {
     if(!(status_&EventLoopStatus::EventHandling)&&!(status_&EventLoopStatus::PendingFunctions))
@@ -120,8 +116,7 @@ void EventLoop::doPendingFunctions()
     {
         Functor cb;
         FunctionList_.retrieve(cb);
-        LOG_LOOP_DEBUG("");
-    
+        LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
         cb(); 
         ++FinishNum;
     }

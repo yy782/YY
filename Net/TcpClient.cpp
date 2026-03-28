@@ -57,7 +57,7 @@ struct TcpClient::Connector:noncopyable,
             {
                 con->startInLoop();
             }
-        });
+        },"Connector::start");
     }
 
     void stop() 
@@ -70,7 +70,7 @@ struct TcpClient::Connector:noncopyable,
             {
                 con->stopInLoop();
             }
-        });
+        },"Connector::stop");
     }
 
     void restart() 
@@ -121,7 +121,7 @@ private:
     void connecting() 
     {
         state_=State::kConnecting;
-        handler_=new EventHandler(fd_,loop_);
+        handler_=new EventHandler(fd_,loop_,"Connector::connecting");
         handler_->setWriteCallBack([this]()
         {
             handleWrite();
@@ -142,7 +142,7 @@ private:
             if (err!=0) 
             {
                 LOG_WARN("Connector::handleWrite - SO_ERROR = "<<err);
-                handler_->removeListen();
+                handler_->removeListen("Conector::handleWrite,err");
                 resetHandler();
                 retry();
                 return;
@@ -150,13 +150,13 @@ private:
             if (sockets::isSelfConnect(fd_)) 
             {
                 LOG_WARN("Connector::handleWrite - Self connect");
-                handler_->removeListen();
+                handler_->removeListen("Conector::handleWrite,isSelfCon");
                 resetHandler();
                 retry();
                 return;
             }
             state_=kConnected;
-            handler_->removeListen();
+            handler_->removeListen("Conector::handleWrite,NewCon");
             Ncb_(fd_);
         }
     }
@@ -169,7 +169,7 @@ private:
 
             int err = sockets::sockfd_has_error(fd_);
             LOG_WARN("Connector::handleError - Self connect"<<err);
-            handler_->removeListen();
+            handler_->removeListen("Connector::handleError");
             resetHandler();
             retry();
         }
@@ -216,7 +216,7 @@ private:
         if (state_ == kConnecting) 
         {
             state_=kDisconnected;
-            handler_->removeListen();
+            handler_->removeListen("Connector::stopInLoop");
         }
     }
     void resetHandler()
@@ -230,7 +230,7 @@ private:
             {
                 con->handler_=nullptr;
             }
-        });
+        },"Connector::resetHandler");
     }
 
     // void resetHandler() 

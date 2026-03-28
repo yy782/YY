@@ -13,7 +13,7 @@ revents_(Event(LogicEvent::None)),
 loop_(loop)
 {
     assert(loop_!=nullptr);
-    loop_->addListen(this);
+    loop_->addListen(this,addInformation);
 } 
 EventHandler::EventHandler(Event events):
 status_(-1),
@@ -22,14 +22,14 @@ revents_(Event(LogicEvent::None))
 {
 
 }
-void EventHandler::init(int fd,const std::string& addInformation,EventLoop* loop)
+void EventHandler::init(int fd,EventLoop* loop,const std::string& addInformation)
 {
     assert(fd_==-1);
     assert(fd!=-1);
     assert(loop);
     loop_=loop;
     fd_=fd;
-    loop_->addListen(this);  
+    loop_->addListen(this,addInformation);  
 }  
 // void EventHandler::tie(const std::shared_ptr<void>& obj)
 // {
@@ -48,30 +48,18 @@ void EventHandler::handler_revent()
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接
         // 但是HupEvent和RdHupEvent的事件分界比较模糊?
-        EXCLUDE_BEFORE_COMPILATION( 
-            LOG_EVENT_DEBUG(printName()<<" handler_revent HupEvent");
-        )
         if(closeCallback_) closeCallback_();
     }  
     if(revents_&LogicEvent::Nval)
     {
-        EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent NvalEvent");
-        )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&LogicEvent::Error)
     {
-        EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ErrorEvent");
-        )
         if(errorCallback_)errorCallback_();
     }
     if(revents_&LogicEvent::Except)
     {
-        EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ExceptEvent");
-        )
         if(exceptCallback_)
         {
             exceptCallback_();
@@ -79,9 +67,6 @@ void EventHandler::handler_revent()
     }
     if(revents_&LogicEvent::Read||revents_&LogicEvent::RdHup)
     {
-        EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent ReadEvent");
-        )
         if(readCallback_)
         {
             readCallback_();
@@ -89,9 +74,6 @@ void EventHandler::handler_revent()
     }
     if(revents_&LogicEvent::Write)
     {
-        EXCLUDE_BEFORE_COMPILATION(
-            LOG_EVENT_DEBUG(printName()<<" handler_revent WriteEvent");
-        )
         if(writeCallback_)writeCallback_();
     }
 }
@@ -100,11 +82,11 @@ void EventHandler::update()
     assert(loop_);
     loop_->update_listen(this);
 }
-void EventHandler::removeListen()
+void EventHandler::removeListen(const std::string& removeInformation)
 {
     assert(loop_);
     
-    loop_->remove_listen(this);
+    loop_->remove_listen(this,removeInformation);
 }
 }
 }    

@@ -9,11 +9,13 @@ using namespace yy;
 using namespace yy::net;
 //./ProtoBufTestClient
 // 客户端类
+
+bool isConnected=true;
+
 class MyClient {
 public:
-    MyClient(const Address& addr,EventLoopThread* thread) 
-        : client_(addr,thread->getEventLoop()),
-        thread_(thread)
+    MyClient(const Address& addr,EventLoop* loop) 
+        : client_(addr,loop)
     {
         client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
@@ -23,8 +25,7 @@ public:
                 onMessage(con);
             });
             conn->setCloseCallBack([this,Cloop](TcpConnectionPtr){
-                Cloop->quit();
-                exit(0);
+                isConnected=false;
             });
             return conn;
         });
@@ -63,33 +64,27 @@ private:
                     demo::StudentResponse* resp = 
                         dynamic_cast<demo::StudentResponse*>(msg.get());
                     std::cout << "客户端收到服务器响应: " 
-                              << resp->message() << std::endl;
-                    Exit();          
+                              << resp->message() << std::endl;        
                 }
+                client_.disconnect();
             }
         }
     }
-    void Exit()
-    {
-        thread_->stop(); // 保证thread_先构析
-        exit(0);
-    }
     TcpClient client_;
-    EventLoopThread* thread_;
 };
 
 int main()
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     EventLoopThread thread;
-    MyClient client(Address(8080,true),&thread);
-    
-    thread.run();
+    MyClient client(Address(8080,true),thread.run());
     client.connect();
-    
-    // 主线程睡眠一段时间，让EventLoop线程有时间处理连接
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    
+    sleep(1);
+    while(isConnected)
+    {
+        sleep(1);
+    }
+    thread.stop();
     google::protobuf::ShutdownProtobufLibrary();
     return 0;
 }

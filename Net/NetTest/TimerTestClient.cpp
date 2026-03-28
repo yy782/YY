@@ -10,8 +10,8 @@ using namespace yy::net;
 
 class TimerClient;
 
-const int N=20;
-std::atomic<int> ConnNum=0;
+int N;
+std::atomic<int> DisConNum=0;
 
 bool AllDisCon=false;
 class TimerClient// stdout是线程不安全的
@@ -22,14 +22,11 @@ public:
     {
         client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
-            ++ConnNum;
             conn->send("hello !",8);
-            conn->setMessageCallBack([this](TcpConnectionPtr){
-                
-            });
+            conn->setMessageCallBack([this](TcpConnectionPtr){});
             conn->setCloseCallBack([this](TcpConnectionPtr){
-                --ConnNum;
-                if(ConnNum==0)AllDisCon=true;
+                ++DisConNum;
+                if(DisConNum.load()==N)AllDisCon=true;
             });
             return conn;
         });
@@ -37,11 +34,9 @@ public:
     void connect()
     {
         client_.connect();
-        //cout<<"connect success "<<client_.getPeerAddr().sockaddrToString()<<endl;
     }
     void disconnect()
     {
-        
         client_.disconnect();
     }
     bool isConnected()
@@ -50,10 +45,14 @@ public:
     }
 private:
     TcpClient client_;
-  
 };
-int main()
+int main(int argc, char* argv[])
 { 
+    N=50;
+    if(argc>1)
+    {
+        N=std::atoi(argv[1]);
+    }
     std::vector<std::unique_ptr<TimerClient>> clients;
     Address serverAddr("127.0.0.1",8080);
     EventLoopThread thread;

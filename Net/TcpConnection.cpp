@@ -18,7 +18,7 @@ fd_(fd),
 addr_(addr),
 loop_(loop),
 Connstatus_(ConnectStatus::Connected),
-handler_(fd,loop,events),
+handler_(fd,loop,std::string(addr.sockaddrToString()+" AddListen"),events),
 isET(events.has(LogicEvent::Edge)?true:false)
 {
     if(isET)
@@ -115,7 +115,7 @@ void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
     fd_=fd;
     loop_=loop;
     addr_=addr;
-    handler_.init(fd,loop);
+    handler_.init(fd,loop,addr.sockaddrToString());
 }
 void TcpConnection::reset()///////////////////////////////////////////
 {
@@ -167,7 +167,7 @@ void TcpConnection::disconnect()
             auto con=c.lock();
             if(con)
                 con->disconnectInLoop();
-        });
+        },std::string("TcpCon::disconnect:"+addr_.sockaddrToString()));
     }
     else 
     {
@@ -213,7 +213,7 @@ void TcpConnection::send(const char* message,size_t len)
             {
                 con->sendInLoop(s.c_str(),s.size());
             }
-        });
+        },std::string("TcpConn::send"+addr_.sockaddrToString()));
     }      
 }
 void TcpConnection::send(std::string&& message)
@@ -225,7 +225,7 @@ void TcpConnection::send(std::string&& message)
         auto con=c.lock();
         if(con)
             con->sendInLoop(msg.c_str(),msg.size());
-    });     
+    },std::string("TcpConn::send"+addr_.sockaddrToString()));     /////////////////////////////////////////////////////////////////////////////
 }
 void TcpConnection::sendOutput()
 {
@@ -239,7 +239,7 @@ void TcpConnection::sendOutput()
                 con->handler_.setWriting();
             }              
         }
-    });
+    },std::string("TcpConn::sendOutput()"+addr_.sockaddrToString()));
 }
 void TcpConnection::sendInLoop(const char* message,size_t len)
 {
@@ -319,7 +319,7 @@ void TcpConnection::handleETRead()
         {
             con->handleETRead();
         }
-    });
+    },std::string("TcpConn::handleETRead()"+addr_.sockaddrToString()));
 
 }
 void TcpConnection::handleRead()
@@ -384,13 +384,13 @@ void TcpConnection::handleClose()
 {
     assert(loop_->isInLoopThread());
     assert(Connstatus_==ConnectStatus::Connected||Connstatus_==ConnectStatus::DisConnecting); 
-    handler_.removeListen();
+    handler_.removeListen(std::string("TcpCon::handleClose "+addr_.sockaddrToString()));
     Connstatus_=ConnectStatus::DisConnected;
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
     assert(destructCallBack_);
     loop_->DelayedExecution<true>([this](){
        destructCallBack_(shared_from_this()); ///////////////////////一定要放到最后  ///////////////////////////////////////
-    });
+    },std::string("TcpCon::handleClose "+addr_.sockaddrToString()+" destructCallBack_"));
 }
 void TcpConnection::handleError()   
 {

@@ -78,7 +78,7 @@ void UdpConnection::sendTo(const std::string& s,const Address* dest)
     loop_->submit([this,buf=std::move(s),dest]() 
     {
         sendInLoop(buf.data(), buf.size(),dest);
-    });    
+    },std::string("UdpCon::sendTo "+dest->sockaddrToString()));    
 }
 void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleTime)
 {
@@ -104,7 +104,7 @@ void UdpConnection::startHeartbeat(LTimeInterval interval,LTimeInterval MaxidleT
 void UdpConnection::close() 
 {
     assert(!closed_);
-    handler_.removeListen();
+    handler_.removeListen(std::string("UdpCon::close"));
     closed_=true;
 }
 
