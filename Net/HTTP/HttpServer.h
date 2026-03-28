@@ -18,17 +18,17 @@ public:
         loop_(loop)
         {
         
-        server_.setConnectCallBack([this](TcpConnectionPtr conn)
+        server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             onConnection(conn);
-        });
-        server_.setMessageCallBack([this](TcpConnectionPtr conn)
-        {
-            onMessage(conn);
-        });
-        server_.setCloseCallBack([this](TcpConnectionPtr conn)
-        {
-            onClose(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr con){
+                onClose(con);
+            });
+            return conn;
         });
     }
     

@@ -18,25 +18,20 @@ public:
     thread_(thread)
     {
         client_.enableRetry();
-        client_.setConnectionCallback([this,isET](TcpConnectionPtr con){
-
+        client_.setConnectionCallback([this,isET](int Cfd,const Address& Caddr,EventLoop* Cloop)
+        {
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             if(isET)
             {
-               con->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+               conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
             }
-            else 
-            {
-                con->setReading();
-            }
-            
-        });
-        client_.setMessageCallBack([this](TcpConnectionPtr conn)
-        {
-            handleMessage(conn);
-        });
-        client_.setCloseCallBack([this](TcpConnectionPtr conn)
-        {
-            handleClose(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                handleMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr con){
+                handleClose(con);
+            });
+            return conn;
         }); 
         stdIn_.setReadCallBack([this](){handleRead();});
        

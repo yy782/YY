@@ -6,9 +6,11 @@
 #include "EventHandler.h"
 #include "InetAddress.h"
 #include "EventLoop.h"
+#include "TcpConnection.h"
 #include <assert.h>
 #include <functional>
 #include <memory>
+#include <boost/unordered/concurrent_flat_set.hpp>
 namespace yy
 {
 namespace net
@@ -20,29 +22,29 @@ namespace net
  * 
  * 本文件定义了接受器类，用于接受新的TCP连接。
  */
-
-class TcpConnection;
-
 /**
  * @brief 接受器类
  * 
  * 用于接受新的TCP连接。
  */
+
+class TcpServer;
+
 class Acceptor:noncopyable
 {
 public:
     /**
      * @brief 新连接回调函数类型
      */
-    typedef std::function<void(int fd,const Address&)> NewConnectCallBack;
-    
+    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectCallBack;
+    typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
     /**
      * @brief 构造函数
      * 
      * @param addr 地址
      * @param loop 事件循环
      */
-    Acceptor(const Address& addr,EventLoop* loop);
+    Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser);
     
     /**
      * @brief 析构函数
@@ -61,7 +63,7 @@ public:
      * 
      * @param cb 回调函数
      */
-    void setNewConnectCallBack(NewConnectCallBack cb){callback_=std::move(cb);}
+    void setNewConnectCallBack(ServicesConnectCallBack cb){SconnectCallBack_=std::move(cb);}
     
     /**
      * @brief 开始监听
@@ -81,7 +83,8 @@ private:
      */
     template<bool isIpv6=false>
     void accept();
-    
+    void NewConnection(int fd,const Address& addr);
+    void removeConnection(TcpConnectionPtr conn);
     /**
      * @brief 地址
      */
@@ -96,16 +99,17 @@ private:
      * @brief 事件处理器
      */
     EventHandler handler_;
+    ConnectMap connects_;
+
+    ServicesConnectCallBack SconnectCallBack_;
+
     
-    /**
-     * @brief 新连接回调函数
-     */
-    NewConnectCallBack callback_;
     
     /**
      * @brief 空闲文件描述符
      */
     int idleFd_;
+    TcpServer* Ser_;
 };
 /**
  * @brief 接受连接
@@ -122,9 +126,7 @@ void Acceptor::accept()
        
         if(fd>0)
         {
-            
-            assert(callback_);
-            callback_(fd,addr);
+            NewConnection(fd,addr);
         }
         else 
         {
@@ -142,6 +144,7 @@ void Acceptor::accept()
         }         
     }
 } 
+
 }  
 }
 #endif

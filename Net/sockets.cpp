@@ -179,7 +179,13 @@ bool setNonBlocking(int fd)
     } 
     return true;
 }
-
+bool isNonBlocking(int fd) {
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1) {
+        return false;
+    }
+    return (flags & O_NONBLOCK) != 0;
+}
 
 void setKeepAlive(int fd,bool on,int idleSeconds, 
                   int intervalSeconds,int maxProbes)

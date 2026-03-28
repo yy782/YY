@@ -18,10 +18,12 @@ int main()
     auto loop=thread.run();
     TcpClient cli(addr,loop);
     cli.enableRetry();
-    cli.connect();
-    cli.setConnectionCallback([](TcpConnectionPtr){
+    cli.setConnectionCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
+        auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
         LOG_CLIENT_DEBUG("连接成功!");
+        return conn;
     });
+    cli.connect();
     int fd=0;
     loop->runTimer<LowPrecision>([&addr,&fd](){
         fd=sockets::createTcpSocketOrDie(AF_INET);

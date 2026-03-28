@@ -36,9 +36,9 @@ public:
     loop_(loop)
     
     {
-        server_.setConnectCallBack([this](int fd,const Address& addr,EventLoop* loop)
+        server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
-            auto conn=TcpConnection::accept(fd,addr,loop,Event(LogicEvent::Read));
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 onMessage(con);
             });

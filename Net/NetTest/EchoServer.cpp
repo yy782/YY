@@ -36,17 +36,27 @@ public:
     server_(addr,thread_num,loop)
     
     {
-        server_.setConnectCallBack([this, isET](TcpConnectionPtr conn)
+        server_.setConnectCallBack([this, isET](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
-            onConnection(conn, isET);
-        });
-        server_.setMessageCallBack([this](TcpConnectionPtr conn)
-        {
-            onMessage(conn);
-        });
-        server_.setCloseCallBack([this](TcpConnectionPtr conn)
-        {
-            onClose(conn);
+            Event event(LogicEvent::Read);
+            if(isET)
+            {
+                if(!sockets::setNonBlocking(Cfd))
+                {
+                    sockets::close(Cfd);
+                    exit(1);
+                }                
+                event.add(LogicEvent::Edge);
+            }
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,event);
+            onConnection(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr con){
+                onClose(con);
+            });
+            return conn;
         });
         
     }
@@ -63,20 +73,10 @@ public:
         LOG_SYSTEM_INFO("server stop!");
     }
 private:
-    void onConnection(TcpConnectionPtr conn,bool isET)
+    void onConnection(TcpConnectionPtr conn)
     {
         auto addr=conn->addr(); 
-        LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());
-        if(isET)
-        {
-            conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
-        }
-        else 
-        {
-            conn->setReading();
-        }
-        
-        
+        LOG_SYSTEM_INFO("new connection! "<<addr.sockaddrToString());       
     }
     void onMessage(TcpConnectionPtr conn)
     {

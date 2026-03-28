@@ -14,20 +14,20 @@ public:
     CodecTestClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setConnectionCallback([this](int fd,const Address& addr,EventLoop* loop)
+        client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
-            auto conn=TcpConnection::accept(fd,addr,loop,Event(LogicEvent::Read));
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 handleMessage(con);
             });
-            conn->setCloseCallBack([this](TcpConnectionPtr con){
-                handleClose(con);
+            conn->setCloseCallBack([this](TcpConnectionPtr){
+                handleClose();
             });
             handleConnected(conn);
             return conn;
         });
     }
-    TcpConnectionPtr handleConnected(TcpConnectionPtr con)
+    void handleConnected(TcpConnectionPtr con)
     {
         
         std::cout<<"Connected to server"<<std::endl;
@@ -41,6 +41,7 @@ public:
         std::cout<<"Sending Hello 4"<<std::endl;
         send("Hello 4",con);
         std::cout<<"All messages sent"<<std::endl;
+        
     }
     void send(const std::string& msg,TcpConnectionPtr con)
     {
@@ -78,9 +79,8 @@ public:
         }
 
     }
-    void handleClose(TcpConnectionPtr conn) // 对端主动关闭时的回调
+    void handleClose() // 对端主动关闭时的回调
     {
-        conn->send("bye\n",4);
         exit(0);
     }
     bool isConnected(){return client_.isConnected();}

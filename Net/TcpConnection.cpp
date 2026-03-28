@@ -23,6 +23,7 @@ isET(events.has(LogicEvent::Edge)?true:false)
 {
     if(isET)
     {
+        assert(sockets::isNonBlocking(fd));
         handler_.setReadCallBack([this]()
         {
             handleETRead();

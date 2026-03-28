@@ -34,20 +34,39 @@ class Session : noncopyable
       bytesWritten_(0),
       messagesRead_(0)
   {
-    client_.setConnectionCallback([this](TcpConnectionPtr conn)
+    client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
     {
-        onConnection(conn);
-    });
-    client_.setMessageCallBack([this](TcpConnectionPtr conn)
-    {
-        onMessage(conn);
-    });
-    client_.setCloseCallBack([this](TcpConnectionPtr conn)
-    {
-        handleClose(conn);
-    });
-    client_.setErrorCallback([](TcpConnectionPtr con){
-        LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+        if constexpr (isET)
+        {
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read|LogicEvent::Edge));
+            onConnection(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr){
+                handleClose();
+            });
+            conn->setErrorCallBack([](TcpConnectionPtr con){
+                LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+            });
+            return conn;          
+        }
+        else 
+        {
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
+            onConnection(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr){
+                handleClose();
+            });
+            conn->setErrorCallBack([](TcpConnectionPtr con){
+                LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+            });
+            return conn;          
+        }
+
     });
   }
 
@@ -60,7 +79,7 @@ class Session : noncopyable
   {
     client_.disconnect();
   }
-  void handleClose(TcpConnectionPtr);
+  void handleClose(); 
   int64_t bytesRead() const
   {
      return bytesRead_;
@@ -209,7 +228,7 @@ void Session<isET>::onConnection(const TcpConnectionPtr& conn)
     owner_->onConnect();
 }
 template<bool isET>
-void Session<isET>::handleClose(TcpConnectionPtr)
+void Session<isET>::handleClose()
 {
     owner_->onDisconnect();
 }

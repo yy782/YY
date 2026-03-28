@@ -212,6 +212,7 @@ bool setNonBlocking(int fd);
  * @param fd 文件描述符
  * @param on 是否启用
  */
+bool isNonBlocking(int fd);
 void reusePortOrDie(int fd,bool on=true);
 
 //void set_nonblock(int fd);

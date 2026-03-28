@@ -22,12 +22,13 @@ public:
             }
         );
         
-        server_.setMessageCallBack([this](TcpConnectionPtr conn){
-            onMessage(conn);
-        });
-        server_.setConnectCallBack([](TcpConnectionPtr conn){
+        server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             std::cout<<"Connect!"<<std::endl;
-            conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            return conn;
         });
     }
     

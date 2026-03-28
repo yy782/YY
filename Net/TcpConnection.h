@@ -297,7 +297,7 @@ public:
     // BackpressureState getSendBufferState()const{return SendbpState_;}
     //void updateWaterMark();
 
-    void handleETRead();
+    
     // void handleBackpressureAfterSend();
     // void handleBackpressureAfterRead();
 private:
@@ -306,13 +306,14 @@ private:
     void sendInLoop(const char* message,size_t len);
     void disconnectInLoop();
     void handleRead();
+    void handleETRead();
     void handleWrite();
     void handleClose();
     void handleError();
     void handleException();
     //void parseMessagesWithCodec();
 
-    friend class TcpServer;
+    friend class Acceptor;
     friend class TcpClient;
     template<typename Callable>
     void setDestructorCallBack(Callable&& cb) {
@@ -343,7 +344,6 @@ private:
     
     EventHandler handler_;
     bool isET={false};
-
 
 };
 

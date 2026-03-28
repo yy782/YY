@@ -20,17 +20,18 @@ public:
     TimerClient(const Address& serverAddr,EventLoop* loop):
     client_(serverAddr,loop)
     {
-        client_.setMessageCallBack([this](TcpConnectionPtr){
-            
-        });
-        client_.setConnectionCallback([this](TcpConnectionPtr conn){
-            conn->setEvent(Event(LogicEvent::Read|LogicEvent::Edge));
+        client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             ++ConnNum;
             conn->send("hello !",8);
-        });
-        client_.setCloseCallBack([this](TcpConnectionPtr){
-            --ConnNum;
-            if(ConnNum==0)AllDisCon=true;
+            conn->setMessageCallBack([this](TcpConnectionPtr){
+                
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr){
+                --ConnNum;
+                if(ConnNum==0)AllDisCon=true;
+            });
+            return conn;
         });
     }
     void connect()

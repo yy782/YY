@@ -15,18 +15,18 @@ public:
         : client_(addr,thread->getEventLoop()),
         thread_(thread)
     {
-        auto loop=thread->getEventLoop();
-        client_.setMessageCallBack([this](TcpConnectionPtr conn){
-            onMessage(conn);
-        });
-        client_.setCloseCallBack([this,loop](TcpConnectionPtr){
-            loop->quit();
-            exit(0);
-        });
-        client_.setConnectionCallback([this](TcpConnectionPtr conn){
-            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
-            conn->setReading();
+        client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
+            
             this->sendStudent(conn);
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this,Cloop](TcpConnectionPtr){
+                Cloop->quit();
+                exit(0);
+            });
+            return conn;
         });
     }
     

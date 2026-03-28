@@ -18,18 +18,17 @@ public:
         : client_(serverAddr, loop)
          {
         
-        client_.setMessageCallBack([this](TcpConnectionPtr conn)
-        {
-            onMessage(conn);
-        });
-        client_.setCloseCallBack([this](TcpConnectionPtr){
-            closeCb_();
-        });
-        client_.setConnectionCallback([this](TcpConnectionPtr con){
-            //client_.setEvent(EventType::ReadEvent|EventType::EV_ET);
-            con->setReading();
+        client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
+            conn->setMessageCallBack([this](TcpConnectionPtr con){
+                onMessage(con);
+            });
+            conn->setCloseCallBack([this](TcpConnectionPtr){
+                closeCb_();
+            });
             conCb_();
+            return conn;
         });
     }
     

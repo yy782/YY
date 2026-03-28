@@ -3,7 +3,7 @@
 
 #include "../Common/noncopyable.h"
 #include "../Common/SyncLog.h"
-#include "Acceptor.h"
+#include "AcceptorPool.h"
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventLoopThreadPool.h"
@@ -14,7 +14,7 @@
 #include <set>
 #include <memory>
 #include <vector>
-#include <boost/unordered/concurrent_flat_set.hpp>
+
 namespace yy
 {
 namespace net
@@ -31,19 +31,15 @@ namespace net
 class TcpServer:public noncopyable
 {
 public:
-    /**
-     * @brief 连接映射类型
-     */
-    typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
-    //typedef std::vector<std::unique_ptr<Acceptor>> AcceptorList;
+
+    
     /**
      * @brief 接收器指针类型
      */
-    typedef std::unique_ptr<Acceptor> AcceptorPtr;
     /**
      * @brief 连接回调函数类型
      */
-    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectionCallBack;
+    typedef Acceptor::ServicesConnectCallBack ServicesConnectCallBack;
     /**
      * @brief 字符容器类型
      */
@@ -56,8 +52,7 @@ public:
      * @param threadnum 线程池大小
      * @param loop 事件循环
      */
-    TcpServer(const Address& addr,int threadnum,EventLoop* loop);
-    
+    TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum,EventLoop* loop);
     /**
      * @brief 析构函数
      */
@@ -67,28 +62,23 @@ public:
      * 
      * 启动服务器，开始接受客户端连接。
      */
-    void setConnectCallBack(ServicesConnectionCallBack cb)
+    void setConnectCallBack(ServicesConnectCallBack cb)
     {
-        SconnectionCallBack_=std::move(cb);
+        AcceptorPool_.setNewConnectCallBack(std::move(cb)); 
     }
     void loop();
-    
+    void wait(); 
     /**
      * @brief 停止服务器
      * 
      * 停止服务器，不再接受新的客户端连接。
      */
     void stop();
+
+
 private:
-    /**
-     * @brief 新连接回调
-     * 
-     * @param fd 套接字文件描述符
-     * @param addr 客户端地址
-     * 
-     * 当有新的客户端连接时调用，创建TcpConnection对象。
-     */
-    void newConnection(int fd,const Address& addr);
+    friend class Acceptor;
+    EventLoop* NextLoop();
     
     /**
      * @brief 移除连接
@@ -97,7 +87,6 @@ private:
      * 
      * 当连接关闭时调用，清理连接资源。
      */
-    void removeConnection(TcpConnectionPtr conn);
     
     /**
      * @brief 事件循环
@@ -107,19 +96,16 @@ private:
     /**
      * @brief 接收器
      */
-    AcceptorPtr acceptor_;
-    
+    AcceptorPool AcceptorPool_;
     /**
      * @brief 事件循环线程池
      */
-    EventLoopThreadPool threadpool_;
+    EventLoopThreadPool WorkThreadPool_;
     
     /**
      * @brief 连接映射
      */
-    ConnectMap connects_;
 
-    ServicesConnectionCallBack SconnectionCallBack_;
 }; 
 
 }    

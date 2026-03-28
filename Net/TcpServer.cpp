@@ -3,57 +3,38 @@
 namespace yy
 {
 namespace net
-{
-TcpServer::TcpServer(const Address& addr,int threadnum,EventLoop* loop):
+{   
+TcpServer::TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum,EventLoop* loop):
 loop_(loop),
-acceptor_(std::make_unique<Acceptor>(addr,loop_)),
-threadpool_(threadnum,loop)
+AcceptorPool_(addr,this,AcceptorNum),
+WorkThreadPool_(WorkThreadnum)
 {
-    LOG_SYSTEM_INFO(addr.sockaddrToString());
-
-    acceptor_->setNewConnectCallBack([this](int fd, const Address& address)
-    {
-        newConnection(fd, address);
-    });
-        
-}   
-
+    LOG_SYSTEM_INFO(addr.sockaddrToString());       
+}  
 void TcpServer::loop()
 {
-    acceptor_->listen();
-    threadpool_.run();
+    AcceptorPool_.run();
+    WorkThreadPool_.run();
 } 
 void TcpServer::stop()
 {
-    threadpool_.stop();
+    AcceptorPool_.stop();
+    WorkThreadPool_.stop();
 }
-void TcpServer::newConnection(int fd,const Address& addr)
+void TcpServer::wait() 
 {
-
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGTERM);
     
-    assert(loop_->isInLoopThread());
-    EventLoop* loop=threadpool_.getEventLoop();
-    assert(SconnectionCallBack_);
-    auto conn=SconnectionCallBack_(fd,addr,loop);
-    conn->setDestructorCallBack([this](TcpConnectionPtr con)
-    {
-        removeConnection(con);
-    });
-    assert(!connects_.contains(conn));
-    connects_.insert(conn);    
+    int sig;
+    sigwait(&mask, &sig);  // 阻塞直到收到信号
 }
-    
-void TcpServer::removeConnection(TcpConnectionPtr conn)
+EventLoop* TcpServer::NextLoop()
 {
-    assert(conn->loop()->isInLoopThread()); 
-    
-    // loop_->submit([this,conn](){//////////////////connects_是公共数据结构 会导致死锁，accept线程向IO池提交连接，IO池向accept线程移除连接
-    //     assert(connects_.find(conn)!=connects_.end());
-    //     connects_.erase(conn);
-    // });
-    
-    
-    connects_.erase(conn);
+    return WorkThreadPool_.getEventLoop();
 }
+    
 }    
 }
