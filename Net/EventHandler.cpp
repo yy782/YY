@@ -27,19 +27,13 @@ void EventHandler::init(int fd,EventLoop* loop,const char* name,Event events)
     loop_->addListen(this); 
     name_=name;
 }  
-void EventHandler::tie(const std::shared_ptr<void>& obj)
-{
-  tie_ = obj;
-  tied_=true;
-}
+// void EventHandler::tie(const std::shared_ptr<void>& obj)
+// {
+//   tie_ = obj;
+//   tied_=true;
+// }
 void EventHandler::handler_revent()
 {
-    std::shared_ptr<void> guard;
-    if(tied_)
-    {
-        guard=tie_.lock();
-        if(!guard)return;        
-    }
     if(revents_&LogicEvent::Hup&&!(revents_&LogicEvent::Read))
     {
         // @brief 这里判断一下ReadEvent主要是对方关闭了写端，但是可能还有可读数据未读，HupEvent是即将关闭连接

@@ -81,14 +81,14 @@ public:
      */
     void init(int fd,EventLoop* loop,const char* name,Event events=Event(LogicEvent::None));
     
-    /**
-     * @brief 绑定对象的生命周期
-     * 
-     * @param obj 要绑定的对象
-     * 
-     * 绑定一个对象的生命周期，当对象被销毁时，事件处理器会自动移除。
-     */
-    void tie(const std::shared_ptr<void>&);
+    // /**
+    //  * @brief 绑定对象的生命周期
+    //  * 
+    //  * @param obj 要绑定的对象
+    //  * 
+    //  * 绑定一个对象的生命周期，当对象被销毁时，事件处理器会自动移除。
+    //  */
+    // void tie(const std::shared_ptr<void>&);
 
     /**
      * @brief 获取文件描述符
@@ -329,15 +329,15 @@ private:
      */
     int status_={-1};
     
-    /**
-     * @brief 绑定的对象
-     */
-    std::weak_ptr<void> tie_;
+    // /**
+    //  * @brief 绑定的对象
+    //  */
+    // std::weak_ptr<void> tie_;
     
-    /**
-     * @brief 是否绑定了对象
-     */
-    bool tied_={false};
+    // /**
+    //  * @brief 是否绑定了对象
+    //  */
+    // bool tied_={false};
     
     /**
      * @brief 文件描述符

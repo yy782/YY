@@ -53,9 +53,9 @@ isET(events.has(LogicEvent::Edge)?true:false)
     {
         handleError();
     });
-    loop_->DelayedExecution<false>([this](){
-        handler_.tie(shared_from_this()); //对象没创建不能shared_from_this()/////////////////////////////////////////
-    });
+    // loop_->DelayedExecution<false>([this](){
+    //     handler_.tie(shared_from_this()); //对象没创建不能shared_from_this()/////////////////////////////////////////
+    // });
 }
 
 TcpConnection::~TcpConnection()
@@ -332,7 +332,9 @@ void TcpConnection::handleClose()
     Connstatus_=ConnectStatus::DisConnected;
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
     assert(destructCallBack_);
-    destructCallBack_(shared_from_this());///////////////////////一定要放到最后  
+    loop_->DelayedExecution<true>([this](){
+       destructCallBack_(shared_from_this()); ///////////////////////一定要放到最后  ///////////////////////////////////////
+    });
 }
 void TcpConnection::handleError()   
 {
