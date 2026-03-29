@@ -76,6 +76,7 @@ public:
     ~EventLoop()
     {
         assert(isInLoopThread());
+        LOG_LOOP_DEBUG("loopID:"<<id_<<" 析构");
     }
     
     /**
@@ -142,6 +143,9 @@ public:
     void runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count);
     template<class PrecisionTag>
     void runTimer(std::shared_ptr<Timer<PrecisionTag>> timer);
+
+
+    int id() const noexcept{return id_;}
 
 private:
     friend class EventHandler;
@@ -297,7 +301,7 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
 template<bool isInLoop,typename Callable>
 void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation)
 {
-    if constexpr (isInLoop)
+    if constexpr (isInLoop)// 可以放到另一个队列，定时器提醒执行，退出循环也能清理 FIXME
     {
         assert(isInLoopThread());
         if(!FunctionList_.append(Fun(std::forward<Callable>(cb),DelayedExecutionInformation)))
@@ -305,7 +309,7 @@ void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecuti
             runTimer<LowPrecision>([Cb=std::forward<Callable>(cb),DelayedExecutionInformation,this]()mutable
             {
                 DelayedExecution<true>(std::forward<Callable>(Cb),DelayedExecutionInformation);
-            },5s,1);
+            },5s,1);///////////////5s前loop退出循环会怎么样?FIXME
         }
     }
     else 

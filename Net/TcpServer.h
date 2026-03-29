@@ -39,7 +39,7 @@ public:
     /**
      * @brief 连接回调函数类型
      */
-    typedef Acceptor::ServicesConnectCallBack ServicesConnectCallBack;
+    typedef Acceptor::ServicesConnectedCallBack ServicesConnectedCallBack;
     /**
      * @brief 字符容器类型
      */
@@ -62,7 +62,7 @@ public:
      * 
      * 启动服务器，开始接受客户端连接。
      */
-    void setConnectCallBack(ServicesConnectCallBack cb)
+    void setConnectCallBack(ServicesConnectedCallBack cb)
     {
         AcceptorPool_.setNewConnectCallBack(std::move(cb)); 
     }

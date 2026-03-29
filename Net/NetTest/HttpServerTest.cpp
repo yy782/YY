@@ -4,6 +4,9 @@
 #include <map>
 #include "../../Common/SyncLog.h"
 #include "../HTTP/HttpServer.h"
+#include "../TcpConPool.h"
+#include <vector>
+#include <memory>
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::Http;
@@ -11,9 +14,16 @@ using namespace yy::net::Http;
 
 int main() {
     EventLoop loop;
-    Address addr(8080,true);
-    
-    HTTPServer server(addr, 4);
+    Address serveraddr(8080,true);
+    HTTPServer server(serveraddr,1,2);
+    server.setConCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
+        auto conn=TcpConnection::accept(Cfd,Caddr,Cloop);
+        LOG_SYSTEM_INFO("HTTP connection! " << Caddr.sockaddrToString());
+        conn->setCloseCallBack([](TcpConnectionPtr con){  
+            LOG_SYSTEM_INFO("HTTP connection closed! " << con->addr().sockaddrToString());        
+        });
+        return conn;
+    });
     SyncLog::getInstance("../Log.log").getFilter() 
         .set_global_level(LOG_LEVEL_DEBUG) 
         .set_module_enabled("TCP")
@@ -47,6 +57,6 @@ int main() {
     });
     LOG_SYSTEM_INFO("HTTP Server starting on port 8080...");
     server.start();
-
+    server.wait();
     return 0;
 }

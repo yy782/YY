@@ -16,26 +16,14 @@ namespace net
  * TcpClient封装了TCP客户端的连接管理，包括连接建立、断开、重连等功能。
  * 它通过Connector来处理连接的建立过程，并在连接建立后创建TcpConnection对象来管理连接。
  */
-class TcpClient : noncopyable
+class TcpClient : noncopyable// 需要强行保证生命周期长,要求loop彻底停止后再构析
                      {
 public:
-    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectionCallBack;
+    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectedCallBack;
     /**
      * @brief 连接失败回调函数类型
      */
-    typedef std::function<void()> ServicesConnectFailCallback;
-    /**
-     * @brief 消息回调函数类型
-     */
-    typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
-    /**
-     * @brief 关闭回调函数类型
-     */
-    typedef TcpConnection::ServicesCloseCallBack ServicesCloseCallback;
-    /**
-     * @brief 错误回调函数类型
-     */
-    typedef TcpConnection::ServicesErrorCallBack ServicesErrorCallBack;
+    typedef std::function<void()> ServicesConnectFailCallBack;
     /**
      * @brief 缓冲区类型
      */
@@ -124,14 +112,14 @@ public:
      * 
      * @param cb 连接回调函数
      */
-    void setConnectionCallback(ServicesConnectionCallBack cb) { SconnectionCallback_ = std::move(cb); }
+    void setConnectionCallback(ServicesConnectedCallBack cb) { SconnectionCallback_ = std::move(cb); }
     
     /**
      * @brief 设置连接失败回调函数
      * 
      * @param cb 连接失败回调函数
      */
-    void setConnectFailCallback(ServicesConnectFailCallback cb) { SconnectFailCallback_ = std::move(cb); }
+    void setConnectFailCallback(ServicesConnectFailCallBack cb) { SconnectFailCallback_ = std::move(cb); }
 
     /**
      * @brief 获取连接对象
@@ -169,7 +157,7 @@ private:
     /**
      * @brief 本地地址
      */
-    Address addr_;
+    Address addr_;///////////////////////////////地址和fd绑定的不同，FIXME
     
     /**
      * @brief 服务器地址
@@ -194,11 +182,11 @@ private:
     /**you
      * @brief 回调函数
      */
-    ServicesConnectionCallBack SconnectionCallback_;
+    ServicesConnectedCallBack SconnectionCallback_;
     /**
      * @brief 连接失败回调函数
      */
-    ServicesConnectFailCallback SconnectFailCallback_;
+    ServicesConnectFailCallBack SconnectFailCallback_;
 
     /**
      * @brief 新连接回调

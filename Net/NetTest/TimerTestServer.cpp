@@ -27,7 +27,7 @@ void TcpConnection::Extend<checkAlive>(checkAlive)
     auto& lastFulsh=context<LTimeStamp>();
     if(LTimeStamp::now()-lastFulsh>LTimeInterval(10s))
     {
-        disconnect();//////////////////////////  这里线程不安全
+        disconnect();
         LOG_TCP_DEBUG(addr().sockaddrToString()<<" Close!");
     } 
 }

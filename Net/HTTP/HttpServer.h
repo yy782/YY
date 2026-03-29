@@ -12,25 +12,25 @@ namespace Http
 class HTTPServer {
 public:
     typedef std::function<void(Http::HttpRequest&, Http::HttpResponse&)> HttpCallback;
-    
-    HTTPServer(const Address& addr, int thread_num)
-        : server_(addr, 1, thread_num)
+    typedef TcpServer::ServicesConnectedCallBack ServicesConnectedCallBack;
+    HTTPServer(const Address& addr,int AcceptorNum,int WorkThreadnum)
+        : server_(addr,AcceptorNum,WorkThreadnum)
         {
         
         server_.setConnectCallBack([this](int Cfd,const Address& Caddr,EventLoop* Cloop)
         {
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
+            assert(SconCb_);
+            auto conn=SconCb_(Cfd,Caddr,Cloop);
             onConnection(conn);
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 onMessage(con);
             });
-            conn->setCloseCallBack([this](TcpConnectionPtr con){
-                onClose(con);
-            });
             return conn;
         });
     }
-    
+    void setConCallback(ServicesConnectedCallBack cb) {
+        SconCb_=cb;
+    }    
     // 路由注册
     void get(const std::string& path, HttpCallback cb) {
         router_.get(path, cb);
@@ -56,7 +56,9 @@ public:
     void start() {
         server_.loop();
     }
-    
+    void wait(){
+        server_.wait();
+    }
     void stop() {
         server_.stop();
     }
@@ -72,11 +74,7 @@ private:
     };
     
     void onConnection(TcpConnectionPtr conn) {
-        auto addr = conn->addr();
-        LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
         conn->context<HTTPConnectionContext>()=HTTPConnectionContext();
-        //conn->setEvent(EventType::ReadEvent|EventType::EV_ET);
-        conn->setReading();
     }
     
     void onMessage(TcpConnectionPtr conn) {
@@ -154,14 +152,9 @@ private:
 
     }
     
-    void onClose(TcpConnectionPtr conn) {
-        auto addr = conn->addr();   
-        LOG_SYSTEM_INFO("HTTP connection closed! " << addr.sockaddrToString());
-
-    }
-    
     TcpServer server_;
     Http::HttpRouter router_;
+    ServicesConnectedCallBack SconCb_;
 };
 }
 }    

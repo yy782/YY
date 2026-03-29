@@ -11,23 +11,19 @@ namespace Http
 class HTTPClient {
 public:
     typedef std::function<void(const Http::HttpResponse&)> ResponseCallback;
-    typedef std::function<void()> CloseCallback;
-    typedef std::function<void()> ConnectedCallback;
+    typedef TcpClient::ServicesConnectedCallBack ServicesConnectedCallBack;
     
     HTTPClient(const Address& serverAddr, EventLoop* loop)
         : client_(serverAddr, loop)
          {
         
         client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
+            assert(SconCb_);
+            auto conn=SconCb_(Cfd,Caddr,Cloop);
             std::cout << "Connected! Commands: get, post, quit" << std::endl;
             conn->setMessageCallBack([this](TcpConnectionPtr con){
                 onMessage(con);
             });
-            conn->setCloseCallBack([this](TcpConnectionPtr){
-                closeCb_();
-            });
-            conCb_();
             return conn;
         });
     }
@@ -67,11 +63,8 @@ public:
     }
     
     // 设置连接关闭回调
-    void setCloseCallback(CloseCallback cb) {
-        closeCb_ = cb;
-    }
-    void setConCallback(CloseCallback cb) {
-        conCb_ = cb;
+    void setConCallback(ServicesConnectedCallBack cb) {
+        SconCb_=cb;
     }
 private:
     struct RequestContext {
@@ -186,8 +179,7 @@ private:
     TcpClient client_;
     Http::HttpResponse response_;
     std::queue<RequestContext> pendingRequests_;
-    ConnectedCallback conCb_;
-    CloseCallback closeCb_;
+    ServicesConnectedCallBack SconCb_;
 };
 }
 }    

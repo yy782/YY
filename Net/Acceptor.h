@@ -36,7 +36,7 @@ public:
     /**
      * @brief 新连接回调函数类型
      */
-    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectCallBack;
+    typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectedCallBack;
     typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
     /**
      * @brief 构造函数
@@ -63,7 +63,7 @@ public:
      * 
      * @param cb 回调函数
      */
-    void setNewConnectCallBack(ServicesConnectCallBack cb){SconnectCallBack_=std::move(cb);}
+    void setNewConnectCallBack(ServicesConnectedCallBack cb){SconnectCallBack_=std::move(cb);}
     
     /**
      * @brief 开始监听
@@ -100,7 +100,7 @@ private:
 
     ConnectMap connects_;// Not
 
-    ServicesConnectCallBack SconnectCallBack_;// inOne
+    ServicesConnectedCallBack SconnectCallBack_;// inOne
 
     
     

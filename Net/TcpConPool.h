@@ -5,11 +5,16 @@ namespace yy /////////////////////////////////
 {
 template<typename T>
 class ObjectPool;
+template<>
+class ObjectPool<TcpConnectionPtr>;
+typedef class ObjectPool<TcpConnectionPtr> TcpConPool;
+
 const int ExpendNum=1000;
 template<>
 class ObjectPool<TcpConnectionPtr>: noncopyable 
 {
-    struct config:copyable
+public:
+    struct Config:copyable
     {
         typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
         typedef TcpConnection::ServicesExceptCallBack ServicesExceptCallBack;
@@ -24,7 +29,7 @@ class ObjectPool<TcpConnectionPtr>: noncopyable
         ServicesExceptCallBack SexceptCallBack_;  
         ServicesData data_;
     };
-    explicit ObjectPool(int num,struct config& config):
+    explicit ObjectPool(int num,struct Config& config):
     config_(config)
     {
         expend(num);
@@ -63,7 +68,7 @@ class ObjectPool<TcpConnectionPtr>: noncopyable
         free_list_.push_back(conn);
     }
 private:
-    config config_;// 需外部强行保证
+    Config config_;// 需外部强行保证
     //std::list<TcpConnectionPtr> active_list_;
     std::list<TcpConnectionPtr> free_list_;
 };

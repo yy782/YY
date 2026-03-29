@@ -14,13 +14,14 @@
 #include "../InetAddress.h"
 #include "../ConfigCenter.h"
 #include "../TimerQueue.h"
+#include "../SignalHandler.h"
 using namespace yy;
 using namespace yy::net;
 //./PingPongClient 4 4096 100 60 0
 //./PingPongClient 4 4096 10000 10 0
 template<bool isET>
 class Client;
-
+//valgrind --leak-check=full --track-origins=yes ./PingPongClient 4 4096 1000 60 1 2>&1 | tee valgrind.out
 template<bool isET>
 class Session : noncopyable
 {
@@ -203,12 +204,12 @@ void handleTimeout()
 }
 
   EventLoop* loop_;
+  std::vector<std::unique_ptr<Session<isET> >> sessions_;
   EventLoopThreadPool threadPool_;
   int sessionCount_;
   int timeout_;
-  std::vector<std::unique_ptr<Session<isET> >> sessions_;
   std::string message_;
-  std::atomic<int> numConnected_;
+  std::atomic<int> numConnected_={0};
 };
 template<bool isET>
 void Session<isET>::onConnection(const TcpConnectionPtr& conn)
@@ -234,8 +235,11 @@ void Session<isET>::handleClose()
 }
 int main(int argc, char* argv[])
 {
+    Signal::signal(SIGPIPE,[](){});
     SyncLog::getInstance("../CliLog.log").getFilter() 
-      .set_global_level(LOG_LEVEL_ERROR) ;
+      .set_global_level(LOG_LEVEL_ERROR)
+      ; 
+      
       
         // SyncLog::getInstance("../CliLog.log").getFilter() 
         // .set_global_level(LOG_LEVEL_DEBUG) 

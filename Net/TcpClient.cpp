@@ -23,8 +23,9 @@ struct TcpClient::Connector:noncopyable,
     static const HTimeInterval kInitRetryDelayMs;
     static const HTimeInterval kMaxRetryDelayMs;
 
-    Connector(EventLoop* loop,const Address& serverAddr,bool* retry ,const NewConCallBack& Ncb,const FailConCallBack& Fcb): 
+    Connector(EventLoop* loop,const Address& addr,const Address& serverAddr,bool* retry ,const NewConCallBack& Ncb,const FailConCallBack& Fcb): 
     loop_(loop),
+    addr_(addr),
     serverAddr_(serverAddr),
     state_(kDisconnected),
     handler_(nullptr),
@@ -37,7 +38,7 @@ struct TcpClient::Connector:noncopyable,
 
     ~Connector() 
     {   
-        if(handler_!=nullptr)
+        if(handler_!=nullptr)// 这里要求loop已经构析，loop的所有任务已经完成了，可以保证handler_不会双重释放
         {
             delete handler_;
         }
@@ -244,6 +245,7 @@ private:
   
     int fd_={-1};// InOne
     EventLoop* loop_;
+    const Address& addr_;
     const Address& serverAddr_;
     
     State state_;
@@ -262,7 +264,7 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_shared<Connector>(loop, serverAddr, &retry_, [this](int fd)
+    connector_(std::make_shared<Connector>(loop,addr_,serverAddr, &retry_, [this](int fd)
     {
         newConnection(fd);
     }, [this]()

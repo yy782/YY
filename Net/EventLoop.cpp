@@ -86,10 +86,10 @@ bool EventLoop::isInLoopThread() noexcept
 }
 void EventLoop::quit()
 {
-
+    //assert(!isInLoopThread());
     assert(CheckeEventLoopStatus());
     
-    submit([this]()
+    submit([this]()/////////////////////////////////////////////////loop线程提交安全吗
     {
         assert(isInLoopThread());
         status_ = EventLoopStatus::Quiting;     
@@ -112,6 +112,12 @@ void EventLoop::doPendingFunctions()
     assert(isInLoopThread());
     size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
+
+    if(FunctionList_.full())
+    {
+        LOG_LOOP_WARN("loopID:"<<id_<<" FunctionList is full");
+    }
+
     while(!FunctionList_.empty()&&FinishNum<30) 
     {
         Functor cb;

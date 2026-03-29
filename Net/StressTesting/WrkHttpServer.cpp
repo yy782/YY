@@ -1,77 +1,96 @@
-#include "../HTTP/HttpSer-ET.h"
 #include "../HTTP/HttpServer.h"
 #include "../../Common/TimeStamp.h"
+#include "../TcpConPool.h"
+#include <vector>
+
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::Http;
 
 //./WrkHttpServer
 extern char favicon[555];
-
+// int main()
+// {
+//     return 0;
+// }
 int main(int argc, char* argv[])
 {
+    Signal::signal(SIGPIPE,[](){});
     bool isET=true;
-    Address addr(8080,true);
+    bool useConPool=false;
+    Address serveraddr(8080,true);
     int numThreads=4;
-    if(argc>1)
+    int AcceptorNum=2;
+    if (argc>3)
     {
-       numThreads = atoi(argv[1]); 
-    } 
-    if (argc>2)
-    {
-        isET=(atoi(argv[2])==1?true:false);
+        numThreads =std::atoi(argv[1]);
+        AcceptorNum=std::atoi(argv[2]);
+        isET=(atoi(argv[3])==1?true:false);
+        useConPool=(atoi(argv[4])==1?true:false);
     }
-    if(isET) 
+    Event event=(isET)?Event(LogicEvent::Read|LogicEvent::Edge):Event(LogicEvent::Read);
+    HTTPServer ser(serveraddr,AcceptorNum,numThreads);
+    std::vector<std::unique_ptr<TcpConPool>> conPools;
+    if(useConPool)
     {
-        HTTPSerET ser(addr,numThreads);
-        ser.get("/",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "text/html";
-            resp.headers_["Server"]="HttpSer";
-            std::string now = TimeStamp<LowPrecision>::nowToString();
-            resp.body_=std::string("<html><head><title>This is title</title></head>"
-                "<body><h1>Hello</h1>Now is " + now +
-                "</body></html>"); 
+        TcpConPool::Config config;
+        config.event_=event;
+        config.isTcpAlive_=true;
+        config.ScloseCallBack_=([&conPools](TcpConnectionPtr con){
+            auto addr = con->addr();   
+            LOG_SYSTEM_INFO("HTTP connection closed! " << addr.sockaddrToString());  
+            conPools[con->loop()->id()]->release(con);//////////////////////////////////////////////////////////////////
+        });        
+        for(int i=0;i<numThreads;++i)
+        {
+            conPools.emplace_back(std::make_unique<TcpConPool>(1024,config));
+        }        
+        ser.setConCallback([&conPools](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=conPools[Cloop->id()]->acquire(Cfd,Caddr,Cloop);
+            auto addr = conn->addr();
+            LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());            
+            return conn;
         });
-        ser.get("/favicon.ico",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "image/png";
-            resp.body_=std::string(favicon, sizeof favicon);
-        });    
-        ser.get("/hello",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "text/plain";
-            resp.body_=std::string("hello, world!\n");
-        });
-        ser.start();
     }
     else 
     {
-        HTTPServer ser(addr,numThreads);
-        ser.get("/",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "text/html";
-            resp.headers_["Server"]="HttpSer";
-            std::string now = TimeStamp<LowPrecision>::nowToString();
-            resp.body_=std::string("<html><head><title>This is title</title></head>"
-                "<body><h1>Hello</h1>Now is " + now +
-                "</body></html>"); 
+        ser.setConCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop);
+            conn->setCloseCallBack([](TcpConnectionPtr con){
+                auto addr = con->addr();   
+                LOG_SYSTEM_INFO("HTTP connection closed! " << addr.sockaddrToString());        
+            });
+            auto addr = conn->addr();
+            LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());
+            return conn;
         });
-        ser.get("/favicon.ico",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "image/png";
-            resp.body_=std::string(favicon, sizeof favicon);
-        });    
-        ser.get("/hello",[](Http::HttpRequest&, Http::HttpResponse& resp) {
-            resp.setStatus(Http::HttpResponse::Status::OK);
-            resp.headers_["Content-Type"] = "text/plain";
-            resp.body_=std::string("hello, world!\n");
-        });
-        ser.start();
     }
-    
-    
+
+    ser.get("/",[](Http::HttpRequest&, Http::HttpResponse& resp) {
+        resp.setStatus(Http::HttpResponse::Status::OK);
+        resp.headers_["Content-Type"] = "text/html";
+        resp.headers_["Server"]="HttpSer";
+        std::string now = TimeStamp<LowPrecision>::nowToString();
+        resp.body_=std::string("<html><head><title>This is title</title></head>"
+            "<body><h1>Hello</h1>Now is " + now +
+            "</body></html>"); 
+    });
+    ser.get("/favicon.ico",[](Http::HttpRequest&, Http::HttpResponse& resp) {
+        resp.setStatus(Http::HttpResponse::Status::OK);
+        resp.headers_["Content-Type"] = "image/png";
+        resp.body_=std::string(favicon, sizeof favicon);
+    });    
+    ser.get("/hello",[](Http::HttpRequest&, Http::HttpResponse& resp) {
+        resp.setStatus(Http::HttpResponse::Status::OK);
+        resp.headers_["Content-Type"] = "text/plain";
+        resp.body_=std::string("hello, world!\n");
+    });
+    ser.start();
+    ser.wait();
 }
+    
+    
+
 
 char favicon[555] = {
   '\x89', 'P', 'N', 'G', '\xD', '\xA', '\x1A', '\xA',

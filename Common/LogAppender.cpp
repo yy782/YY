@@ -30,20 +30,16 @@ writtenBytes_(0)
 {
     if(fp_==nullptr)
     {
-        fprintf(stderr, "Open failed: filename='%s', errno=%d, reason=%s\n",
-        filename, errno, strerror(errno));
-        fprintf(stderr, "Using stderr for logging instead\n");
-        fp_ = stderr;
+        exit(1);
     }
     // @brief 替换掉标准库的默认缓冲区，默认缓冲区太小了
     ::setvbuf(fp_, buffer_, _IOFBF, BUFFER_SIZE);
 }  
 BaseLogAppender::~BaseLogAppender()
 {
-    // 不要关闭stderr
-    if (fp_ != stderr) {
-        ::fclose(fp_);
-    }
+
+    ::fclose(fp_);
+    
 }
 void BaseLogAppender::append(const char* logline,size_t len)
 {

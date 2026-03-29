@@ -12,12 +12,13 @@
 
 namespace yy
 {
+template<typename T>
+class ObjectPool;    
 namespace net
 {
 class TcpConnection;
 typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;    
-template<typename T>
-class ObjectPool;
+
 /**
  * @brief TCP连接类，负责管理TCP连接的生命周期和数据传输
  * 
@@ -303,6 +304,7 @@ public:
     
     // void handleBackpressureAfterSend();
     // void handleBackpressureAfterRead();
+    TcpConnection(Event events);
 private:
 
 
@@ -325,7 +327,7 @@ private:
     
 
     friend class ObjectPool<TcpConnectionPtr>;
-    TcpConnection(Event events);
+
     void init(int fd,const Address& addr,EventLoop* loop);
     void reset();
 

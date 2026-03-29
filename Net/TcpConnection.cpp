@@ -122,7 +122,13 @@ void TcpConnection::reset()///////////////////////////////////////////
     sockets::close(fd_);
     fd_=-1;
     loop_=nullptr;
-    addr_=Address();
+    //address不重置，保留最后一次连接的地址信息
+    //     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
+    // assert(destructCallBack_);
+    // loop_->DelayedExecution<true>([this](){
+    //    destructCallBack_(shared_from_this()); 
+    // },std::string("TcpCon::handleClose "+addr_.sockaddrToString()+" destructCallBack_"));
+
     RecvBuffer_.reset();
     SendBuffer_.reset();
     Connstatus_=ConnectStatus::Connecting;
@@ -171,10 +177,17 @@ void TcpConnection::disconnect()
     }
     else 
     {
-        if(!handler_.isWriting())
-        {
-            handler_.setWriting();
-        }          
+        loop_->submit([c=weak_from_this()](){
+            auto con=c.lock();
+            if(con)
+            {
+                if(!con->handler_.isWriting())
+                {
+                    con->handler_.setWriting();
+                }                  
+            }
+        },std::string("TcpCon::disconnect handlerSetWriting "+addr_.sockaddrToString()));
+        
     }
 }  
 void TcpConnection::disconnectInLoop()
@@ -312,7 +325,7 @@ void TcpConnection::handleETRead()
             }  
         }            
     }
-    loop_->submit([c=weak_from_this()]()
+    loop_->DelayedExecution<true>([c=weak_from_this()]()
     {
         auto con=c.lock();
         if(con)

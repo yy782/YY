@@ -13,7 +13,15 @@
 //#include "../../Common/AsyncLog.h"
 #include "../../Common/SyncLog.h"
 #include "../../Common/TimeStamp.h"
-
+#if 0
+/usr/local/bin/valgrind --leak-check=full \
+         --track-origins=yes \
+         --show-leak-kinds=all \
+         --num-callers=30 \
+         --log-file=server_check.log \
+         ./PingPongServer 4 0 
+#endif
+// tail -f server_check.log
 using namespace yy;
 using namespace yy::net;
 //./PingPongServer 4 0
@@ -21,8 +29,9 @@ using namespace yy::net;
 // cd programs/yy/build/bin
 int main(int argc, char* argv[])
 {
-    int threadNums=8;
-    bool isET=true;
+    Signal::signal(SIGPIPE,[](){});
+    int threadNums=4;
+    bool isET=false;
     if(argc>1)
     {
         threadNums=std::atoi(argv[1]);
@@ -31,6 +40,7 @@ int main(int argc, char* argv[])
     SyncLog::getInstance("../Log.log").getFilter() 
       .set_global_level(LOG_LEVEL_ERROR) 
       ;
+
     // SyncLog::getInstance("../Log.log").getFilter() 
     //     .set_global_level(LOG_LEVEL_DEBUG) 
     //     .set_module_enabled("TCP")
