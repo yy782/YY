@@ -21,12 +21,12 @@ int main(int argc, char* argv[])
     Address serveraddr(8080,true);
     int numThreads=4;
     int AcceptorNum=2;
-    if (argc>3)
+    if (argc>1)
     {
-        numThreads =std::atoi(argv[1]);
-        AcceptorNum=std::atoi(argv[2]);
-        isET=(atoi(argv[3])==1?true:false);
-        useConPool=(atoi(argv[4])==1?true:false);
+        numThreads =std::atoi(argv[2]);
+        AcceptorNum=std::atoi(argv[3]);
+        isET=(atoi(argv[4])==1?true:false);
+        useConPool=(atoi(argv[5])==1?true:false);
     }
     Event event=(isET)?Event(LogicEvent::Read|LogicEvent::Edge):Event(LogicEvent::Read);
     HTTPServer ser(serveraddr,AcceptorNum,numThreads);
