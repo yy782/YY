@@ -30,7 +30,7 @@ bool EventLoop::CheckeEventLoopStatus()
 EventLoop::EventLoop(int id):
 id_(id),
 activeHandlers_(),
-FunctionList_(),
+FunctionList_(10),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
 wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeHandler",Event(LogicEvent::Read|LogicEvent::Edge))

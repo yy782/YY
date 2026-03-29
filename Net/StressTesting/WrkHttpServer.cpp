@@ -65,7 +65,8 @@ int main(int argc, char* argv[])
                 LOG_ERRNO(errno);
                 sockets::close(Cfd);
             }
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop);
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,event);
+            conn->setTcpNoDelay(true);
             conn->setCloseCallBack([](TcpConnectionPtr con){
                 auto addr = con->addr();   
                 LOG_SYSTEM_INFO("HTTP connection closed! " << addr.sockaddrToString());        

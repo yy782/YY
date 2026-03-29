@@ -10,7 +10,7 @@ class RingBuffer:noncopyable
 { 
 
 public:
-    RingBuffer(size_t capacity=1024):queue_(capacity)
+    RingBuffer(size_t capacity):queue_(capacity)
     {}
     bool append(const T& t)
     {
