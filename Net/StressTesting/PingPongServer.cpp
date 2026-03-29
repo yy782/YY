@@ -38,8 +38,9 @@ int main(int argc, char* argv[])
         isET=std::atoi(argv[2])==1?true:false;
     }
     SyncLog::getInstance("../Log.log").getFilter() 
-      .set_global_level(LOG_LEVEL_ERROR) 
-      ;
+    .set_global_level(LOG_LEVEL_WARN) 
+    
+    ;
 
     // SyncLog::getInstance("../Log.log").getFilter() 
     //     .set_global_level(LOG_LEVEL_DEBUG) 
@@ -47,72 +48,76 @@ int main(int argc, char* argv[])
     //     .set_module_enabled("SYSTEM")
     //     ;
     Address listenAddr("0.0.0.0",8080);
-    TcpServer server(listenAddr,1,threadNums);
-    int ConNum=0;
-    if(isET)
+    TcpServer server(listenAddr,1,threadNums);    
+    try 
     {
-        server.setConnectCallBack([&server,&ConNum](int Cfd,const Address& Caddr,EventLoop* Cloop)mutable
-        { 
-            if(!sockets::setNonBlocking(Cfd))
-            {
-                LOG_ERRNO(errno);
-                sockets::close(Cfd);
-            }
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read|LogicEvent::Edge));
-            conn->setTcpNoDelay(true);   
-            
-            conn->setMessageCallBack([](TcpConnectionPtr con){
-                auto& buf=con->recvBuffer();
-                auto size=buf.readable_size();
-                assert(size==4096);
-                con->send(buf.retrieve(size),size);
+        int ConNum=0;
+        if(isET)
+        {
+            server.setConnectCallBack([&server,&ConNum](int Cfd,const Address& Caddr,EventLoop* Cloop)mutable
+            { 
+                if(!sockets::setNonBlocking(Cfd))
+                {
+                    LOG_ERRNO(errno);
+                    sockets::close(Cfd);
+                }
+                auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read|LogicEvent::Edge));
+                conn->setTcpNoDelay(true);   
                 
+                conn->setMessageCallBack([](TcpConnectionPtr con){
+                    auto& buf=con->recvBuffer();
+                    auto size=buf.readable_size();
+                    assert(size==4096);
+                    con->send(buf.retrieve(size),size);
+                    
+                });
+                conn->setErrorCallBack([](TcpConnectionPtr con){
+                    LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+                });
+                
+                std::atomic<int> CloseNum=0;
+                conn->setCloseCallBack([&CloseNum](TcpConnectionPtr){
+                    LOG_SYSTEM_DEBUG("CloseNum:"<<(++CloseNum));
+                });
+                
+                LOG_TCP_DEBUG("连接数为:"<<(++ConNum));   
+                return conn;
             });
-            conn->setErrorCallBack([](TcpConnectionPtr con){
-                LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+        }
+        else 
+        {
+            server.setConnectCallBack([&server,&ConNum](int Cfd,const Address& Caddr,EventLoop* Cloop)mutable
+            { 
+                auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
+                conn->setTcpNoDelay(true);             
+                conn->setMessageCallBack([](TcpConnectionPtr con){
+                    auto& buf=con->recvBuffer();
+                    auto size=buf.readable_size();
+                    assert(size==4096);
+                    con->send(buf.retrieve(size),size);
+                    
+                });
+                conn->setErrorCallBack([](TcpConnectionPtr con){
+                    LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
+                });
+                
+                // std::atomic<int> CloseNum=0;
+                // con->setCloseCallBack([&CloseNum](TcpConnectionPtr){
+                //     LOG_SYSTEM_DEBUG("CloseNum:"<<(++CloseNum));
+                // });
+                conn->setCloseCallBack([](TcpConnectionPtr){
+
+                });            
+                LOG_TCP_DEBUG("连接数为:"<<(++ConNum));   
+                return conn;
             });
-            
-            std::atomic<int> CloseNum=0;
-            conn->setCloseCallBack([&CloseNum](TcpConnectionPtr){
-                LOG_SYSTEM_DEBUG("CloseNum:"<<(++CloseNum));
-            });
-            
-            LOG_TCP_DEBUG("连接数为:"<<(++ConNum));   
-            return conn;
-        });
-    }
-    else 
+        }
+
+        server.loop();
+        server.wait();        
+    }catch (const std::exception& ex) 
     {
-        server.setConnectCallBack([&server,&ConNum](int Cfd,const Address& Caddr,EventLoop* Cloop)mutable
-        { 
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
-            conn->setTcpNoDelay(true);             
-            conn->setMessageCallBack([](TcpConnectionPtr con){
-                auto& buf=con->recvBuffer();
-                auto size=buf.readable_size();
-                assert(size==4096);
-                con->send(buf.retrieve(size),size);
-                
-            });
-            conn->setErrorCallBack([](TcpConnectionPtr con){
-                LOG_SYSTEM_ERROR(con->addr().sockaddrToString()<<" errno:"<<errno);
-            });
-            
-            // std::atomic<int> CloseNum=0;
-            // con->setCloseCallBack([&CloseNum](TcpConnectionPtr){
-            //     LOG_SYSTEM_DEBUG("CloseNum:"<<(++CloseNum));
-            // });
-            conn->setCloseCallBack([](TcpConnectionPtr){
-
-            });            
-            LOG_TCP_DEBUG("连接数为:"<<(++ConNum));   
-            return conn;
-        });
+        LOG_SYSTEM_ERROR("Exception: " << ex.what());
     }
-
-    server.loop();
-    server.wait();
-
-
-  
+    return 0;
 }

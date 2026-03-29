@@ -14,6 +14,8 @@
 #include "Timer.h"
 #include "../Common/locker.h"
 #include "../Common/RingBuffer.h"
+#include <iostream>
+#include <queue>
 namespace yy
 {
 namespace net
@@ -29,6 +31,7 @@ struct Fun
         : Functor_(std::forward<Callable>(callable))
         , name_(std::move(name))
     {
+        assert(Functor_);
     }  
     std::string getName(){return name_;} 
     void operator()()
@@ -59,8 +62,9 @@ public:
     /**
      * @brief 函数列表类型
      */
-    typedef RingBuffer<Functor> FunctionList;
-
+    //typedef RingBuffer<Functor> FunctionList;
+    typedef std::vector<Functor> FunctionList;  
+    typedef std::queue<Functor> AsyncTaskQueue;
     /**
      * @brief 构造函数
      * 
@@ -245,11 +249,11 @@ private:
      * @brief 任务队列
      */
     FunctionList FunctionList_;// Not
-    
+    AsyncTaskQueue AsyncTaskQueue_;// InLoop
     /**
      * @brief 事件循环线程ID
      */
-    Pid_t threadId_;// InLoop
+    Pid_t threadId_;
     
     /**
      * @brief 事件循环状态
@@ -265,7 +269,7 @@ private:
 
     //int LoopNum={0};
     //std::string name_;
-    
+    std::mutex FunctionListMtx_;
 };
 
 /**
@@ -276,6 +280,19 @@ private:
  * 
  * 如果当前线程是事件循环线程，直接执行任务；否则，将任务添加到任务队列。
  */
+// template<typename Callable>
+// void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
+// {
+//     if(isInLoopThread())
+//     {
+//         cb();
+//     }
+//     else 
+//     {
+//         assert(!isInLoopThread());
+//         FunctionList_.blockappend(Fun(std::forward<Callable>(cb),TaskNameInformation));
+//     }
+// }
 template<typename Callable>
 void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
 {
@@ -286,7 +303,8 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
     else 
     {
         assert(!isInLoopThread());
-        FunctionList_.blockappend(Fun(std::forward<Callable>(cb),TaskNameInformation));
+        std::lock_guard<std::mutex> lock(FunctionListMtx_);
+        FunctionList_.push_back(Fun(std::forward<Callable>(cb),TaskNameInformation));
     }
 }
 
@@ -298,25 +316,28 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
  * 
  * 如果任务队列已满，将任务放入定时器，延迟执行。
  */
+// template<bool isInLoop,typename Callable>
+// void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation)
+// {
+//     if constexpr (isInLoop)// 可以放到另一个队列，定时器提醒执行，退出循环也能清理 FIXME
+//     {
+//         assert(isInLoopThread());
+//         if(!FunctionList_.append(Fun(std::forward<Callable>(cb),DelayedExecutionInformation)))
+//         {
+//             AsyncTaskQueue_.push(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
+//         }
+//     }
+//     else 
+//     {
+//         assert(!isInLoopThread());
+//         FunctionList_.blockappend(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
+//     }
+// }
 template<bool isInLoop,typename Callable>
 void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation)
 {
-    if constexpr (isInLoop)// 可以放到另一个队列，定时器提醒执行，退出循环也能清理 FIXME
-    {
-        assert(isInLoopThread());
-        if(!FunctionList_.append(Fun(std::forward<Callable>(cb),DelayedExecutionInformation)))
-        {
-            runTimer<LowPrecision>([Cb=std::forward<Callable>(cb),DelayedExecutionInformation,this]()mutable
-            {
-                DelayedExecution<true>(std::forward<Callable>(Cb),DelayedExecutionInformation);
-            },5s,1);///////////////5s前loop退出循环会怎么样?FIXME
-        }
-    }
-    else 
-    {
-        assert(!isInLoopThread());
-        FunctionList_.blockappend(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
-    }
+    std::lock_guard<std::mutex> lock(FunctionListMtx_);
+    FunctionList_.push_back(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
 }
 }    
 }

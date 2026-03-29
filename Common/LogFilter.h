@@ -227,7 +227,7 @@ extern LogFilter* g_log_filter;
 
     #define LOG_WARN(msg)     LOG_BASE(LogModule::WARN, LOG_LEVEL_WARN,  "WARN",  msg)
     #define LOG_SYSFATAL(msg)       LOG_BASE(LogModule::DEFAULT, LOG_LEVEL_ERROR, "SYSTEM", msg); \
-                                    exit(1)        
+                                    assert(false);    
 
 #define LOG_ERRNO(save_errno) \
                         switch(save_errno){\

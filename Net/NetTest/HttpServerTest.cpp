@@ -17,7 +17,7 @@ int main() {
     Address serveraddr(8080,true);
     HTTPServer server(serveraddr,1,2);
     server.setConCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
-        auto conn=TcpConnection::accept(Cfd,Caddr,Cloop);
+        auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
         LOG_SYSTEM_INFO("HTTP connection! " << Caddr.sockaddrToString());
         conn->setCloseCallBack([](TcpConnectionPtr con){  
             LOG_SYSTEM_INFO("HTTP connection closed! " << con->addr().sockaddrToString());        

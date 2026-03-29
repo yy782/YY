@@ -11,8 +11,7 @@ namespace EventLoopStatus {
     constexpr int Looping = 1 << 1;
     constexpr int EventHandling = 1 << 2;
     constexpr int PendingFunctions = 1 << 3;
-    constexpr int Quiting = 1 << 4;
-    constexpr int Quited = 1 << 5;
+    constexpr int Quited = 1 << 4;
 }
 
 
@@ -22,15 +21,33 @@ const int PollTimeMs=100;
 bool EventLoop::CheckeEventLoopStatus()
 {
     if((status_&EventLoopStatus::EventHandling)&&(status_&EventLoopStatus::PendingFunctions))return false;
-    if((status_&EventLoopStatus::Quiting)&&(status_&EventLoopStatus::Init))return false;
     if((status_&EventLoopStatus::Init)&&status_!=EventLoopStatus::Init)return false;
     return true;
 }
 
+// EventLoop::EventLoop(int id):
+// id_(id),
+// activeHandlers_(),
+// FunctionList_(10),
+// threadId_(Thread::getId()),
+// status_(EventLoopStatus::Init),
+// wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeHandler",Event(LogicEvent::Read|LogicEvent::Edge))
+
+// {
+//     auto eventCallBack=[this]() -> void
+//     {
+//         uint64_t one = 1;
+//         ssize_t n = sockets::read(wakeHandler_.fd(), &one, sizeof one);
+//         assert(n == sizeof one);
+        
+//         return;
+//     };
+//     wakeHandler_.setReadCallBack(eventCallBack);
+// }
 EventLoop::EventLoop(int id):
 id_(id),
 activeHandlers_(),
-FunctionList_(10),
+FunctionList_(),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
 wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeHandler",Event(LogicEvent::Read|LogicEvent::Edge))
@@ -48,7 +65,7 @@ wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeH
 }
 bool EventLoop::isQuit() noexcept
 {
-    return status_&EventLoopStatus::Quiting;
+    return status_&EventLoopStatus::Quited;
 }
 void EventLoop::loop()
 {
@@ -74,7 +91,6 @@ void EventLoop::loop()
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
         doPendingFunctions();
-        if(status_&EventLoopStatus::Quiting)break;
     }
     while(!FunctionList_.empty())
         doPendingFunctions();
@@ -92,7 +108,7 @@ void EventLoop::quit()
     submit([this]()/////////////////////////////////////////////////loop线程提交安全吗
     {
         assert(isInLoopThread());
-        status_ = EventLoopStatus::Quiting;     
+        status_&=~EventLoopStatus::Looping;     
     },std::string("loopID:"+std::to_string(id_)+"quit"));
     uint64_t one =1;
     ssize_t n=sockets::write(wakeHandler_.fd(), &one, sizeof one);
@@ -107,27 +123,60 @@ void EventLoop::wakeup()
         assert(n==sizeof one);        
     }
 }
+// void EventLoop::doPendingFunctions()
+// {
+//     assert(isInLoopThread());
+//     size_t FinishNum=0;
+//     status_|=EventLoopStatus::PendingFunctions;
+
+//     if(FunctionList_.full())
+//     {
+//         LOG_LOOP_WARN("loopID:"<<id_<<" FunctionList is full");
+//     }
+
+//     while(!FunctionList_.empty()&&FinishNum<30) 
+//     {
+//         Functor cb;
+//         FunctionList_.retrieve(cb);
+
+        
+//         LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
+//         cb(); 
+//         ++FinishNum;
+//     }
+//     while(!AsyncTaskQueue_.empty()&&FinishNum<60)
+//     {
+//         auto cb=AsyncTaskQueue_.front();
+//         AsyncTaskQueue_.pop();
+//         LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
+//         cb();
+//         ++FinishNum;
+//     }
+//     status_&=~EventLoopStatus::PendingFunctions;
+// }   
 void EventLoop::doPendingFunctions()
 {
     assert(isInLoopThread());
-    size_t FinishNum=0;
     status_|=EventLoopStatus::PendingFunctions;
 
-    if(FunctionList_.full())
+    FunctionList other;
+    if(!FunctionList_.empty())
     {
-        LOG_LOOP_WARN("loopID:"<<id_<<" FunctionList is full");
+        std::lock_guard<std::mutex> lock(FunctionListMtx_);
+        other.swap(FunctionList_);
     }
-
-    while(!FunctionList_.empty()&&FinishNum<30) 
+    for(Functor& functor:other)
     {
-        Functor cb;
-        FunctionList_.retrieve(cb);
+        functor();
+    }
+    while(!AsyncTaskQueue_.empty())
+    {
+        auto cb=AsyncTaskQueue_.front();
+        AsyncTaskQueue_.pop();
         LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
-        cb(); 
-        ++FinishNum;
+        cb();
     }
     status_&=~EventLoopStatus::PendingFunctions;
-}   
-
+} 
 }    
 }

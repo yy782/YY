@@ -5,6 +5,7 @@
 #include "../Common/noncopyable.h"
 #include "EventLoop.h"
 #include <exception>
+#include <iostream>
 namespace yy
 {
 namespace net
@@ -31,7 +32,7 @@ public:
                 loop_ = &loop;        
                 cond_.notify_one();    
             }
-            loop.loop();         
+            loop.loop();     
         });
         {
             std::unique_lock<std::mutex> lock(mutex_);

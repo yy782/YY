@@ -25,7 +25,6 @@ public:
     }
     ~EventLoopThreadPool()
     {
-   
         for(auto it=threads_.begin();it!=threads_.end();++it)
         {
             auto& t=(*it);
@@ -45,7 +44,6 @@ public:
     }
     void stop()
     {
-
         for(auto it=threads_.begin();it!=threads_.end();++it)
         {
             (*it)->stop();
