@@ -45,7 +45,12 @@ int main(int argc, char* argv[])
         {
             conPools.emplace_back(std::make_unique<TcpConPool>(1024,config));
         }        
-        ser.setConCallback([&conPools](int Cfd,const Address& Caddr,EventLoop* Cloop){
+        ser.setConCallback([&conPools,&event](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            if(event.has(LogicEvent::Edge) && !sockets::setNonBlocking(Cfd))
+            {
+                LOG_ERRNO(errno);
+                sockets::close(Cfd);
+            }
             auto conn=conPools[Cloop->id()]->acquire(Cfd,Caddr,Cloop);
             auto addr = conn->addr();
             LOG_SYSTEM_INFO("HTTP connection! " << addr.sockaddrToString());            
@@ -54,7 +59,12 @@ int main(int argc, char* argv[])
     }
     else 
     {
-        ser.setConCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
+        ser.setConCallback([&event](int Cfd,const Address& Caddr,EventLoop* Cloop){
+            if(event.has(LogicEvent::Edge) && !sockets::setNonBlocking(Cfd))
+            {
+                LOG_ERRNO(errno);
+                sockets::close(Cfd);
+            }
             auto conn=TcpConnection::accept(Cfd,Caddr,Cloop);
             conn->setCloseCallBack([](TcpConnectionPtr con){
                 auto addr = con->addr();   

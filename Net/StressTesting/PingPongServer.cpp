@@ -30,7 +30,7 @@ using namespace yy::net;
 int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
-    int threadNums=4;
+    int threadNums=1;
     bool isET=false;
     if(argc>1)
     {
