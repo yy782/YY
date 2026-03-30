@@ -165,6 +165,14 @@ class Client : noncopyable
 
     }
     LOG_TCP_DEBUG("连接数:"<<numConnected_);
+    // if(numConnected_%250==0)
+    // {
+    //     std::cout<<"已连接 "<<numConnected_<<" 个客户端\n";
+    // }
+        
+    
+    //std::cout<<"已连接 "<<numConnected_<<" 个客户端\n";
+    
   }
 
   void onDisconnect()
@@ -237,7 +245,8 @@ int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
     SyncLog::getInstance("../CliLog.log").getFilter() 
-      .set_global_level(LOG_LEVEL_ERROR)
+      .set_global_level(LOG_LEVEL_DEBUG)
+      .set_module_enabled("LOOP")
       ; 
       
       
@@ -259,7 +268,7 @@ int main(int argc, char* argv[])
       threadCount = 4;
       blockSize = 4096;
       sessionCount =100;
-      timeout = 10;        
+      timeout = 1000000;        
     }
     else
     {

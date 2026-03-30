@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
     int threadNums=1;
-    bool isET=false;
+    bool isET=true;
     if(argc>1)
     {
         threadNums=std::atoi(argv[1]);

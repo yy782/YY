@@ -59,8 +59,10 @@ void AsyncLog::append(const std::string& log)
         }
     }
     assert(Receptionbuffer_);
-    Receptionbuffer_->blockappend(log);
-
+    if(!Receptionbuffer_->append(log))
+    {
+        SecondaryBuffer_.push_back(log);
+    }
 }
 void AsyncLog::loop()
 {
@@ -93,6 +95,12 @@ void AsyncLog::loop()
             }
         }
         WriteBuffer.clear();
+
+        SecondaryBuffer temp=SecondaryBuffer_.getAndClear();
+        for(auto& log:temp)
+        {
+            appender_.append(log.data(),log.size());
+        }
     }
 }   
 }

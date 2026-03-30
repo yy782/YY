@@ -3,6 +3,9 @@
 #include "sockets.h"
 #include "TimerQueue.h"
 #include <memory>
+#include <atomic>
+
+std::atomic<int> numConnecting_(0);
 
 namespace yy 
 {
@@ -85,8 +88,12 @@ struct TcpClient::Connector:noncopyable,
 private:
     void startInLoop() 
     {
-        if(state_ != kDisconnected) return;
+        if(state_ != kDisconnected)
+        {
+            return;
+        }
         connectInLoop();
+        std::cout<<"connectingNum:"<<(++numConnecting_)<<"\n";
     }
 
     void connectInLoop() 
@@ -223,7 +230,7 @@ private:
     void resetHandler()
     {
         EventHandler* p=handler_;
-        loop_->DelayedExecution<true>([p,c=weak_from_this()]()
+        loop_->DelayedExecution([p,c=weak_from_this()]()
         {
             delete p;
             auto con=c.lock();

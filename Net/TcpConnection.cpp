@@ -123,7 +123,6 @@ void TcpConnection::reset()///////////////////////////////////////////
 {
     sockets::close(fd_);
     fd_=-1;
-    loop_=nullptr;
     //address不重置，保留最后一次连接的地址信息
     //     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
     // assert(destructCallBack_);
@@ -327,7 +326,7 @@ void TcpConnection::handleETRead()
             }  
         }            
     }
-    loop_->DelayedExecution<true>([c=weak_from_this()]()
+    loop_->DelayedExecution([c=weak_from_this()]()
     {
         auto con=c.lock();
         if(con)
@@ -403,7 +402,7 @@ void TcpConnection::handleClose()
     Connstatus_=ConnectStatus::DisConnected;
     if(ScloseCallBack_)ScloseCallBack_(shared_from_this());
     assert(destructCallBack_);
-    loop_->DelayedExecution<true>([this](){
+    loop_->DelayedExecution([this](){
        destructCallBack_(shared_from_this()); ///////////////////////一定要放到最后  ///////////////////////////////////////
     },std::string("TcpCon::handleClose "+addr_.sockaddrToString()+" destructCallBack_"));
 }

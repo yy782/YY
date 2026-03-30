@@ -20,21 +20,6 @@ public:
     {
         return appendImpl(std::move(t));
     }
-    void blockappend(const T& t)
-    {
-        while(!append(t))
-        {
-            std::this_thread::yield();
-        }
-
-    }
-    void blockappend(T&& t)
-    {
-        while(!append(std::move(t)))
-        {
-            std::this_thread::yield();
-        }
-    }
     bool retrieve(T& t)
     {
         return queue_.dequeue(t);

@@ -11,7 +11,7 @@
 #include <string>
 #include "Types.h"
 #include <chrono>
-
+#include "SafeVector.h"
 #include "TimeStamp.h"
 using namespace std::chrono_literals;
 namespace yy
@@ -21,6 +21,7 @@ class AsyncLog:noncopyable
 {
 public:
     typedef RingBuffer<std::string> Buffer;
+    typedef SafeVector<std::string> SecondaryBuffer;
     typedef std::unique_ptr<Buffer> BufferPtr;
     typedef std::vector<BufferPtr> BufferContainer;
     static AsyncLog& getInstance(const char* fileName,LTimeInterval flush_interval=10s,size_t BufferSize=20)
@@ -38,6 +39,7 @@ private:
 
     size_t BufferSize_;
     BufferPtr Receptionbuffer_;
+    SecondaryBuffer SecondaryBuffer_;
     BufferPtr SpareBuffer_;
     BufferContainer BackstageBuffers_;
     bool isRunning_={false};
