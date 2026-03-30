@@ -2,7 +2,7 @@
 #include "../../Common/TimeStamp.h"
 #include "../TcpConPool.h"
 #include <vector>
-
+#include "../../Common/SyncLog.h"
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::Http;
@@ -16,6 +16,10 @@ extern char favicon[555];
 int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
+    SyncLog::getInstance("../Log.log").getFilter() 
+    .set_global_level(LOG_LEVEL_WARN)
+    .set_module_enabled("LOOP") 
+    ;
     bool isET=true;
     bool useConPool=true;
     Address serveraddr(8080,true);
@@ -43,7 +47,7 @@ int main(int argc, char* argv[])
         });        
         for(int i=0;i<numThreads;++i)
         {
-            conPools.emplace_back(std::make_unique<TcpConPool>(5,config));
+            conPools.emplace_back(std::make_unique<TcpConPool>(200,config,i));
         }        
         ser.setConCallback([&conPools,&event](int Cfd,const Address& Caddr,EventLoop* Cloop){
             if(event.has(LogicEvent::Edge) && !sockets::setNonBlocking(Cfd))

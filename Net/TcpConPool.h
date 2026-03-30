@@ -1,6 +1,7 @@
 #include "TcpConnection.h"
 #include <algorithm>
 #include "../Common/locker.h"
+//#include <boost/lockfree/queue.hpp>
 using namespace yy::net;
 namespace yy /////////////////////////////////
 {
@@ -31,8 +32,9 @@ public:
         ServicesExceptCallBack SexceptCallBack_;  
         ServicesData data_;
     };
-    explicit ObjectPool(int num,struct Config& config):
-    config_(config)
+    ObjectPool(int num,struct Config& config,int id=-1):
+    config_(config),
+    id_(id)
     {
         expend(num);
     }
@@ -52,41 +54,34 @@ public:
     }
     TcpConnectionPtr acquire(int fd,const Address& addr,EventLoop* loop)
     {
-
-        if(id_==-1)
-        {
-            id_=loop->id();
-        }
-        else 
-        {
-            assert(id_==loop->id());
-        }
-
+        assert(loop->id()==id_);
 
         if(free_list_.empty())
         {
             expend(ExpendNum);
         }
-        auto conn=free_list_.front();
+        TcpConnectionPtr conn=free_list_.front();
         free_list_.pop_front();
+        assert(conn);
         //active_list_.push_back(conn);
         conn->init(fd,addr,loop); 
         return conn;
     }
     void release(TcpConnectionPtr conn)
     {
-
-        assert(conn);
         assert(conn->loop()->id()==id_);
+        assert(conn);
         conn->reset();
         //assert(std::find(active_list_.begin(),active_list_.end(),conn));
-        assert(std::find(free_list_.begin(),free_list_.end(),conn)==free_list_.end());
+
         free_list_.push_back(conn);
     }
 private:
     Config config_;// 需外部强行保证
     //std::list<TcpConnectionPtr> active_list_;
+    //boost::lockfree::queue<TcpConnectionPtr> free_list_;
     std::list<TcpConnectionPtr> free_list_;
     int id_={-1};
+
 };
 }

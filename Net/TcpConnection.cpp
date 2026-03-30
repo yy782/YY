@@ -111,6 +111,7 @@ void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
         (handler_.event().has(LogicEvent::Edge)&&sockets::isNonBlocking(fd)));
     assert(fd_==-1);
     assert(loop_==nullptr);
+    assert(loop);
     assert(Connstatus_==ConnectStatus::Connecting);
     Connstatus_=ConnectStatus::Connected;
     fd_=fd;

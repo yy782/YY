@@ -83,6 +83,12 @@ public:
      */
     ~EventLoop()
     {
+        int uncaughtCount = std::uncaught_exceptions();
+        if(uncaughtCount > 0)
+        {
+            LOG_LOOP_ERROR("loopID:"<<id_<<" 析构时有未捕获的异常，数量: " << uncaughtCount);
+            assert(uncaughtCount==0); // 确保没有未捕获的异常
+        }
         assert(isInLoopThread());
         LOG_LOOP_DEBUG("loopID:"<<id_<<" 析构");
     }

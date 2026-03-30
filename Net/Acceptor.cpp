@@ -46,13 +46,17 @@ void Acceptor::NewConnection(int fd,const Address& addr)
     auto loop=Ser_->NextLoop();
     assert(SconnectCallBack_);
     assert(loop);
-    auto conn=SconnectCallBack_(fd,addr,loop);
-    conn->setDestructorCallBack([this](TcpConnectionPtr con)
+    loop->submit([this,fd,addr,loop]()
     {
-        removeConnection(con);
-    });
-    assert(!connects_.contains(conn));
-    connects_.insert(conn);     
+        auto conn=SconnectCallBack_(fd,addr,loop);
+        conn->setDestructorCallBack([this](TcpConnectionPtr con)
+        {
+            removeConnection(con);
+        });
+        assert(!connects_.contains(conn));
+        connects_.insert(conn);         
+    },std::string("AcceptorID:"+std::to_string(id_)+" NewConnection"));
+    
 }
 void Acceptor::removeConnection(TcpConnectionPtr conn)
 {
