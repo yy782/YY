@@ -8,9 +8,6 @@ project(yy LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# # 添加 AddressSanitizer 编译选项
-# export CXXFLAGS="-fsanitize=address -g -O0 -fno-omit-frame-pointer"
-# export LDFLAGS="-fsanitize=address"
 
 
 # 查找 Boost（需要 1.83+）
@@ -43,6 +40,8 @@ if(USE_ASAN)
         -fno-omit-frame-pointer
     )
     set(ASAN_LDFLAGS -fsanitize=address)
+    add_compile_options(${ASAN_FLAGS})
+    add_link_options(${ASAN_LDFLAGS})
     message(STATUS "AddressSanitizer is ENABLED")
 else()
     set(ASAN_FLAGS "")
@@ -96,11 +95,7 @@ add_subdirectory(Net)
     #add_subdirectory多目录需要拆开调用
 #
 
-# 添加 Boost 包含目录到所有子项目
-target_compile_options(common PRIVATE ${WARNING_OPTIONS})
-target_compile_options(memorypool PRIVATE ${WARNING_OPTIONS})
-target_compile_options(threadpool PRIVATE ${WARNING_OPTIONS})
-target_compile_options(net PRIVATE ${WARNING_OPTIONS})
+
 
 # 为每个子目标添加 Boost 包含目录
 target_include_directories(common PRIVATE ${Boost_INCLUDE_DIRS})
@@ -110,12 +105,9 @@ target_include_directories(net PRIVATE ${Boost_INCLUDE_DIRS})
 
 # 如果某些库需要链接 Boost 库（如 boost_system, boost_thread）
 # 取消下面的注释
-# target_link_libraries(common PRIVATE ${Boost_LIBRARIES})
-# target_link_libraries(net PRIVATE ${Boost_LIBRARIES})
-target_link_options(common PRIVATE ${ASAN_LDFLAGS})
-target_link_options(memorypool PRIVATE ${ASAN_LDFLAGS})
-target_link_options(threadpool PRIVATE ${ASAN_LDFLAGS})
-target_link_options(net PRIVATE ${ASAN_LDFLAGS})
+target_link_libraries(common PRIVATE ${Boost_LIBRARIES})
+target_link_libraries(net PRIVATE ${Boost_LIBRARIES})
+
 # 创建接口库
 add_library(yy INTERFACE)
 

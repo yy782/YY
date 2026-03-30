@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
     bool isET=true;
-    bool useConPool=false;
+    bool useConPool=true;
     Address serveraddr(8080,true);
     int numThreads=4;
     int AcceptorNum=2;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
         });        
         for(int i=0;i<numThreads;++i)
         {
-            conPools.emplace_back(std::make_unique<TcpConPool>(1024,config));
+            conPools.emplace_back(std::make_unique<TcpConPool>(5,config));
         }        
         ser.setConCallback([&conPools,&event](int Cfd,const Address& Caddr,EventLoop* Cloop){
             if(event.has(LogicEvent::Edge) && !sockets::setNonBlocking(Cfd))
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
                 LOG_ERRNO(errno);
                 sockets::close(Cfd);
             }
-            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,event);
+            auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,event);///////////////////可能在还没来的即设计回调就handleRead了
             conn->setTcpNoDelay(true);
             conn->setCloseCallBack([](TcpConnectionPtr con){
                 auto addr = con->addr();   

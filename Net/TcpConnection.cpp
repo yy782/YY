@@ -60,6 +60,7 @@ isET(events.has(LogicEvent::Edge)?true:false)
 
 TcpConnection::~TcpConnection()
 {
+    assert(loop_->isInLoopThread());
     if(RecvBuffer_.readable_size()!=0)
     {
         LOG_TCP_WARN("had data not read!");
@@ -107,7 +108,7 @@ isET(events.has(LogicEvent::Edge)?true:false)
 void TcpConnection::init(int fd,const Address& addr,EventLoop* loop)
 {
     assert(!handler_.event().has(LogicEvent::Edge)|| 
-        !sockets::isNonBlocking(fd));
+        (handler_.event().has(LogicEvent::Edge)&&sockets::isNonBlocking(fd)));
     assert(fd_==-1);
     assert(loop_==nullptr);
     assert(Connstatus_==ConnectStatus::Connecting);

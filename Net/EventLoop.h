@@ -38,6 +38,10 @@ struct Fun
     {
         Functor_();
     }
+    bool operator!() const
+    {
+        return !Functor_;
+    }
 };
 
 /**

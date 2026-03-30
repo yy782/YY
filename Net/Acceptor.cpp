@@ -45,6 +45,7 @@ void Acceptor::NewConnection(int fd,const Address& addr)
     assert(loop_->isInLoopThread());
     auto loop=Ser_->NextLoop();
     assert(SconnectCallBack_);
+    assert(loop);
     auto conn=SconnectCallBack_(fd,addr,loop);
     conn->setDestructorCallBack([this](TcpConnectionPtr con)
     {

@@ -1,5 +1,6 @@
 #include "TcpConnection.h"
 #include <algorithm>
+#include "../Common/locker.h"
 using namespace yy::net;
 namespace yy /////////////////////////////////
 {
@@ -14,6 +15,7 @@ template<>
 class ObjectPool<TcpConnectionPtr>: noncopyable 
 {
 public:
+    typedef Thread::Pid_t Pid_t;
     struct Config:copyable
     {
         typedef TcpConnection::ServicesMessageCallBack ServicesMessageCallBack;
@@ -50,6 +52,17 @@ public:
     }
     TcpConnectionPtr acquire(int fd,const Address& addr,EventLoop* loop)
     {
+
+        if(id_==-1)
+        {
+            id_=loop->id();
+        }
+        else 
+        {
+            assert(id_==loop->id());
+        }
+
+
         if(free_list_.empty())
         {
             expend(ExpendNum);
@@ -62,6 +75,9 @@ public:
     }
     void release(TcpConnectionPtr conn)
     {
+
+        assert(conn);
+        assert(conn->loop()->id()==id_);
         conn->reset();
         //assert(std::find(active_list_.begin(),active_list_.end(),conn));
         assert(std::find(free_list_.begin(),free_list_.end(),conn)==free_list_.end());
@@ -71,5 +87,6 @@ private:
     Config config_;// 需外部强行保证
     //std::list<TcpConnectionPtr> active_list_;
     std::list<TcpConnectionPtr> free_list_;
+    int id_={-1};
 };
 }

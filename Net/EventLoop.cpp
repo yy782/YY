@@ -67,16 +67,57 @@ bool EventLoop::isQuit() noexcept
 {
     return status_&EventLoopStatus::Quited;
 }
+// void EventLoop::loop()
+// {
+
+//     assert(isInLoopThread());
+//     status_&=~EventLoopStatus::Init;
+//     status_|=EventLoopStatus::Looping;
+//     assert(CheckeEventLoopStatus());
+//     while(status_&EventLoopStatus::Looping)
+//     {
+//         try 
+//         {
+//             activeHandlers_.clear();
+//             poller_.poll(PollTimeMs,activeHandlers_);
+
+
+//             status_|=EventLoopStatus::EventHandling;
+//             assert(CheckeEventLoopStatus());
+//             for(auto& handler:activeHandlers_)
+//             {
+//                 assert(handler!=nullptr);
+//                 handler->handler_revent();
+//             }
+//             assert(status_&EventLoopStatus::EventHandling);
+//             status_&=~EventLoopStatus::EventHandling;
+//             doPendingFunctions();            
+//         }catch(const std::exception& e)
+//         {
+//             std::cerr<<"loopID:"<<id_<<" exception: "<<e.what()<<std::endl;
+//         }
+//          catch(...)
+//         {
+//             std::cerr<<"loopID:"<<id_<<" unknown exception"<<std::endl;
+//         }
+
+//     }
+
+//     while(!FunctionList_.empty())
+//         doPendingFunctions();
+//     status_=EventLoopStatus::Quited;       
+
+// } 
 void EventLoop::loop()
 {
 
-    
     assert(isInLoopThread());
     status_&=~EventLoopStatus::Init;
     status_|=EventLoopStatus::Looping;
     assert(CheckeEventLoopStatus());
     while(status_&EventLoopStatus::Looping)
     {
+ 
         activeHandlers_.clear();
         poller_.poll(PollTimeMs,activeHandlers_);
 
@@ -90,11 +131,12 @@ void EventLoop::loop()
         }
         assert(status_&EventLoopStatus::EventHandling);
         status_&=~EventLoopStatus::EventHandling;
-        doPendingFunctions();
+        doPendingFunctions();            
     }
     while(!FunctionList_.empty())
         doPendingFunctions();
-    status_=EventLoopStatus::Quited;
+    status_=EventLoopStatus::Quited;       
+
 } 
 bool EventLoop::isInLoopThread() noexcept
 {
@@ -126,7 +168,6 @@ void EventLoop::wakeup()
 // void EventLoop::doPendingFunctions()
 // {
 //     assert(isInLoopThread());
-//     size_t FinishNum=0;
 //     status_|=EventLoopStatus::PendingFunctions;
 
 //     if(FunctionList_.full())
@@ -134,12 +175,17 @@ void EventLoop::wakeup()
 //         LOG_LOOP_WARN("loopID:"<<id_<<" FunctionList is full");
 //     }
 
+//     size_t FinishNum=0;
 //     while(!FunctionList_.empty()&&FinishNum<30) 
 //     {
 //         Functor cb;
 //         FunctionList_.retrieve(cb);
 
-        
+//         if(!cb)///////////////////////////////////////////////////////////////////////////////FIXME
+//         {
+//             continue;
+//         }
+
 //         LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
 //         cb(); 
 //         ++FinishNum;
@@ -167,12 +213,14 @@ void EventLoop::doPendingFunctions()
     }
     for(Functor& functor:other)
     {
+        assert(!!functor);
         functor();
     }
     while(!AsyncTaskQueue_.empty())
     {
         auto cb=AsyncTaskQueue_.front();
         AsyncTaskQueue_.pop();
+        assert(!!cb);
         LOG_LOOP_DEBUG("loopID:"<<id_<<" "<<cb.getName());
         cb();
     }
