@@ -56,44 +56,40 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 
 
 ## 📁目录结构
-yy/
-├── CMakeLists.txt        # 顶层 CMake
-├── LICENSE               # 许可证
-├── README.md             # 项目说明
-├── include/              # 所有对外头文件
-├── src/                  # 所有源文件
-│   ├── Net/              # 网络核心
-│   ├── HTTP/             # HTTP 服务
-│   ├── Poller/           # epoll 多路复用
-│   ├── UDP/              # UDP 支持
-│   ├── protobuf/         # RPC
-│   ├── Common/           # 工具类
-│   ├── ThreadPool/       # 线程池
-│   └── MemoryPool/       # 内存池
-├── StressTesting/        # 压测工具
-└── NetTest/              # 测试用例
+* `Net/` - 网络核心代码
+  * `HTTP/` - HTTP 协议实现
+  * `Poller/` - epoll 事件监听
+  * `UDP/` - UDP 协议支持
+  * `protobuf/` - Protobuf RPC
+  * `StressTesting/` - 压力测试工具
+  * `NetTest/` - 单元测试和示例
+  * `include/` - 头文件目录
+  * `src/` - 源文件目录
+* `Common/` - 公共工具（日志、配置等）
+* `ThreadPool/` - 线程池实现
+* `MemoryPool/` - 内存池实现
 
 ## 🎯快速开始
 # 克隆项目
-git clone https://github.com/yourname/yy.git
-cd yy
+- git clone https://github.com/yourname/yy.git
+- cd yy
 
 # 构建
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j4
+- mkdir build && cd build
+- cmake -DCMAKE_BUILD_TYPE=Release ..
+- make -j4
 
 ## 📚示例程序
 所有示例位于 NetTest/ 目录：
 
-• EchoServer/Client        基础 TCP 通信，展示 LT/ET 模式切换
-• HttpServer/Client        HTTP 服务器和客户端
-• ProtoBufTestServer/Client Protobuf RPC 通信
-• UdpServer/Client         UDP 协议通信（接口风格类似 TCP）
-• CodeTestServer/Client    自定义协议编解码器
-• TimerTestServer/Client   时间轮定时器
-• RetryConnectTest        自动重连机制
-• CurcularQueueTest       无锁队列安全测试
+- EchoServer/Client        基础 TCP 通信，展示 LT/ET 模式切换
+- HttpServer/Client        HTTP 服务器和客户端
+- ProtoBufTestServer/Client Protobuf RPC 通信
+- UdpServer/Client         UDP 协议通信（接口风格类似 TCP）
+- CodeTestServer/Client    自定义协议编解码器
+- TimerTestServer/Client   时间轮定时器
+- RetryConnectTest        自动重连机制
+- CurcularQueueTest       无锁队列安全测试
 ## 📊性能测试
 使用 wrk 进行压力测试：
 
