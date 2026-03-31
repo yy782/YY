@@ -5,7 +5,7 @@
 #include <memory>
 #include <atomic>
 
-std::atomic<int> numConnecting_(0);
+
 
 namespace yy 
 {
@@ -88,12 +88,8 @@ struct TcpClient::Connector:noncopyable,
 private:
     void startInLoop() 
     {
-        if(state_ != kDisconnected)
-        {
-            return;
-        }
+        if(state_ != kDisconnected) return;
         connectInLoop();
-        std::cout<<"connectingNum:"<<(++numConnecting_)<<"\n";
     }
 
     void connectInLoop() 
@@ -102,6 +98,8 @@ private:
         assert(state_ == kDisconnected);
         fd_ = sockets::createTcpSocketOrDie(serverAddr_.family());/////////////////////////////////////////////////////////
         int ret = sockets::connect(fd_, serverAddr_);
+
+
         int savedErrno = (ret == 0) ? 0 : errno;
         switch (savedErrno) {
             case 0:

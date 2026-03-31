@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <mutex>
+#include "locker.h"
 using namespace std::chrono_literals;
 
 namespace yy
@@ -56,7 +57,7 @@ private:
     LTimeStamp lastFlushTime_;
     const FlushInterval flushInterval_;
 
-    std::mutex mtx_;
+    FairMutex mutex_;
 };
 }
 

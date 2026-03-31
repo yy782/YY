@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 #include <iomanip>
-
+#include <iostream>
 #include "../EventLoop.h"
 #include "../TcpServer.h"
 #include "../TcpConnection.h"
@@ -24,21 +24,26 @@
 // tail -f server_check.log
 using namespace yy;
 using namespace yy::net;
-//./PingPongServer 4 0
+//./PingPongServer 4 1 0
 //ss -tan | grep 8080
 // cd programs/yy/build/bin
 int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
     int threadNums=1;
+    int AcceptorNum=1;
     bool isET=true;
     if(argc>1)
     {
         threadNums=std::atoi(argv[1]);
-        isET=std::atoi(argv[2])==1?true:false;
+        isET=std::atoi(argv[3])==1?true:false;
+        AcceptorNum=std::atoi(argv[2]);
     }
     SyncLog::getInstance("../Log.log").getFilter() 
-    .set_global_level(LOG_LEVEL_WARN) 
+    .set_global_level(LOG_LEVEL_ERROR)
+    .set_module_enabled("TCP")
+    .set_module_enabled("SYSTEM")
+    .set_module_enabled("EVENT")
     ;
 
     // SyncLog::getInstance("../Log.log").getFilter() 
@@ -46,8 +51,9 @@ int main(int argc, char* argv[])
     //     .set_module_enabled("TCP")
     //     .set_module_enabled("SYSTEM")
     //     ;
+    std::cout<<"PID:"<<getpid()<<std::endl;
     Address listenAddr("0.0.0.0",8080);
-    TcpServer server(listenAddr,1,threadNums);    
+    TcpServer server(listenAddr,AcceptorNum,threadNums);    
 
     int ConNum=0;
     if(isET)
@@ -113,6 +119,5 @@ int main(int argc, char* argv[])
 
     server.loop();
     server.wait();        
-
     return 0;
 }

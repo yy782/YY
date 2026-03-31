@@ -566,21 +566,24 @@ void EventLoop::submit(Callable&& cb,const std::string& TaskNameInformation)
     else 
     {
         assert(!isInLoopThread());
-        if(!FunctionList_.append(Fun(std::forward<Callable>(cb),TaskNameInformation)))
+        Fun functor(std::forward<Callable>(cb),TaskNameInformation);
+        if(!FunctionList_.append(functor))
         {
-            AsyncTaskQueue_.push_back(Fun(std::forward<Callable>(cb),TaskNameInformation));
+            AsyncTaskQueue_.push_back(functor);
         }
+        wakeup();
     }
 }
 
 template<typename Callable>
 void EventLoop::DelayedExecution(Callable&& cb,const std::string& DelayedExecutionInformation)
 {
-    assert(isInLoopThread());
-    if(!FunctionList_.append(Fun(std::forward<Callable>(cb),DelayedExecutionInformation)))
+    Fun functor(std::forward<Callable>(cb),DelayedExecutionInformation);
+    if(!FunctionList_.append(functor))
     {
-        AsyncTaskQueue_.push_back(Fun(std::forward<Callable>(cb),DelayedExecutionInformation));
+        AsyncTaskQueue_.push_back(functor);
     }
+    wakeup();
 }
 
 

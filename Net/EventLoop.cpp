@@ -171,7 +171,7 @@ bool EventLoop::CheckeEventLoopStatus()
 EventLoop::EventLoop(int id):
 id_(id),
 activeHandlers_(),
-FunctionList_(10),
+FunctionList_(1024),
 threadId_(Thread::getId()),
 status_(EventLoopStatus::Init),
 wakeHandler_(sockets::createEventFdOrDie(0,EFD_NONBLOCK|EFD_CLOEXEC),this,"wakeHandler",Event(LogicEvent::Read|LogicEvent::Edge))
@@ -273,16 +273,13 @@ void EventLoop::doPendingFunctions()
         cb(); 
         ++FinishNum;
     }
-    while(!AsyncTaskQueue_.empty())
+    SecondaryFuncList tempQueue;
+    tempQueue=AsyncTaskQueue_.getAndClear();    
+    for(auto& cb:tempQueue)
     {
-        SecondaryFuncList tempQueue;
-        tempQueue=AsyncTaskQueue_.getAndClear();
-        for(auto& cb:tempQueue)
-        {
-            assert(!!cb);
-            LOG_LOOP_DEBUG("loopID:"<<id_<<" handle "<<cb.getName());
-            cb();
-        }
+        assert(!!cb);
+        LOG_LOOP_DEBUG("loopID:"<<id_<<" handle "<<cb.getName());
+        cb();
     }
     status_&=~EventLoopStatus::PendingFunctions;
 }   

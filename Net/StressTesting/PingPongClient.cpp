@@ -245,8 +245,8 @@ int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
     SyncLog::getInstance("../CliLog.log").getFilter() 
-      .set_global_level(LOG_LEVEL_DEBUG)
-      .set_module_enabled("LOOP")
+      .set_global_level(LOG_LEVEL_WARN)
+
       ; 
       
       

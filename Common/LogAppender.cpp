@@ -92,7 +92,7 @@ void LogAppender::append(const char* logline, size_t len)
 }
 void LogAppender::safeAppend(const char* logline, size_t len)
 {
-    std::lock_guard<std::mutex> l(mtx_);
+    mutex_.lock();
     if (fileno(baseLogFile_->getFp()) < 0) {
         fprintf(stderr, "Invalid file descriptor in log\n");
         rollFile();
@@ -106,6 +106,7 @@ void LogAppender::safeAppend(const char* logline, size_t len)
     {
         Timeflush();
     }
+    mutex_.unlock();
 }
 void LogAppender::rollFile()
 {

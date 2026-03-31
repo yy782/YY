@@ -10,8 +10,9 @@
 #include <condition_variable>
 #include <future>
 #include <functional>
-#include "SyncLog.h"
 #include "noncopyable.h"
+#include <queue>
+#include <assert.h>
 namespace yy{
 class sem{
 public:
@@ -115,7 +116,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            LOG_THREAD_WARN(e.what());
+            assert(e.what());
         }});
     }   
     bool joinable()const noexcept{
@@ -133,6 +134,36 @@ public:
     Pid_t static getId() noexcept{return std::this_thread::get_id();}
 private:
     std::thread thread_;
+};
+
+class FairMutex {
+public:
+    void lock() {
+        std::unique_lock<std::mutex> lock(mtx_);
+        if (!locked_) {
+            locked_ = true;
+            return;
+        }
+        // 自己入队，等待唤醒
+        waiters_.emplace();
+        waiters_.back().wait(lock);
+    }
+
+    void unlock() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (waiters_.empty()) {
+            locked_ = false;
+            return;
+        }
+        // 唤醒队首（先阻塞的线程）
+        waiters_.front().notify_one();
+        waiters_.pop();
+    }
+    
+private:
+    std::mutex mtx_;
+    bool locked_{false};
+    std::queue<std::condition_variable> waiters_;
 };
 }
 
