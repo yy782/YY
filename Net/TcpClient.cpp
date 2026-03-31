@@ -26,9 +26,8 @@ struct TcpClient::Connector:noncopyable,
     static const HTimeInterval kInitRetryDelayMs;
     static const HTimeInterval kMaxRetryDelayMs;
 
-    Connector(EventLoop* loop,const Address& addr,const Address& serverAddr,bool* retry ,const NewConCallBack& Ncb,const FailConCallBack& Fcb): 
+    Connector(EventLoop* loop,const Address& serverAddr,bool* retry ,const NewConCallBack& Ncb,const FailConCallBack& Fcb): 
     loop_(loop),
-    addr_(addr),
     serverAddr_(serverAddr),
     state_(kDisconnected),
     handler_(nullptr),
@@ -250,7 +249,6 @@ private:
   
     int fd_={-1};// InOne
     EventLoop* loop_;
-    const Address& addr_;
     const Address& serverAddr_;
     
     State state_;
@@ -269,7 +267,7 @@ TcpClient::TcpClient(const Address& serverAddr,EventLoop* loop):
     loop_(loop),
     serverAddr_(serverAddr),
     retry_(false),
-    connector_(std::make_shared<Connector>(loop,addr_,serverAddr, &retry_, [this](int fd)
+    connector_(std::make_shared<Connector>(loop,serverAddr, &retry_, [this](int fd)
     {
         newConnection(fd);
     }, [this]()
@@ -340,7 +338,7 @@ void TcpClient::newConnection(int sockfd)
     
     assert(loop_->isInLoopThread());
     assert(SconnectionCallback_);
-    connection_=SconnectionCallback_(sockfd,addr_,loop_);
+    connection_=SconnectionCallback_(sockfd,serverAddr_,loop_);
 
 
     connection_->setDestructorCallBack([this](TcpConnectionPtr)

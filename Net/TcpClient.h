@@ -155,11 +155,6 @@ private:
     EventLoop* loop_;//InOne
     
     /**
-     * @brief 本地地址
-     */
-    Address addr_;///////////////////////////////地址和fd绑定的不同，FIXME
-    
-    /**
      * @brief 服务器地址
      */
     const Address& serverAddr_;
