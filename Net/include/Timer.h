@@ -28,7 +28,7 @@ template<typename PrecisionTag>
 class Timer;
 
 /**
- * @brief 基础定时器类型
+ * @brief 基础定时器类型，类似于基类
  */
 typedef Timer<Base> BaseTimer; 
 

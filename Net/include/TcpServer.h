@@ -1,3 +1,11 @@
+/**
+ * @file TcpServer.h
+ * @brief TCP服务器类的定义
+ * 
+ * 本文件定义了TCP服务器类，负责接受客户端连接、管理连接、处理连接事件等。
+ * 它使用AcceptorPool来接受客户端连接，并使用EventLoopThreadPool来处理连接的IO事件。
+ */
+
 #ifndef _YY_NET_TCPSERVER_H_
 #define _YY_NET_TCPSERVER_H_
 
@@ -23,10 +31,10 @@ namespace net
 
 
 /**
- * @brief TCP服务器类，负责接受客户端连接
+ * @brief TCP服务器类
  * 
  * TcpServer封装了TCP服务器的功能，包括接受客户端连接、管理连接、处理连接事件等。
- * 它使用Acceptor来接受客户端连接，并使用EventLoopThreadPool来处理连接的IO事件。
+ * 它使用AcceptorPool来接受客户端连接，并使用EventLoopThreadPool来处理连接的IO事件。
  */
 class TcpServer:public noncopyable
 {
@@ -49,8 +57,8 @@ public:
      * @brief 构造函数
      * 
      * @param addr 服务器地址
-     * @param threadnum 线程池大小
-     * @param loop 事件循环
+     * @param AcceptorNum 接收器数量
+     * @param WorkThreadnum 工作线程数量
      */
     TcpServer(const Address& addr,int AcceptorNum,int WorkThreadnum);
     /**
@@ -58,15 +66,25 @@ public:
      */
     ~TcpServer()=default;
     /**
-     * @brief 启动服务器
+     * @brief 设置连接回调函数
      * 
-     * 启动服务器，开始接受客户端连接。
+     * @param cb 连接回调函数
      */
     void setConnectCallBack(ServicesConnectedCallBack cb)
     {
         AcceptorPool_.setNewConnectCallBack(std::move(cb)); 
     }
+    /**
+     * @brief 启动服务器
+     * 
+     * 启动服务器，开始接受客户端连接。
+     */
     void loop();
+    /**
+     * @brief 等待服务器停止
+     * 
+     * 等待服务器停止，阻塞直到服务器完全停止。
+     */
     void wait(); 
     /**
      * @brief 停止服务器
@@ -78,19 +96,16 @@ public:
 
 private:
     friend class Acceptor;
+    /**
+     * @brief 获取下一个事件循环
+     * 
+     * @return EventLoop* 事件循环
+     */
     EventLoop* NextLoop();
     
-    /**
-     * @brief 移除连接
-     * 
-     * @param conn 连接对象
-     * 
-     * 当连接关闭时调用，清理连接资源。
-     */
-
     
     /**
-     * @brief 接收器
+     * @brief 接收器池
      */
     AcceptorPool AcceptorPool_;// InOne
     /**
@@ -98,9 +113,6 @@ private:
      */
     EventLoopThreadPool WorkThreadPool_;
     
-    /**
-     * @brief 连接映射
-     */
 
 }; 
 

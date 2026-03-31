@@ -1,3 +1,5 @@
+#ifndef YY_NET_ACCEPTOR_POOL_H_
+#define YY_NET_ACCEPTOR_POOL_H_
 
 #include "EventLoopThread.h"
 #include "Acceptor.h"
@@ -18,11 +20,7 @@ public:
         {
             threads_.emplace_back(std::make_unique<EventLoopThread>(i+1+1000));
         }
-        acceptors_.reserve(num);
-        // for(int i=0;i<num;++i)
-        // {
-        //     acceptors_.emplace_back(std::make_unique<Acceptor>());
-        // }         
+        acceptors_.reserve(num);       
      }
     ~AcceptorPool()
     {
@@ -65,3 +63,5 @@ private:
 }; 
 }
 }
+
+#endif // YY_NET_ACCEPTOR_POOL_H_

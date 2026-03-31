@@ -15,9 +15,6 @@ class LockFreeCurcularQueue:noncopyable
 public:
     explicit LockFreeCurcularQueue(size_t capacity);
     ~LockFreeCurcularQueue()=default;
-    LockFreeCurcularQueue(LockFreeCurcularQueue&&)=delete;
-    LockFreeCurcularQueue& operator=(LockFreeCurcularQueue&&)=delete;
-
     bool enqueue(const T& data);
     bool enqueue(T&& data);
     bool dequeue(T& data);
@@ -31,7 +28,6 @@ private:
         std::atomic<size_t> sequence;
         T data;
     };
-
     alignas(64) std::atomic<size_t> enqueuePos_; 
     alignas(64) std::atomic<size_t> dequeuePos_; 
 
@@ -42,7 +38,7 @@ private:
     static constexpr size_t kCacheLineSize=64;
 
     template <typename U> 
-    bool enqueueImpl(U &&data);    
+    bool enqueueImpl(U&& data);    
 };
 
 template <typename T>  

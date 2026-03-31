@@ -35,7 +35,7 @@ private:
     /**
      * @brief 上下文映射
      */
-    std::unordered_map<std::type_index, ContextNode> contexts_;
+    std::unordered_map<std::type_index,ContextNode> contexts_;
 public:
     /**
      * @brief 获取上下文
@@ -47,7 +47,8 @@ public:
     T& context() 
     {
         auto it=contexts_.find(typeid(T));
-        if (it==contexts_.end()) {
+        if (it==contexts_.end()) 
+        {
             ContextNode node;
             node.obj=new T();
             node.deleter=[this,p=node.obj](){delete static_cast<T*>(p);};

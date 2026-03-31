@@ -9,7 +9,7 @@ namespace net
 {
 // 创建客户端UDP连接（connect方式，固定对端）
 UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
-    EventLoop* loop, const char* host, unsigned short port) 
+    EventLoop* loop,const char* host,unsigned short port) 
 {
     
     Address addr(host, port);
@@ -21,7 +21,7 @@ UdpConnection::UdpConnectionPtr UdpConnection::createConnection(
     return conn;
 }
 UdpConnection::UdpConnectionPtr UdpConnection::createServer(
-    EventLoop* loop, const  char* bindHost, unsigned short port) 
+    EventLoop* loop,const char* bindHost,unsigned short port) 
     {
     
     Address addr(bindHost, port);
@@ -34,11 +34,11 @@ UdpConnection::UdpConnectionPtr UdpConnection::createServer(
 }
 
 UdpConnection::UdpConnection(EventLoop* loop, int fd, const Address& local):
-    loop_(loop), 
-    handler_(fd, loop,local.sockaddrToString().c_str()), 
-    local_(local), 
-    closed_(false), 
-    isServer_(false) 
+loop_(loop), 
+handler_(fd, loop,local.sockaddrToString().c_str()), 
+local_(local), 
+closed_(false), 
+isServer_(false) 
 {
     
     handler_.setReadCallBack([this](){handleRead();});
@@ -62,7 +62,7 @@ void UdpConnection::onError(UdpErrorCallBack cb)
     errorCallback_=std::move(cb);
 }
 
-void UdpConnection::sendTo(const char* buf, size_t len, const Address* dest) {
+void UdpConnection::sendTo(const char* buf,size_t len,const Address* dest) {
 
     sendTo(std::string(buf, len),dest);
 }

@@ -10,7 +10,8 @@ namespace yy
 {
 namespace net
 {
-class EventLoopThread : public noncopyable {
+class EventLoopThread : public noncopyable 
+{
 public:
     typedef EventLoop::Functor Functor;
 
@@ -19,7 +20,8 @@ public:
     loop_(nullptr) 
     {}
 
-    ~EventLoopThread() {
+    ~EventLoopThread() 
+    {
         assert(!thread_.joinable());
     }
     EventLoop* run() 
@@ -36,12 +38,14 @@ public:
         });
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            cond_.wait(lock, [this] { return loop_ != nullptr; });
+            cond_.wait(lock,[this] { return loop_ != nullptr; });
         }
         return loop_;
     }
-    void stop() {
-        if (loop_ != nullptr) {
+    void stop() 
+    {
+        if (loop_ != nullptr) 
+        {
             loop_->quit();  
         }
         thread_.join();

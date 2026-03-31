@@ -6,8 +6,10 @@
 #include <type_traits>
 
 #include "../Common/copyable.h"
-namespace yy {
-namespace net {
+namespace yy 
+{
+namespace net 
+{
 
 /**
  * @file Event.h
@@ -22,22 +24,22 @@ namespace net {
  * 
  * 定义了各种网络事件类型。
  */
-enum class LogicEvent : uint32_t 
+enum class LogicEvent:uint32_t
 {
-    None   = 0,        /**< 无事件 */
-    Read   = 1 << 0,    /**< 读事件 */
-    Except = 1 << 1,    /**< 异常事件 */
-    Write  = 1 << 2,    /**< 写事件 */
-    Error  = 1 << 3,    /**< 错误事件 */
-    Hup    = 1 << 4,    /**< 连接关闭事件 */
-    Nval   = 1 << 5,    /**< 无效事件 */
-    RdHup  = 1 << 6,    /**< 读关闭事件 */
-    Edge   = 1 << 7,    /**< 边缘触发 */
-    OneShot = 1 << 8,   /**< 一次性事件 */
+    None=0,        /**< 无事件 */
+    Read=1<<0,    /**< 读事件 */
+    Except=1<<1,    /**< 异常事件 */
+    Write=1<<2,    /**< 写事件 */
+    Error=1<<3,    /**< 错误事件 */
+    Hup=1<<4,    /**< 连接关闭事件 */
+    Nval=1<<5,    /**< 无效事件 */
+    RdHup=1<<6,    /**< 读关闭事件 */
+    Edge=1<<7,    /**< 边缘触发 */
+    OneShot=1<<8,   /**< 一次性事件 */
     
     // 常用组合
-    ReadWrite = Read | Write,      /**< 读写事件 */
-    AllEvents = Read | Write | Except | Error | Hup | Nval | RdHup,  /**< 所有事件 */
+    ReadWrite=Read|Write,      /**< 读写事件 */
+    AllEvents=Read|Write|Except|Error|Hup|Nval|RdHup,  /**< 所有事件 */
 };
 
 /**
@@ -47,9 +49,10 @@ enum class LogicEvent : uint32_t
  * @param rhs 右操作数
  * @return LogicEvent 结果
  */
-inline constexpr LogicEvent operator|(LogicEvent lhs, LogicEvent rhs) {
+inline constexpr LogicEvent operator|(LogicEvent lhs,LogicEvent rhs)
+{
     return static_cast<LogicEvent>(
-        static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs)
+        static_cast<uint32_t>(lhs)|static_cast<uint32_t>(rhs)
     );
 }
 
@@ -60,9 +63,10 @@ inline constexpr LogicEvent operator|(LogicEvent lhs, LogicEvent rhs) {
  * @param rhs 右操作数
  * @return LogicEvent 结果
  */
-inline constexpr LogicEvent operator&(LogicEvent lhs, LogicEvent rhs) {
+inline constexpr LogicEvent operator&(LogicEvent lhs,LogicEvent rhs)
+{
     return static_cast<LogicEvent>(
-        static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs)
+        static_cast<uint32_t>(lhs)&static_cast<uint32_t>(rhs)
     );
 }
 
@@ -72,7 +76,8 @@ inline constexpr LogicEvent operator&(LogicEvent lhs, LogicEvent rhs) {
  * @param lhs 操作数
  * @return LogicEvent 结果
  */
-inline constexpr LogicEvent operator~(LogicEvent lhs) {
+inline constexpr LogicEvent operator~(LogicEvent lhs)
+{
     return static_cast<LogicEvent>(~static_cast<uint32_t>(lhs));
 }
 
@@ -83,8 +88,9 @@ inline constexpr LogicEvent operator~(LogicEvent lhs) {
  * @param rhs 右操作数
  * @return bool 结果
  */
-inline constexpr bool operator==(LogicEvent lhs, uint32_t rhs) {
-    return static_cast<uint32_t>(lhs) == rhs;
+inline constexpr bool operator==(LogicEvent lhs, uint32_t rhs)
+{
+    return static_cast<uint32_t>(lhs)==rhs;
 }
 
 /**
@@ -94,8 +100,9 @@ inline constexpr bool operator==(LogicEvent lhs, uint32_t rhs) {
  * @param rhs 右操作数
  * @return bool 结果
  */
-inline constexpr bool has_event(LogicEvent lhs, LogicEvent rhs) {
-    return (static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs)) != 0;
+inline constexpr bool has_event(LogicEvent lhs, LogicEvent rhs)
+{
+    return (static_cast<uint32_t>(lhs)&static_cast<uint32_t>(rhs)) != 0;
 }
 
 
@@ -104,29 +111,31 @@ inline constexpr bool has_event(LogicEvent lhs, LogicEvent rhs) {
  * 
  * 保持与原有接口兼容，用于处理网络事件。
  */
-class Event:copyable 
+class Event:copyable
 {
 public:
     /**
      * @brief 默认构造函数
      */
-    constexpr Event() noexcept : events_(LogicEvent::None) {}
+    constexpr Event() noexcept:events_(LogicEvent::None){}
     
     /**
      * @brief 构造函数
      * 
      * @param events 事件
      */
-    constexpr explicit Event(LogicEvent events) noexcept : events_(events) {
+    constexpr explicit Event(LogicEvent events) noexcept:events_(events)
+    {
         assert(validate(events_));
-    }   
+    }
     
     /**
      * @brief 构造函数
      * 
      * @param events 事件
      */
-    constexpr explicit Event(uint32_t events) noexcept : events_(static_cast<LogicEvent>(events)) {
+    constexpr explicit Event(uint32_t events) noexcept:events_(static_cast<LogicEvent>(events))
+    {
         assert(validate(events_));
     }
     
@@ -135,23 +144,24 @@ public:
      * 
      * @return LogicEvent 事件
      */
-    constexpr LogicEvent get() const noexcept { return events_; }
+    constexpr LogicEvent get() const noexcept{return events_;}
     
     /**
      * @brief 获取事件值
      * 
      * @return uint32_t 事件值
      */
-    constexpr uint32_t value() const noexcept { return static_cast<uint32_t>(events_); }
+    constexpr uint32_t value() const noexcept{return static_cast<uint32_t>(events_);}
     
     /**
      * @brief 添加事件
      * 
      * @param event 事件
      */
-    constexpr void add(LogicEvent event) noexcept {
+    constexpr void add(LogicEvent event) noexcept
+    {
         assert(validate(event));
-        events_ = events_ | event;
+        events_=events_|event;
     }
     
     /**
@@ -159,7 +169,8 @@ public:
      * 
      * @param event 事件
      */
-    constexpr void add(uint32_t event) {
+    constexpr void add(uint32_t event)
+    {
         add(static_cast<LogicEvent>(event));
     }
     
@@ -168,10 +179,11 @@ public:
      * 
      * @param event 事件
      */
-    constexpr void remove(LogicEvent event) noexcept {
+    constexpr void remove(LogicEvent event) noexcept
+    {
         assert(validate(event));
-        events_ = static_cast<LogicEvent>(
-            static_cast<uint32_t>(events_) & ~static_cast<uint32_t>(event)
+        events_=static_cast<LogicEvent>(
+            static_cast<uint32_t>(events_)&~static_cast<uint32_t>(event)
         );
     }
     
@@ -180,7 +192,8 @@ public:
      * 
      * @param event 事件
      */
-    constexpr void remove(uint32_t event) {
+    constexpr void remove(uint32_t event)
+    {
         remove(static_cast<LogicEvent>(event));
     }
     
@@ -190,9 +203,7 @@ public:
      * @param event 事件
      * @return bool 是否存在
      */
-    constexpr bool has(LogicEvent event) const noexcept {
-        return has_event(events_, event);
-    }
+    constexpr bool has(LogicEvent event) const noexcept{return has_event(events_,event);}
     
     /**
      * @brief 检查事件是否存在（兼容原有接口）
@@ -200,18 +211,14 @@ public:
      * @param event 事件
      * @return bool 是否存在
      */
-    constexpr bool has(uint32_t event) const {
-        return has(static_cast<LogicEvent>(event));
-    }
+    constexpr bool has(uint32_t event) const{return has(static_cast<LogicEvent>(event));}
     
     /**
      * @brief 检查是否无事件
      * 
      * @return bool 是否无事件
      */
-    constexpr bool is_none() const noexcept {
-        return events_ == LogicEvent::None;
-    }
+    constexpr bool is_none() const noexcept{return events_==LogicEvent::None;}
     
     /**
      * @brief 赋值运算符
@@ -219,9 +226,10 @@ public:
      * @param other 其他事件
      * @return Event& 引用
      */
-    constexpr Event& operator=(LogicEvent other) noexcept {
+    constexpr Event& operator=(LogicEvent other) noexcept
+    {
         assert(validate(other));
-        events_ = other;
+        events_=other;
         return *this;
     }
     
@@ -231,12 +239,13 @@ public:
      * @param other 其他事件
      * @return Event& 引用
      */
-    Event& operator=(uint32_t other) noexcept {
-        LogicEvent le = static_cast<LogicEvent>(other);
+    Event& operator=(uint32_t other) noexcept
+    {
+        LogicEvent le=static_cast<LogicEvent>(other);
         assert(validate(le));
-        events_ = le;
+        events_=le;
         return *this;
-    }   
+    }
 
     /**
      * @brief 等于运算符
@@ -244,8 +253,9 @@ public:
      * @param other 其他事件
      * @return bool 结果
      */
-    constexpr bool operator==(LogicEvent other) const noexcept {
-        return events_ == other;
+    constexpr bool operator==(LogicEvent other) const noexcept
+    {
+        return events_==other;
     }
 
     /**
@@ -254,8 +264,9 @@ public:
      * @param other 其他事件
      * @return bool 结果
      */
-    constexpr bool operator!=(LogicEvent other) const noexcept {
-        return !(*this == other);
+    constexpr bool operator!=(LogicEvent other) const noexcept
+    {
+        return !(*this==other);
     }
     
     /**
@@ -264,7 +275,8 @@ public:
      * @param other 其他事件
      * @return bool 结果
      */
-    constexpr bool operator&(LogicEvent other) const noexcept {
+    constexpr bool operator&(LogicEvent other) const noexcept
+    {
         return has(other);
     }
     
@@ -274,7 +286,8 @@ public:
      * @param other 其他事件
      * @return Event& 引用
      */
-    constexpr Event& operator|=(LogicEvent other) noexcept {
+    constexpr Event& operator|=(LogicEvent other) noexcept
+    {
         add(other);
         return *this;
     }
@@ -285,8 +298,9 @@ public:
      * @param other 其他事件
      * @return Event& 引用
      */
-    constexpr Event& operator&=(LogicEvent other) noexcept {
-        events_ = events_ & other;
+    constexpr Event& operator&=(LogicEvent other) noexcept
+    {
+        events_=events_&other;
         return *this;
     }
     
@@ -298,8 +312,9 @@ public:
      * @return bool 结果
      */
     template<typename T>
-    bool operator==(const T& other) const {
-        return events_ == static_cast<LogicEvent>(other.get_event());
+    bool operator==(const T& other) const
+    {
+        return events_==static_cast<LogicEvent>(other.get_event());
     }
     
     /**
@@ -310,8 +325,9 @@ public:
      * @return bool 结果
      */
     template<typename T>
-    bool operator!=(const T& other) const {
-        return !(*this == other);
+    bool operator!=(const T& other) const
+    {
+        return !(*this==other);
     }
     
 private:
@@ -321,11 +337,11 @@ private:
      * @param events 事件
      * @return bool 是否有效
      */
-    static constexpr bool validate(LogicEvent events) noexcept 
+    static constexpr bool validate(LogicEvent events) noexcept
     {
-        constexpr auto valid_mask = LogicEvent::AllEvents | LogicEvent::Edge | LogicEvent::OneShot;
-        uint32_t invalid = static_cast<uint32_t>(events) & ~static_cast<uint32_t>(valid_mask);
-        return invalid == 0;
+        constexpr auto valid_mask=LogicEvent::AllEvents|LogicEvent::Edge|LogicEvent::OneShot;
+        uint32_t invalid=static_cast<uint32_t>(events)&~static_cast<uint32_t>(valid_mask);
+        return invalid==0;
     }
     
     /**

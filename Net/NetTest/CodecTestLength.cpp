@@ -5,7 +5,8 @@ using namespace yy;
 using namespace yy::net;
 
 //./CodecTestLength
-void testLengthCodec() {
+void testLengthCodec() 
+{
     std::cout << "=== 测试 LengthCodec ===" << std::endl;
     TcpBuffer buffer;
     

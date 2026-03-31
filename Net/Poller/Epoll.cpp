@@ -59,21 +59,12 @@ void Epoll::poll(int timeout,HandlerList& event_handlers)
     }                
     else
     {
-
         for(int i=0;i<ready_fds;++i)
-        {
-            
+        { 
             uint32_t revents=events_[i].events;
-            
             EventHandler* handler=static_cast<EventHandler*>(events_[i].data.ptr);
-
-           assert(handler);
-
-
-
+            assert(handler);
             handler->set_revent(Event(revents));
-            // @note 这里是uint32_t到int的隐形转换，但是epollfd_返回的就绪事件是在0X00000000-0x0000001F,不会溢出
-
             event_handlers.push_back(handler);
         }
     }

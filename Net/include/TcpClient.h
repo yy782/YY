@@ -16,7 +16,7 @@ namespace net
  * TcpClient封装了TCP客户端的连接管理，包括连接建立、断开、重连等功能。
  * 它通过Connector来处理连接的建立过程，并在连接建立后创建TcpConnection对象来管理连接。
  */
-class TcpClient : noncopyable// 需要强行保证生命周期长,要求loop彻底停止后再构析
+class TcpClient : noncopyable// 需要强行保证生命周期长,要求loop处理完所有connector的任务后再构析，否则内存泄漏
                      {
 public:
     typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectedCallBack;
@@ -146,7 +146,11 @@ public:
     // Buffer& getRecvBuffer() { return connection_->getRecvBuffer(); }
 
 private:
-    // Pimpl: 隐藏所有连接细节
+    /**
+     * @brief 连接器结构体，负责处理连接的建立过程
+     * 
+     * Connector封装了连接建立的细节，包括连接尝试、重连等功能。
+     */
     struct Connector;
     
     /**

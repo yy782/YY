@@ -34,7 +34,7 @@ struct ProtoMsgDispatcher
     }
 
    private:
-    std::map<const Descriptor*, ProtoCallBack> protocbs_;
+    std::map<const Descriptor*,ProtoCallBack> protocbs_;
 };
 
 inline bool ProtoMsgCodec::msgComplete(Buffer& buf) 

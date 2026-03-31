@@ -28,27 +28,28 @@ namespace yy
 class LogStream 
 {
 public:
-    LogStream() = default;
+    LogStream()=default;
     
-    // 使用模板统一处理所有可以通过ostringstream输出的类型
     template<typename T>
-    LogStream& operator<<(const T& val) {
+    LogStream& operator<<(const T& val) 
+    {
         oss_ << val;
         return *this;
     }
-    LogStream& operator<<(const stringPiece& val) {
+    LogStream& operator<<(const stringPiece& val) 
+    {
         oss_.write(val.data(),val.size());
         return *this;
     }
     
-    // 特化bool类型输出为true/false
-    LogStream& operator<<(bool val) {
+    LogStream& operator<<(bool val) 
+    {
         oss_ << (val ? "true" : "false");
         return *this;
     }
     
-    // 特化const char*以处理空指针
-    LogStream& operator<<(const char* val) {
+    LogStream& operator<<(const char* val) 
+    {
         if (val == nullptr) {
             oss_ << "(null)";
         } else {
@@ -57,18 +58,18 @@ public:
         return *this;
     }
     
-    // 特化char*以处理非const指针
-    LogStream& operator<<(char* val) {
+    LogStream& operator<<(char* val) 
+    {
         return operator<<(const_cast<const char*>(val));
     }
     
-    // 获取当前字符串内容
-    std::string str() const {
+    std::string str() const 
+    {
         return oss_.str();
     }
     
-    // 清空流内容
-    void clear() {
+    void clear() 
+    {
         oss_.str("");
         oss_.clear();
     }

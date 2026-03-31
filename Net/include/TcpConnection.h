@@ -6,7 +6,6 @@
 #include "TcpBuffer.h"
 #include <memory>
 #include "../Common/TimeStamp.h"
-#include "Codec.h"
 #include "AutoContext.h"
 #include "EventLoop.h"
 
@@ -68,7 +67,7 @@ public:
      */
     enum class ConnectStatus
     {
-        Connecting,
+        Connecting,    /**< 连接中 */ //@note面向对象池的，accept是直接连接成功的，归还给对象池状态改为连接中
         Connected,     /**< 已连接 */
         DisConnecting, /**< 断开连接中 */
         DisConnected   /**< 已断开连接 */
@@ -84,28 +83,38 @@ public:
      * @param fd 文件描述符
      * @param addr 对端地址
      * @param loop 事件循环
-     * @param name 连接名称
+     * @param events 事件类型
      */
     TcpConnection(int fd,const Address& addr,EventLoop* loop,Event events=Event(LogicEvent::None));
-
+    /**
+     * @brief 构造函数
+     * 
+     * @param events 事件类型
+     * @warning 面向对象池的，用于创建多个连接对象,不直接调用
+     */
+    TcpConnection(Event events);
     /**
      * @brief 析构函数
      * 
      * 构析函数不能触发回调了，TcpConnectionPtr不允许
      */
     ~TcpConnection();
+    /**
+     * @brief 创建TCP连接对象
+     * 
+     * @param fd 文件描述符
+     * @param addr 对端地址
+     * @param loop 事件循环
+     * @param events 事件类型
+     * @return TcpConnectionPtr TCP连接对象
+     */
     static TcpConnectionPtr accept(int fd,const Address& addr,EventLoop* loop,Event events=Event(LogicEvent::None))
     {
         return std::make_shared<TcpConnection>(fd,addr,loop,events);
     }
 
     
-    // /**
-    //  * @brief 连接成功
-    //  * 
-    //  * 当连接建立成功时调用。
-    //  */
-    // void ConnectSuccess();
+
     
     /**
      * @brief 获取事件处理器
@@ -134,6 +143,11 @@ public:
      * @return EventLoop* 事件循环
      */
     EventLoop* loop() noexcept{return loop_;}
+    /**
+     * @brief 获取服务数据
+     * 
+     * @return ServicesData& 服务数据
+     */
     ServicesData& date(){return data_;}
     /**
      * @brief 获取发送缓冲区
@@ -152,8 +166,6 @@ public:
      * @brief 扩展功能
      * 
      * @tparam Tag 标签类型
-     * @tparam Args 参数类型
-     * @param args 参数
      * @return typename Tag::ReturnType 返回值
      */
     template<typename Tag>
@@ -215,6 +227,12 @@ public:
         SexceptCallBack_ = std::forward<Callable>(cb);
     }
     
+    /**
+     * @brief 设置关闭回调函数
+     * 
+     * @tparam Callable 可调用对象类型
+     * @param cb 关闭回调函数
+     */
     template<typename Callable>
     void setCloseCallBack(Callable&& cb) {
         ScloseCallBack_ = std::forward<Callable>(cb);
@@ -304,22 +322,55 @@ public:
     
     // void handleBackpressureAfterSend();
     // void handleBackpressureAfterRead();
-    TcpConnection(Event events);
+
 private:
 
 
+    /**
+     * @brief 在事件循环中发送数据
+     * 
+     * @param message 要发送的数据
+     * @param len 数据长度
+     */
     void sendInLoop(const char* message,size_t len);
+    /**
+     * @brief 在事件循环中断开连接
+     */
     void disconnectInLoop();
+    /**
+     * @brief 处理可读事件
+     */
     void handleRead();
+    /**
+     * @brief 处理边缘触发的可读事件
+     */
     void handleETRead();
+    /**
+     * @brief 处理可写事件
+     */
     void handleWrite();
+    /**
+     * @brief 处理关闭事件
+     */
     void handleClose();
+    /**
+     * @brief 处理错误事件
+     */
     void handleError();
+    /**
+     * @brief 处理异常事件
+     */
     void handleException();
     //void parseMessagesWithCodec();
 
     friend class Acceptor;
     friend class TcpClient;
+    /**
+     * @brief 设置析构回调函数
+     * 
+     * @tparam Callable 可调用对象类型
+     * @param cb 析构回调函数
+     */
     template<typename Callable>
     void setDestructorCallBack(Callable&& cb) {
         destructCallBack_= std::forward<Callable>(cb);
@@ -328,12 +379,24 @@ private:
 
     friend class ObjectPool<TcpConnectionPtr>;
 
+    /**
+     * @brief 初始化TCP连接
+     * 
+     * @param fd 文件描述符
+     * @param addr 对端地址
+     * @param loop 事件循环
+     * @note 面向对象池的，用于确定fd和addr,loop的初始化
+     */
     void init(int fd,const Address& addr,EventLoop* loop);
+    /**
+     * @brief 重置TCP连接 
+     * @note 面向对象池的，用于移除Tcp连接时reset的归还对象池
+     */
     void reset();
 
     int fd_={-1};//不用ObjectPool,如果~在InLoop,则是InLoop
-    Address addr_; // @prief 地址 如果是ser,则是对端的，如果是Cli,则是我端的
-    EventLoop* loop_={nullptr};//////////////////////////////////////////////
+    Address addr_; // @prief 对端地址
+    EventLoop* loop_={nullptr};
     Buffer RecvBuffer_;
     //BackpressureState RecvbpState_{BackpressureState::kNormal};
     //BackpressureAfterSendCallBack BackpressureAfterSend_;
@@ -370,7 +433,7 @@ private:
 //     kBackoff         /**< 停止读取 - 反向压力机制，暂停从socket读取新数据，最推荐的优雅策略 */ // Recv Buffer
 // };
 
-// // 主模板声明（必须有！）
+// // 
 // template<BufferBackpressureStrategy strategy>
 // void handleAfterSend(TcpConnectionPtr conn);
 

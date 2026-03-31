@@ -9,19 +9,22 @@ namespace yy
 namespace net
 {
 
-typedef TcpBuffer Buffer;    
+    
 
 // ProtoBufOutputStream.h
-class ProtoBufOutputStream : public google::protobuf::io::ZeroCopyOutputStream {
+class ProtoBufOutputStream : public google::protobuf::io::ZeroCopyOutputStream 
+{
 public:
-    ProtoBufOutputStream(Buffer* buf) 
-        : buffer_(buf)
-        , originalSize_(buffer_->readable_size())
-        , byte_count_(0)
+    typedef TcpBuffer Buffer;
+    ProtoBufOutputStream(Buffer* buf): 
+    buffer_(buf),
+    originalSize_(buffer_->readable_size()),
+    byte_count_(0)
     {}
 
     // Next: 获取下一块可写内存
-    bool Next(void** data, int* size) override {
+    bool Next(void** data, int* size) override 
+    {
         // 每次至少分配 4KB，但也要考虑当前可写空间
         size_t free_space = buffer_->writable_size();
         if (free_space < 4096) {
@@ -38,7 +41,8 @@ public:
     }
 
     // BackUp: 回退未使用的字节
-    void BackUp(int count) override {
+    void BackUp(int count) override 
+    {
         if (count > 0) {
             buffer_->unwrite(count);
             byte_count_ -= count;
@@ -46,12 +50,14 @@ public:
     }
 
     // ByteCount: 返回已写入的字节数
-    int64_t ByteCount() const override {
+    int64_t ByteCount() const override 
+    {
         return byte_count_;
     }
 
     // 获取实际写入的消息长度（不包括之前占位的长度字段）
-    size_t getMessageSize() const {
+    size_t getMessageSize() const 
+    {
         return byte_count_;
     }
 
@@ -62,50 +68,59 @@ private:
 };
 
 // ProtoBufInputStream.h
-class ProtoBufInputStream : public google::protobuf::io::ZeroCopyInputStream {
+class ProtoBufInputStream : public google::protobuf::io::ZeroCopyInputStream 
+{
 public:
-    ProtoBufInputStream(Buffer* buffer) 
-        : buffer_(buffer)
-        , position_(0)
-        , total_bytes_(buffer_->readable_size())
+    ProtoBufInputStream(Buffer* buffer) : 
+    buffer_(buffer), 
+    position_(0),
+    total_bytes_(buffer_->readable_size())
     {}
 
-    bool Next(const void** data, int* size) override {
-        if (position_ >= total_bytes_) {
+    bool Next(const void** data, int* size) override 
+    {
+        if (position_>=total_bytes_) 
+        {
             return false;
         }
         
         // 返回当前可读数据的指针（从 peek() 开始 + 偏移）
-        *data = buffer_->peek() + position_;
+        *data=buffer_->peek()+position_;
         
         // 剩余所有可读数据
-        *size = static_cast<int>(total_bytes_ - position_);
+        *size = static_cast<int>(total_bytes_-position_);
         
-        position_ += *size;
+        position_+=*size;
         
         return true;
     }
 
-    void BackUp(int count) override {
-        if (count > 0) {
-            position_ = (static_cast<size_t>(count) > position_) ? 0 : position_ - static_cast<size_t>(count);
+    void BackUp(int count) override 
+    {
+        if (count > 0) 
+        {
+            position_=(static_cast<size_t>(count)>position_)?0:position_-static_cast<size_t>(count);
         }
     }
 
-    bool Skip(int count) override {
-        if (count < 0 || position_ + static_cast<size_t>(count) > total_bytes_) {
+    bool Skip(int count) override 
+    {
+        if (count<0||position_+static_cast<size_t>(count)>total_bytes_) 
+        {
             return false;
         }
-        position_ += static_cast<size_t>(count);
+        position_+=static_cast<size_t>(count);
         return true;
     }
 
-    int64_t ByteCount() const override {
+    int64_t ByteCount() const override 
+    {
         return position_;
     }
 
     // 消费已解析的数据
-    void consume() {
+    void consume() 
+    {
         buffer_->consume(position_);
     }
 

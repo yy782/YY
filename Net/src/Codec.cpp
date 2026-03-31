@@ -5,7 +5,8 @@ namespace yy
 {
 namespace net
 {
-int LineCodec::tryDecode(stringPiece data,stringPiece& msg) {
+int LineCodec::tryDecode(stringPiece data,stringPiece& msg) 
+{
     if(data.size()==1&&data[0]==0x04) // 0x04是EOF
     {
         msg=data;
@@ -46,7 +47,8 @@ int LengthCodec::tryDecode(stringPiece data, stringPiece &msg)
     }
     return 0;
 }
-void LengthCodec::encode(stringPiece msg, TcpBuffer &buf) {
+void LengthCodec::encode(stringPiece msg,TcpBuffer& buf) 
+{
     buf.FluentAppend("mBdT",4)
         .FluentAppend(::htonl(static_cast<uint32_t>(msg.size())))
         .append(msg);

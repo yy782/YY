@@ -18,7 +18,7 @@ namespace yy
             std::lock_guard<std::mutex> lock(mtx_);
             return vec_.empty();
         }
-        typename std::vector<T>::iterator begin()////////////////////////////////////
+        typename std::vector<T>::iterator begin()
         {
             std::lock_guard<std::mutex> lock(mtx_);
             return vec_.begin();

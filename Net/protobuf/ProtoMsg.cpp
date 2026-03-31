@@ -11,7 +11,8 @@ namespace yy
 {
 namespace net 
 {
-void ProtoMsgCodec::encode(Message* msg, Buffer& buf) {
+void ProtoMsgCodec::encode(Message* msg,Buffer& buf) 
+{
     size_t len_pos=buf.readable_size();
     
     // 2. 先占位长度字段（4字节）和名字长度字段（4字节）
@@ -57,7 +58,8 @@ Message* ProtoMsgCodec::createMessage(const std::string& typeName)
 // 4 byte name len
 // name string not null ended
 // protobuf data
-Message* ProtoMsgCodec::decode(Buffer& buf) {
+Message* ProtoMsgCodec::decode(Buffer& buf) 
+{
     if(buf.readable_size()<8) 
     {
         return NULL;
@@ -69,12 +71,14 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     uint32_t name_len=ntohl(*reinterpret_cast<uint32_t*>(p+4));
     
     // 2. 验证长度
-    if (total_len>MAX_MESSAGE_SIZE||name_len>MAX_NAME_LENGTH) {
+    if (total_len>MAX_MESSAGE_SIZE||name_len>MAX_NAME_LENGTH) 
+    {
         LOG_WARN("Invalid length: total="<<total_len<<" name="<<name_len);
         return NULL;
     }
     
-    if (buf.readable_size()<total_len) {
+    if (buf.readable_size()<total_len) 
+    {
         return NULL;  // 数据不足
     }
     
@@ -112,7 +116,8 @@ Message* ProtoMsgCodec::decode(Buffer& buf) {
     
     return msg;
 }
-void ProtoMsgDispatcher::handle(TcpConnectionPtr con,Message* msg) {
+void ProtoMsgDispatcher::handle(TcpConnectionPtr con,Message* msg) 
+{
     auto p=protocbs_.find(msg->GetDescriptor());
     if(p!=protocbs_.end()) 
     {

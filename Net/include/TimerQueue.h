@@ -1,3 +1,8 @@
+// Copyright 2010, Shuo Chen.  All rights reserved.
+// http://code.google.com/p/muduo/
+//
+// Modified by yy on 2026
+// Additional modifications and improvements
 #ifndef _YY_NET_TIMERQUEUE_H_
 #define _YY_NET_TIMERQUEUE_H_
 
@@ -59,8 +64,7 @@ public:
      * @brief 定时器列表类型
      */
     typedef std::set<Entry> TimerList;
-    //typedef std::set<std::pair<TimerPtr,int64_t>> QuerySet;// @brief int64_t是定时器的身份ID,靠TimerPtr(通过原始元素地址)比较，无法保证键唯一性
-    // @note muduo库由于受限于C++11标准，std::set不支持异构查找,选择用裸指针存储，我们使用的是C++17标准，选择完善他
+
 
     /**
      * @brief 删除默认构造函数
@@ -157,14 +161,7 @@ private:
     //QuerySet querySet_;
 };
 
-/**
- * @brief 运行定时器
- * 
- * @tparam PrecisionTag 精度标签
- * @param cb 回调函数
- * @param interval 时间间隔
- * @param execute_count 执行次数
- */
+
 template<class PrecisionTag>
 void EventLoop::runTimer(BaseTimer::TimerCallBack cb,typename Timer<PrecisionTag>::Time_Interval interval,int execute_count)
 {

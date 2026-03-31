@@ -1,3 +1,10 @@
+/**
+ * @file HttpClient.h
+ * @brief HTTP客户端的定义
+ * 
+ * 本文件定义了HTTP客户端类，用于发送HTTP请求并处理HTTP响应。
+ */
+
 #ifndef _YY_NET_HTTP_HTTPCLIENT_H_
 #define _YY_NET_HTTP_HTTPCLIENT_H_
 #include "http.h"
@@ -8,15 +15,32 @@ namespace net
 {
 namespace Http 
 {
-class HTTPClient {
+/**
+ * @brief HTTP客户端类
+ * 
+ * HTTPClient用于发送HTTP请求并处理HTTP响应，支持GET、POST、PUT、DELETE等HTTP方法。
+ */
+class HTTPClient 
+{
 public:
+    /**
+     * @brief 响应回调函数类型
+     */
     typedef std::function<void(const Http::HttpResponse&)> ResponseCallback;
+    /**
+     * @brief 连接回调函数类型
+     */
     typedef TcpClient::ServicesConnectedCallBack ServicesConnectedCallBack;
     
-    HTTPClient(const Address& serverAddr, EventLoop* loop)
-        : client_(serverAddr, loop)
-         {
-        
+    /**
+     * @brief 构造函数
+     * 
+     * @param serverAddr 服务器地址
+     * @param loop 事件循环
+     */
+    HTTPClient(const Address& serverAddr, EventLoop* loop): 
+    client_(serverAddr, loop)
+    {
         client_.setConnectionCallback([this](int Cfd,const Address& Caddr,EventLoop* Cloop){
             assert(SconCb_);
             auto conn=SconCb_(Cfd,Caddr,Cloop);
@@ -28,82 +52,137 @@ public:
         });
     }
     
-    void connect() {
+    /**
+     * @brief 连接服务器
+     */
+    void connect()
+    {
         client_.connect();
     }
     
-    void disconnect() {
+    /**
+     * @brief 断开连接
+     */
+    void disconnect()
+    {
         client_.disconnect();
     }
     
 
     
-    // GET请求
-    void get(const std::string& url, ResponseCallback cb) {
-        sendRequest("GET", url, "", cb);
+    /**
+     * @brief 发送GET请求
+     * 
+     * @param url 请求URL
+     * @param cb 响应回调函数
+     */
+    void get(const std::string& url, ResponseCallback cb) 
+    {
+        sendRequest("GET",url,"",cb);
     }
     
-    // POST请求
-    void post(const std::string& url, const std::string& body, 
-              const std::map<std::string, std::string>& headers = {},
-              ResponseCallback cb = nullptr) {
-        sendRequest("POST", url, body, cb, headers);
+    /**
+     * @brief 发送POST请求
+     * 
+     * @param url 请求URL
+     * @param body 请求体
+     * @param headers 请求头
+     * @param cb 响应回调函数
+     */
+    void post(const std::string& url, const std::string& body,
+              const std::map<std::string,std::string>& headers={},
+              ResponseCallback cb=nullptr)
+    {
+        sendRequest("POST",url,body,cb,headers);
     }
     
-    // PUT请求
+    /**
+     * @brief 发送PUT请求
+     * 
+     * @param url 请求URL
+     * @param body 请求体
+     * @param headers 请求头
+     * @param cb 响应回调函数
+     */
     void put(const std::string& url, const std::string& body,
-             const std::map<std::string, std::string>& headers = {},
-             ResponseCallback cb = nullptr) {
-        sendRequest("PUT", url, body, cb, headers);
+             const std::map<std::string,std::string>& headers={},
+             ResponseCallback cb=nullptr)
+    {
+        sendRequest("PUT",url,body,cb,headers);
     }
     
-    // DELETE请求
-    void del(const std::string& url, ResponseCallback cb = nullptr) {
-        sendRequest("DELETE", url, "", cb);
+    /**
+     * @brief 发送DELETE请求
+     * 
+     * @param url 请求URL
+     * @param cb 响应回调函数
+     */
+    void del(const std::string& url, ResponseCallback cb=nullptr)
+    {
+        sendRequest("DELETE",url,"",cb);
     }
     
-    // 设置连接关闭回调
-    void setConCallback(ServicesConnectedCallBack cb) {
+    /**
+     * @brief 设置连接回调函数
+     * 
+     * @param cb 连接回调函数
+     */
+    void setConCallback(ServicesConnectedCallBack cb)
+    {
         SconCb_=cb;
     }
 private:
-    struct RequestContext {
-        std::string method;
-        std::string url;
-        std::map<std::string, std::string> headers;
-        ResponseCallback callback;
+    /**
+     * @brief 请求上下文
+     */
+    struct RequestContext
+    {
+        std::string method;         ///< 请求方法
+        std::string url;            ///< 请求URL
+        std::map<std::string,std::string> headers; ///< 请求头
+        ResponseCallback callback;  ///< 响应回调函数
     };
     
-    void sendRequest(const std::string& method, const std::string& url, 
-                     const std::string& body, ResponseCallback cb,
-                     const std::map<std::string, std::string>& headers = {}) 
-                     {
-        
+    /**
+     * @brief 发送HTTP请求
+     * 
+     * @param method 请求方法
+     * @param url 请求URL
+     * @param body 请求体
+     * @param cb 响应回调函数
+     * @param headers 请求头
+     */
+    void sendRequest(const std::string& method,const std::string& url,
+                     const std::string& body,ResponseCallback cb,
+                     const std::map<std::string,std::string>& headers={})
+    {
         // 构建HTTP请求
         Http::HttpRequest req;
         
         // 设置方法
-        if (method == "GET") req.method_ = Http::HttpRequest::Method::GET;
-        else if (method == "POST") req.method_ = Http::HttpRequest::Method::POST;
-        else if (method == "PUT") req.method_ = Http::HttpRequest::Method::PUT;
-        else if (method == "DELETE") req.method_ = Http::HttpRequest::Method::DELETE;
+        if(method=="GET") req.method_=Http::HttpRequest::Method::GET;
+        else if(method=="POST") req.method_=Http::HttpRequest::Method::POST;
+        else if(method=="PUT") req.method_=Http::HttpRequest::Method::PUT;
+        else if(method=="DELETE") req.method_=Http::HttpRequest::Method::DELETE;
         
-        req.queryUrl_ = url;
-        req.version_ = "HTTP/1.1";
+        req.queryUrl_=url;
+        req.version_="HTTP/1.1";
         
         // 添加Host头
-        std::string host = client_.getPeerAddr().sockaddrToString();
-        req.headers_["Host"] = host.substr(0, host.find(':'));
+        std::string host=client_.getPeerAddr().sockaddrToString();
+        req.headers_["Host"]=host.substr(0,host.find(':'));
         
         // 添加用户自定义头
-        for (const auto& h : headers) {
-            req.headers_[h.first] = h.second;
+        for(const auto& h:headers)
+        {
+            req.headers_[h.first]=h.second;
         }
         
         // 设置body
-        if (!body.empty()) {
-            req.body_ = body;
-            req.headers_["Content-Type"] = "application/x-www-form-urlencoded";
+        if(!body.empty())
+        {
+            req.body_=body;
+            req.headers_["Content-Type"]="application/x-www-form-urlencoded";
         }
         
         // 编码并发送
@@ -113,46 +192,57 @@ private:
         
         // 保存上下文
         RequestContext ctx;
-        ctx.method = method;
-        ctx.url = url;
-        ctx.headers = headers;
-        ctx.callback = cb;
+        ctx.method=method;
+        ctx.url=url;
+        ctx.headers=headers;
+        ctx.callback=cb;
         
         pendingRequests_.push(ctx);
     }
     
-    void onMessage(TcpConnectionPtr conn) {
-        TcpBuffer& buffer = conn->recvBuffer(); 
+    /**
+     * @brief 处理收到的消息
+     * 
+     * @param conn TCP连接
+     */
+    void onMessage(TcpConnectionPtr conn)
+    {
+        TcpBuffer& buffer=conn->recvBuffer();
         
         while(true)
         {
-            Http::ParseResult result = response_.tryDecode(
-                stringPiece(buffer.peek(), buffer.readable_size()),
+            Http::ParseResult result=response_.tryDecode(
+                stringPiece(buffer.peek(),buffer.readable_size()),
                 true  // copy body
             );
             
-            if (result == Http::ParseResult::Error) {
+            if(result==Http::ParseResult::Error)
+            {
                 std::cerr<<"HTTP response parse error"<<std::endl;
                 buffer.consume(buffer.readable_size());
                 return;
             }
             
-            if (result == Http::ParseResult::NotComplete) {
+            if(result==Http::ParseResult::NotComplete)
+            {
                 // 数据不完整，等待更多
                 return;
             }
             
-            if (result == Http::ParseResult::Complete) {
+            if(result==Http::ParseResult::Complete)
+            {
                 // 解析完成
-                if (!pendingRequests_.empty()) {
-                    RequestContext ctx = pendingRequests_.front();
+                if(!pendingRequests_.empty())
+                {
+                    RequestContext ctx=pendingRequests_.front();
                     pendingRequests_.pop();
                     
-                    std::cout<<"HTTP response: " << static_cast<int>(response_.status_) 
-                                << " for " << ctx.method << " " << ctx.url<<std::endl;               
+                    std::cout<<"HTTP response: "<<static_cast<int>(response_.status_)
+                                <<" for "<<ctx.method<<" "<<ctx.url<<std::endl;
                     
                     // 调用回调
-                    if (ctx.callback) {
+                    if(ctx.callback)
+                    {
                         ctx.callback(response_);
                     }
                 }
@@ -161,14 +251,17 @@ private:
                 buffer.consume(response_.getByte());
                 
                 // 检查是否保持连接
-                std::string connection = response_.getHeader("connection");
-                if (connection == "close") {
+                std::string connection=response_.getHeader("connection");
+                if(connection=="close")
+                {
                     conn->disconnect();
-                } else {
+                }
+                else
+                {
                     // 重置响应解析器
                     response_.clear();
                 }
-            }            
+            }
         }
 
 
@@ -176,9 +269,21 @@ private:
 
 
     
+    /**
+     * @brief TCP客户端
+     */
     TcpClient client_;
+    /**
+     * @brief HTTP响应
+     */
     Http::HttpResponse response_;
+    /**
+     * @brief 待处理的请求队列
+     */
     std::queue<RequestContext> pendingRequests_;
+    /**
+     * @brief 连接回调函数
+     */
     ServicesConnectedCallBack SconCb_;
 };
 }

@@ -29,7 +29,6 @@ CTestTestfile.cmake
 *.swp
 *.swo
 *~
-.DS_Store
 *.user
 *.suo
 *.ncb
@@ -40,4 +39,20 @@ CTestTestfile.cmake
 # 日志/临时文件
 *.log
 tmp/
-temp/
+
+# 项目特定文件
+CliLog.log
+Log.log
+
+# 测试输出
+net_test_output/
+memory_test_output/
+threadpool_test_output/
+
+# Protobuf 生成文件
+Net/protobuf/*.pb.h
+Net/protobuf/*.pb.cc
+
+# 脚本输出
+*.pyc
+

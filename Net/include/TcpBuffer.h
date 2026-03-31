@@ -1,3 +1,8 @@
+// Copyright 2010, Shuo Chen.  All rights reserved.
+// http://code.google.com/p/muduo/
+//
+// Modified by yy on 2026
+// Additional modifications and improvements
 #ifndef _YY_NET_TCP_BUFFER_H_
 #define _YY_NET_TCP_BUFFER_H_
 

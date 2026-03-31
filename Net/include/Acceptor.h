@@ -43,6 +43,8 @@ public:
      * 
      * @param addr 地址
      * @param loop 事件循环
+     * @param Ser 所属的TcpServer
+     * @param id 接受器ID
      */
     Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser,int id=-1);
     
@@ -81,12 +83,26 @@ private:
      */
     template<bool isIpv6=false>
     void accept();
+    /**
+     * @brief 处理新连接
+     * 
+     * @param fd 文件描述符
+     * @param addr 客户端地址
+     */
     void NewConnection(int fd,const Address& addr);
+    /**
+     * @brief 移除连接
+     * 
+     * @param conn 要移除的连接
+     */
     void removeConnection(TcpConnectionPtr conn);
     /**
      * @brief 地址
      */
     const Address& addr_;// inOne
+    /**
+     * @brief 接受器ID
+     */
     const int id_;
     /**
      * @brief 事件循环
@@ -98,8 +114,14 @@ private:
      */
     EventHandler handler_;
 
+    /**
+     * @brief 连接集合
+     */
     ConnectMap connects_;// Not
 
+    /**
+     * @brief 新连接回调函数
+     */
     ServicesConnectedCallBack SconnectCallBack_;// inOne
 
     
@@ -108,13 +130,12 @@ private:
      * @brief 空闲文件描述符
      */
     int idleFd_;
+    /**
+     * @brief 所属的TcpServer
+     */
     TcpServer* Ser_;
 };
-/**
- * @brief 接受连接
- * 
- * @tparam isIpv6 是否是IPv6
- */
+
 template<bool isIpv6>
 void Acceptor::accept()
 {
@@ -129,14 +150,14 @@ void Acceptor::accept()
         }
         else 
         {
-            if (errno == EMFILE)
+            if (errno==EMFILE)
             {
                 close(idleFd_);
                 idleFd_=sockets::acceptAutoOrDie<isIpv6>(fd,addr);
                 close(idleFd_);
                 idleFd_= ::open("/dev/null",O_RDONLY|O_CLOEXEC);
             }
-            if(errno==EAGAIN||errno == EWOULDBLOCK)
+            if(errno==EAGAIN||errno==EWOULDBLOCK)
             {
                 break;
             }

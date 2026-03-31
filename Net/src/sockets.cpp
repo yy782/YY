@@ -16,7 +16,7 @@ namespace sockets
 {
 int createTcpSocketOrDie(sa_family_t family)
 {
-    auto listenfd=::socket(family,SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+    auto listenfd=::socket(family,SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC,IPPROTO_TCP);
     if(listenfd<0)
     {
         LOG_SYSFATAL("sockets::createNonblockingOrDie");
@@ -25,7 +25,7 @@ int createTcpSocketOrDie(sa_family_t family)
 }
 int createUdpSocketOrDie(sa_family_t family)
 {
-    int fd=::socket(family,SOCK_DGRAM| SOCK_NONBLOCK | SOCK_CLOEXEC,IPPROTO_UDP);
+    int fd=::socket(family,SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC,IPPROTO_UDP);
     if(fd<0)
     {
         LOG_SYSFATAL("sockets::createNonblockingOrDie");
@@ -124,9 +124,9 @@ int connect(int fd,const Address& addr)
 struct sockaddr_in6 getLocalAddr(int sockfd)
 {
     struct sockaddr_in6 localaddr;
-    memZero(&localaddr, sizeof localaddr);
-    socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
-    if (::getsockname(sockfd,reinterpret_cast<struct sockaddr*>(&localaddr), &addrlen) < 0)
+    memZero(&localaddr,sizeof localaddr);
+    socklen_t addrlen=static_cast<socklen_t>(sizeof localaddr);
+    if (::getsockname(sockfd,reinterpret_cast<struct sockaddr*>(&localaddr),&addrlen)<0)
     {
         LOG_WARN("sockets::getLocalAddr");
     }
@@ -136,9 +136,9 @@ struct sockaddr_in6 getLocalAddr(int sockfd)
 struct sockaddr_in6 getPeerAddr(int sockfd)
 {
     struct sockaddr_in6 peeraddr;
-    memZero(&peeraddr, sizeof peeraddr);
-    socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
-    if (::getpeername(sockfd, reinterpret_cast<struct sockaddr*>(&peeraddr), &addrlen) < 0)
+    memZero(&peeraddr,sizeof peeraddr);
+    socklen_t addrlen=static_cast<socklen_t>(sizeof peeraddr);
+    if (::getpeername(sockfd, reinterpret_cast<struct sockaddr*>(&peeraddr),&addrlen)<0)
     {
         LOG_WARN("sockets::getPeerAddr");
     }
@@ -146,19 +146,19 @@ struct sockaddr_in6 getPeerAddr(int sockfd)
 }
 bool isSelfConnect(int sockfd)
 {
-    struct sockaddr_in6 localaddr = getLocalAddr(sockfd);
-    struct sockaddr_in6 peeraddr = getPeerAddr(sockfd);
-    if (localaddr.sin6_family == AF_INET)
+    struct sockaddr_in6 localaddr=getLocalAddr(sockfd);
+    struct sockaddr_in6 peeraddr=getPeerAddr(sockfd);
+    if (localaddr.sin6_family==AF_INET)
     {
-        const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(&localaddr);
-        const struct sockaddr_in* raddr4 = reinterpret_cast<struct sockaddr_in*>(&peeraddr);
-        return laddr4->sin_port == raddr4->sin_port
-            && laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
+        const struct sockaddr_in* laddr4=reinterpret_cast<struct sockaddr_in*>(&localaddr);
+        const struct sockaddr_in* raddr4=reinterpret_cast<struct sockaddr_in*>(&peeraddr);
+        return laddr4->sin_port==raddr4->sin_port
+            && laddr4->sin_addr.s_addr==raddr4->sin_addr.s_addr;
     }
-    else if (localaddr.sin6_family == AF_INET6)
+    else if (localaddr.sin6_family==AF_INET6)
     {
-        return localaddr.sin6_port == peeraddr.sin6_port
-            && memcmp(&localaddr.sin6_addr, &peeraddr.sin6_addr, sizeof localaddr.sin6_addr) == 0;
+        return localaddr.sin6_port==peeraddr.sin6_port
+            &&memcmp(&localaddr.sin6_addr,&peeraddr.sin6_addr,sizeof localaddr.sin6_addr) == 0;
     }
     else
     {
@@ -167,24 +167,25 @@ bool isSelfConnect(int sockfd)
 }
 bool setNonBlocking(int fd) 
 {
-    int flags = fcntl(fd, F_GETFL,0);
-    if (flags == -1) 
+    int flags=fcntl(fd, F_GETFL,0);
+    if (flags==-1) 
     {
         return false;
     }
-    flags |= O_NONBLOCK;
-    if (fcntl(fd, F_SETFL, flags) == -1) 
+    flags|=O_NONBLOCK;
+    if (fcntl(fd,F_SETFL,flags) == -1) 
     {
         return false;
     } 
     return true;
 }
-bool isNonBlocking(int fd) {
-    int flags = fcntl(fd, F_GETFL);
-    if (flags == -1) {
+bool isNonBlocking(int fd) 
+{
+    int flags=fcntl(fd,F_GETFL);
+    if (flags==-1) {
         return false;
     }
-    return (flags & O_NONBLOCK) != 0;
+    return (flags&O_NONBLOCK)!=0;
 }
 
 void setKeepAlive(int fd,bool on,int idleSeconds, 
@@ -229,15 +230,15 @@ void setTcpNoDelay(int fd,bool on)
 bool setSocketBufferSize(int fd,size_t BufSize)
 {
     assert(BufSize>0);
-    int ret=::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &BufSize, static_cast<socklen_t>(sizeof BufSize));
+    int ret=::setsockopt(fd,SOL_SOCKET,SO_RCVBUF,&BufSize,static_cast<socklen_t>(sizeof BufSize));
     return ret>=0;
 }
 void reuseAddrOrDie (int fd,bool on)
 {
     // 根据on参数设置optval的值，1表示启用，0表示禁用
     int optval=on?1:0;
-    auto ret=::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-            &optval, static_cast<socklen_t>(sizeof optval));
+    auto ret=::setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,
+            &optval,static_cast<socklen_t>(sizeof optval));
     if(ret<0)
     {
         LOG_ERRNO(errno);
@@ -247,8 +248,8 @@ void reuseAddrOrDie (int fd,bool on)
 void reusePortOrDie(int fd,bool on)
 {
     int optval = on ? 1 : 0;
-    int ret = ::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
-                            &optval, static_cast<socklen_t>(sizeof optval)); 
+    int ret = ::setsockopt(fd,SOL_SOCKET,SO_REUSEPORT,
+                            &optval,static_cast<socklen_t>(sizeof optval)); 
     if(ret<0)
     {
         LOG_ERRNO(errno);
