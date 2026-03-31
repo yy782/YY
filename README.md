@@ -25,6 +25,7 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 - **CRTP+SFINAE 编译期多态**：替代虚函数，零开销抽象
 - **无锁队列**：`RingBuffer` + 溢出队列，保证任务不丢失
 - **智能唤醒**：只在必要时唤醒事件循环，减少系统调用
+- **支持ET,LT模式**: 业务创建对象，选择对象创建方式，直接创建还是对象池
 
 ### 高并发能力
 - **SO_REUSEPORT**：多 Acceptor 模式，内核级负载均衡
@@ -55,50 +56,44 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 
 
 ## 📁目录结构
-text
 yy/
-├── CMakeLists.txt          # 顶层 CMake 配置
-├── LICENSE                 # MIT 许可证
-├── README.md               # 项目说明
-│
-├── Net/                    # 网络核心代码
-│   ├── HTTP/               # HTTP 协议实现
-│   ├── Poller/             # epoll 事件监听
-│   ├── UDP/                # UDP 协议支持
-│   ├── protobuf/           # Protobuf RPC
-│   ├── StressTesting/      # 压力测试工具
-│   ├── NetTest/            # 单元测试和示例
-│   ├── include/            # 头文件
-│   └── src/                # 源文件
-│
-├── Common/                 # 公共工具
-│   ├── Log.h               # 异步日志
-│   ├── Config.h            # 配置解析
-│   ├── Thread.h            # 线程封装
-│   └── RingBuffer.h        # 无锁队列
-│
-├── ThreadPool/             # 线程池实现
-└── MemoryPool/             # 内存池实现
+├── CMakeLists.txt        # 顶层 CMake
+├── LICENSE               # 许可证
+├── README.md             # 项目说明
+├── include/              # 所有对外头文件
+├── src/                  # 所有源文件
+│   ├── Net/              # 网络核心
+│   ├── HTTP/             # HTTP 服务
+│   ├── Poller/           # epoll 多路复用
+│   ├── UDP/              # UDP 支持
+│   ├── protobuf/         # RPC
+│   ├── Common/           # 工具类
+│   ├── ThreadPool/       # 线程池
+│   └── MemoryPool/       # 内存池
+├── StressTesting/        # 压测工具
+└── NetTest/              # 测试用例
 
 ## 🎯快速开始
+# 克隆项目
 git clone https://github.com/yourname/yy.git
 cd yy
+
+# 构建
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j4
 
 ## 📚示例程序
-所有示例位于 Net/NetTest/ 目录：
+所有示例位于 NetTest/ 目录：
 
-示例	说明
-EchoServer/Client	基础 TCP 通信，展示 LT/ET 模式切换
-HttpServer/Client	HTTP 服务器和客户端
-ProtoBufTestServer/Client	Protobuf RPC 通信
-UdpServer/Client	UDP 协议通信（类似 TCP 接口）
-CodeTestServer/Client	自定义协议编解码器
-TimerTestServer/Client	时间轮定时器
-RetryConnectTest	自动重连机制
-CurcularQueueTest	无锁队列安全测试
+• EchoServer/Client        基础 TCP 通信，展示 LT/ET 模式切换
+• HttpServer/Client        HTTP 服务器和客户端
+• ProtoBufTestServer/Client Protobuf RPC 通信
+• UdpServer/Client         UDP 协议通信（接口风格类似 TCP）
+• CodeTestServer/Client    自定义协议编解码器
+• TimerTestServer/Client   时间轮定时器
+• RetryConnectTest        自动重连机制
+• CurcularQueueTest       无锁队列安全测试
 ## 📊性能测试
 使用 wrk 进行压力测试：
 
@@ -109,18 +104,26 @@ wrk -c 10000 -t 8 -d 30s http://127.0.0.1:8080/hello
 
 ### 测试 / 端点
 wrk -c 10000 -t 8 -d 30s http://127.0.0.1:8080/
-#### 🏗️ 设计亮点
-零拷贝缓冲区
+### 🏗️ 设计亮点
+#### 零拷贝缓冲区（Buffer）
+使用 `readv` 实现**分散读 / 零拷贝**，一次系统调用读取全量数据，减少拷贝与系统调用开销。
+
+```cpp
 ssize_t Buffer::readFd(int fd) {
     char extrabuf[65536];
     struct iovec vec[2];
     vec[0].iov_base = beginWrite();
+    vec[0].iov_len = writableBytes();
     vec[1].iov_base = extrabuf;
-    
+    vec[1].iov_len = sizeof extrabuf;
+
+    // 一次系统调用读取尽可能多的数据
     ssize_t n = readv(fd, vec, 2);
-    // 一次系统调用读尽可能多的数据
 }
-CRTP + SFINAE 接口检查
+```
+
+#### CRTP + SFINAE 接口检查
+```cpp
 template<class PollerTag>
 class Poller {
     void poll(int timeout, HandlerList& handlers) {
@@ -128,7 +131,9 @@ class Poller {
         return static_cast<PollerTag*>(this).poll(timeout, handlers);
     }
 };
-双队列任务系统
+```
+#### 双队列任务系统
+```cpp
 class EventLoop {
     RingBuffer<Functor> pendingFunctors_;      // 无锁主队列
     SafeVector<Functor> overflowQueue_;        // 溢出队列
@@ -138,7 +143,9 @@ class EventLoop {
         // 再处理溢出队列
     }
 };
-对象池优化
+```
+#### 对象池优化
+```cpp
 class ObjectPool<TcpConnectionPtr> {
     void expend(int num) {
         for (int i = 0; i < num; ++i) {
@@ -154,8 +161,16 @@ class ObjectPool<TcpConnectionPtr> {
         return conn;
     }
 };
+```
 ## 📝许可证
 MIT License
 
 ## 👥贡献
 欢迎提交 Issue 和 Pull Request！
+
+## 🙏 致谢与参考
+本项目参考了以下优秀开源项目的设计思想：
+- [muduo](https://github.com/chenshuo/muduo)：基于 Reactor 模型的经典 C++ 网络库，架构与事件驱动设计深受其影响
+- [handy](https://github.com/yedf2/handy)：简洁高效的 C++ 网络库，接口设计与实践提供重要参考
+
+yy 网络库在 muduo 的 one loop per thread 模型、handy 的简洁易用性基础上进行优化与扩展，在此深表感谢！
