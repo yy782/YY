@@ -22,15 +22,13 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 
 ### 高性能设计
 - **零拷贝缓冲区**：`readv` + 栈上 64KB 临时缓冲，一次系统调用读取所有数据
-- **CRTP 编译期多态**：替代虚函数，零开销抽象
+- **CRTP+SFINAE 编译期多态**：替代虚函数，零开销抽象
 - **无锁队列**：`RingBuffer` + 溢出队列，保证任务不丢失
 - **智能唤醒**：只在必要时唤醒事件循环，减少系统调用
 
 ### 高并发能力
 - **SO_REUSEPORT**：多 Acceptor 模式，内核级负载均衡
 - **对象池**：连接对象复用，减少 new/delete 开销
-- **连接池**：HTTP Keep-Alive，减少握手开销
-- **原子操作**：无锁计数，线程安全
 
 ### 现代 C++ 设计
 - **C++17 标准**：`string_view`、`std::any`、`std::atomic`
@@ -89,7 +87,6 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j4
 
-
 ## 📚示例程序
 所有示例位于 Net/NetTest/ 目录：
 
@@ -114,7 +111,6 @@ wrk -c 10000 -t 8 -d 30s http://127.0.0.1:8080/hello
 wrk -c 10000 -t 8 -d 30s http://127.0.0.1:8080/
 #### 🏗️ 设计亮点
 零拷贝缓冲区
-cpp
 ssize_t Buffer::readFd(int fd) {
     char extrabuf[65536];
     struct iovec vec[2];
@@ -125,7 +121,6 @@ ssize_t Buffer::readFd(int fd) {
     // 一次系统调用读尽可能多的数据
 }
 CRTP + SFINAE 接口检查
-cpp
 template<class PollerTag>
 class Poller {
     void poll(int timeout, HandlerList& handlers) {
@@ -134,7 +129,6 @@ class Poller {
     }
 };
 双队列任务系统
-cpp
 class EventLoop {
     RingBuffer<Functor> pendingFunctors_;      // 无锁主队列
     SafeVector<Functor> overflowQueue_;        // 溢出队列
@@ -145,7 +139,6 @@ class EventLoop {
     }
 };
 对象池优化
-cpp
 class ObjectPool<TcpConnectionPtr> {
     void expend(int num) {
         for (int i = 0; i < num; ++i) {
