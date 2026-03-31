@@ -8,7 +8,7 @@
 #ifndef _YY_NET_HTTP_HTTPCLIENT_H_
 #define _YY_NET_HTTP_HTTPCLIENT_H_
 #include "http.h"
-#include "../TcpClient.h"
+#include "../include/TcpClient.h"
 namespace yy 
 {
 namespace net 

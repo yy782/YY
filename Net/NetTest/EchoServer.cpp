@@ -13,10 +13,10 @@
 #include <algorithm>
 #include <thread>
 #include <vector>
-#include "../TcpServer.h"
-#include "../Codec.h"
+#include "../include/TcpServer.h"
+#include "../include/Codec.h"
 #include "../../Common/SyncLog.h"
-#include "../ConfigCenter.h"
+#include "../include/ConfigCenter.h"
 #include "../../Common/AsyncLog.h"
 #include "../../Common/SyncLog.h"
 #include <execinfo.h>

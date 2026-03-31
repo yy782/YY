@@ -1,6 +1,6 @@
-#include "../TcpClient.h"
-#include "../EventLoopThread.h"
-#include "../TimerQueue.h"
+#include "../include/TcpClient.h"
+#include "../include/EventLoopThread.h"
+#include "../include/TimerQueue.h"
 using namespace yy;
 using namespace yy::net;
 //./RetryConnectTest

@@ -3,7 +3,7 @@
 
 
 #include <google/protobuf/io/zero_copy_stream.h>
-#include "../TcpBuffer.h"
+#include "../include/TcpBuffer.h"
 namespace yy
 {
 namespace net

@@ -1,7 +1,7 @@
 #include <google/protobuf/io/zero_copy_stream.h>
 
-#include "../TcpClient.h"
-#include "../EventLoopThread.h"
+#include "../include/TcpClient.h"
+#include "../include/EventLoopThread.h"
 #include "student.pb.h"
 #include "../protobuf/ProtoMsg.h"
 #include <memory>

@@ -1,9 +1,9 @@
-#include "../TcpClient.h"
+#include "../include/TcpClient.h"
 #include <vector>
 #include <iostream>
 #include "../../Common/TimeStamp.h"
 #include <atomic>
-#include "../EventLoopThread.h"
+#include "../include/EventLoopThread.h"
 // ./TimerTestClient
 using namespace yy;
 using namespace yy::net;

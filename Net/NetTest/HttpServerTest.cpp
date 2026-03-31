@@ -1,10 +1,10 @@
-#include "../TcpServer.h"
+#include "../include/TcpServer.h"
 #include "../HTTP/http.h"
 #include <functional>
 #include <map>
 #include "../../Common/SyncLog.h"
 #include "../HTTP/HttpServer.h"
-#include "../TcpConPool.h"
+#include "../include/TcpConPool.h"
 #include <vector>
 #include <memory>
 using namespace yy;

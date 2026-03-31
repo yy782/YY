@@ -9,7 +9,7 @@
 #define _YY_NET_HTTP_HTTPSERVER_H_
 #include "http.h"
 #include "../../Common/LogFilter.h"
-#include "../TcpServer.h"
+#include "../include/TcpServer.h"
 namespace yy 
 {
 namespace net 

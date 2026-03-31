@@ -7,14 +7,14 @@
 #include <cstring>
 #include <random>
 
-#include "../EventLoop.h"
-#include "../EventLoopThreadPool.h"
-#include "../TcpClient.h"
-#include "../TcpConnection.h"
-#include "../InetAddress.h"
-#include "../ConfigCenter.h"
-#include "../TimerQueue.h"
-#include "../SignalHandler.h"
+#include "../include/EventLoop.h"
+#include "../include/EventLoopThreadPool.h"
+#include "../include/TcpClient.h"
+#include "../include/TcpConnection.h"
+#include "../include/InetAddress.h"
+#include "../include/ConfigCenter.h"
+#include "../include/TimerQueue.h"
+#include "../include/SignalHandler.h"
 using namespace yy;
 using namespace yy::net;
 //./PingPongClient 4 4096 100 60 0

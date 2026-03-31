@@ -1,8 +1,8 @@
 
 #include "UdpConnection.h"
-#include "../sockets.h"
-#include "../PollerType.h"
-#include "../Timer.h"
+#include "../include/sockets.h"
+#include "../include/PollerType.h"
+#include "../include/Timer.h"
 namespace yy 
 {
 namespace net 

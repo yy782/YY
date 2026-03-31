@@ -3,7 +3,7 @@
 
 #include <google/protobuf/io/zero_copy_stream.h>
 
-#include "../TcpServer.h"
+#include "../include/TcpServer.h"
 
 #include "student.pb.h"
 #include "../protobuf/ProtoMsg.h"

@@ -224,7 +224,7 @@ private:
     const char *pe_; ///< 字符串结束指针
 };
 
-stringPiece stringPiece::eatWord()
+inline stringPiece stringPiece::eatWord()
 {
     const char *b = pb_;
     while (b < pe_ && isspace(*b))
@@ -240,7 +240,7 @@ stringPiece stringPiece::eatWord()
     return stringPiece(b, e - b);
 }
 
-stringPiece stringPiece::eatLine()
+inline stringPiece stringPiece::eatLine()
 {
     const char *p = pb_;
     while (pb_ < pe_ && *pb_ != '\n' && *pb_ != '\r')
@@ -249,7 +249,7 @@ stringPiece stringPiece::eatLine()
     }
     return stringPiece(p, pb_ - p);
 }
-stringPiece &stringPiece::trimSpace()
+inline stringPiece &stringPiece::trimSpace()
 {
     while (pb_ < pe_ && isspace(*pb_))
         pb_++;
@@ -257,23 +257,23 @@ stringPiece &stringPiece::trimSpace()
         pe_--;
     return *this;
 }
-bool operator<(const stringPiece &x, const stringPiece &y)
+inline bool operator<(const stringPiece &x, const stringPiece &y)
 {
     return x.compare(y) < 0;
 }
 
 
-bool operator==(const stringPiece &x, const stringPiece &y)
+inline bool operator==(const stringPiece &x, const stringPiece &y)
 {
     return ((x.size() == y.size()) && (memcmp(x.data(), y.data(), x.size()) == 0));
 }
 
-bool operator!=(const stringPiece &x, const stringPiece &y)
+inline bool operator!=(const stringPiece &x, const stringPiece &y)
 {
     return !(x == y);
 }
 
-int stringPiece::compare(const stringPiece &b) const
+inline int stringPiece::compare(const stringPiece &b) const
 {
     size_t sz = size(), bsz = b.size();
     const size_t min_len = (sz < bsz) ? sz : bsz;
@@ -289,7 +289,7 @@ int stringPiece::compare(const stringPiece &b) const
 }
 
 
-std::vector<stringPiece> stringPiece::split(char ch) const
+inline std::vector<stringPiece> stringPiece::split(char ch) const
 {
     std::vector<stringPiece> r;
     const char *pb = pb_;

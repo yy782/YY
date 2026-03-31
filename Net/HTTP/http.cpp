@@ -125,7 +125,7 @@ ParseResult HttpMsg::tryDecode_(stringPiece buf,bool copyBody,stringPiece* line1
 }
 
 
-HttpRequest::HttpRequest():complete_(Method::UNKNOWN)
+HttpRequest::HttpRequest()
 {
     clear();
 }

@@ -1,7 +1,7 @@
 
-#include "../TcpServer.h"
-#include "../TimerWheel.h"
-#include "../TimerQueue.h"
+#include "../include/TcpServer.h"
+#include "../include/TimerWheel.h"
+#include "../include/TimerQueue.h"
 #include "../../Common/SyncLog.h"
 using namespace yy;
 using namespace yy::net;

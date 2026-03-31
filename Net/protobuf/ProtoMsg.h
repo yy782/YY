@@ -1,7 +1,7 @@
 #ifndef YY_NET_PROTOBUF_PROTOMSG_H_
 #define YY_NET_PROTOBUF_PROTOMSG_H_
 #include <google/protobuf/message.h>
-#include "../TcpConnection.h"
+#include "../include/TcpConnection.h"
 #include <map>
 
 namespace yy

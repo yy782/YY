@@ -1,9 +1,9 @@
 #include <string.h>
 #include <unistd.h>
-#include "../TcpClient.h"
-#include "../Codec.h"
-#include "../ConfigCenter.h"
-#include "../EventLoopThread.h"
+#include "../include/TcpClient.h"
+#include "../include/Codec.h"
+#include "../include/ConfigCenter.h"
+#include "../include/EventLoopThread.h"
 using namespace yy;
 using namespace yy::net;
 int MsgCount=0;

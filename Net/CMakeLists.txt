@@ -3,13 +3,13 @@ project(net)
 
 find_package(Protobuf REQUIRED)
 
-file(GLOB SOURSE ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB SOURSE ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 add_library(net ${SOURSE})
 
 target_include_directories(net 
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${Protobuf_INCLUDE_DIRS}
 )
 
