@@ -52,7 +52,6 @@ public:
     {
         static_assert(has_poll_v<PollerTag>,"成员不存在");
         return static_cast<PollerTag*>(this).poll(timeout,handler);
-        // @note 这里不能值转换，会创建新的对象
     }
     
     /**
@@ -281,13 +280,7 @@ public:
     constexpr static bool has_update_listen_v=decltype(has_update_listen<T>(0))::value;
 };
 
-/**
- * @brief 获取事件处理器
- * 
- * @tparam PollerTag 轮询器标签类型
- * @param fd 文件描述符
- * @return EventHandler* 事件处理器
- */
+
 template<class PollerTag>
 EventHandler* Poller<PollerTag>::get_event_handler(int fd)
 {
@@ -298,12 +291,7 @@ EventHandler* Poller<PollerTag>::get_event_handler(int fd)
     return handler;
 }
 
-/**
- * @brief 添加处理器
- * 
- * @tparam PollerTag 轮询器标签类型
- * @param handler 事件处理器
- */
+
 template<class PollerTag>
 void Poller<PollerTag>::add_handler(EventHandler* handler)
 {
@@ -311,12 +299,7 @@ void Poller<PollerTag>::add_handler(EventHandler* handler)
     handlers_[handler->fd()]=handler;
 }
 
-/**
- * @brief 移除处理器
- * 
- * @tparam PollerTag 轮询器标签类型
- * @param handler 事件处理器
- */
+
 template<class PollerTag>
 void Poller<PollerTag>::remove_handler(EventHandler* handler)
 {
@@ -329,13 +312,7 @@ void Poller<PollerTag>::remove_handler(EventHandler* handler)
 #endif
 }
 
-/**
- * @brief 检查是否有处理器
- * 
- * @tparam PollerTag 轮询器标签类型
- * @param event_handler 事件处理器
- * @return bool 是否有处理器
- */
+
 template<class PollerTag>
 bool Poller<PollerTag>::has_handler(EventHandler* event_handler)
 {

@@ -17,8 +17,8 @@ void HttpMsg::clear()
 {
     headers_.clear();
     version_="HTTP/1.1";
-    body_.clear();              // 修正：加下划线
-    bodyView_=stringPiece();  // 修正：加下划线
+    body_.clear();              
+    bodyView_=stringPiece();  
     complete_=false;
     contentLen_=0;
     scanned_=0;
@@ -125,10 +125,12 @@ ParseResult HttpMsg::tryDecode_(stringPiece buf,bool copyBody,stringPiece* line1
 }
 
 
-HttpRequest::HttpRequest()
+HttpRequest::HttpRequest():
+method_(Method::UNKNOWN)
 {
     clear();
 }
+
 
 std::string HttpRequest::getArg(const std::string& name)
 {
