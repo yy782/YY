@@ -85,7 +85,9 @@ else()
         ${ASAN_FLAGS}          # 添加 ASan 标志 
     )
 endif()    
-
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_link_options(-s)   
+endif()
 add_subdirectory(Common)
 add_subdirectory(MemoryPool)
 add_subdirectory(ThreadPool)

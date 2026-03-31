@@ -55,7 +55,7 @@ public:
     TcpConnectionPtr acquire(int fd,const Address& addr,EventLoop* loop)
     {
         assert(loop->id()==id_);
-
+        assert(fd>0);
         if(free_list_.empty())
         {
             expend(ExpendNum);

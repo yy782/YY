@@ -24,7 +24,7 @@ revents_(Event(LogicEvent::None))
 }
 void EventHandler::init(int fd,EventLoop* loop,const std::string& addInformation)
 {
-    assert(fd_==-1);
+    //assert(fd_==-1);
     assert(fd!=-1);
     assert(loop);
     loop_=loop;

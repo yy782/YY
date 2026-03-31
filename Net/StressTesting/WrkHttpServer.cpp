@@ -6,7 +6,7 @@
 using namespace yy;
 using namespace yy::net;
 using namespace yy::net::Http;
-
+//cd programs/yy/Net/StressTesting
 //./WrkHttpServer
 extern char favicon[555];
 // int main()
@@ -16,10 +16,10 @@ extern char favicon[555];
 int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
-    SyncLog::getInstance("../Log.log").getFilter() 
-    .set_global_level(LOG_LEVEL_WARN)
-    .set_module_enabled("LOOP") 
-    ;
+    // SyncLog::getInstance("../Log.log").getFilter() 
+    // .set_global_level(LOG_LEVEL_ERROR)
+    // .set_module_enabled("LOOP") 
+    // ;
     bool isET=true;
     bool useConPool=true;
     Address serveraddr(8080,true);
@@ -27,10 +27,10 @@ int main(int argc, char* argv[])
     int AcceptorNum=2;
     if (argc>1)
     {
-        numThreads =std::atoi(argv[2]);
-        AcceptorNum=std::atoi(argv[3]);
-        isET=(atoi(argv[4])==1?true:false);
-        useConPool=(atoi(argv[5])==1?true:false);
+        numThreads =std::atoi(argv[1]);
+        AcceptorNum=std::atoi(argv[2]);
+        isET=(atoi(argv[3])==1?true:false);
+        useConPool=(atoi(argv[4])==1?true:false);
     }
     Event event=(isET)?Event(LogicEvent::Read|LogicEvent::Edge):Event(LogicEvent::Read);
     HTTPServer ser(serveraddr,AcceptorNum,numThreads);
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 }
     
     
-
+//wrk -c 100000 -t 8 -d 30s http://127.0.0.1:8080/
 
 char favicon[555] = {
   '\x89', 'P', 'N', 'G', '\xD', '\xA', '\x1A', '\xA',
