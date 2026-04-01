@@ -5,7 +5,6 @@
 [![Linux](https://img.shields.io/badge/Linux-3.9+-green.svg)](https://www.kernel.org/)
 
 yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per thread** 模型，支持 **千万级并发连接**。性能测试显示，HTTP 服务器在 8 核机器上可达 **37 万 QPS**。
-
 ---
 
 ## 🚀 性能数据
