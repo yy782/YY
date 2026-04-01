@@ -27,7 +27,7 @@ namespace net
  * 
  * 用于接受新的TCP连接。
  */
-
+const int AcceptorinitialId=1000;
 class TcpServer;
 
 class Acceptor:noncopyable
@@ -46,7 +46,7 @@ public:
      * @param Ser 所属的TcpServer
      * @param id 接受器ID
      */
-    Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser,int id=-1);
+    Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser);
     
     /**
      * @brief 析构函数
@@ -100,10 +100,7 @@ private:
      * @brief 地址
      */
     const Address& addr_;// inOne
-    /**
-     * @brief 接受器ID
-     */
-    const int id_;
+
     /**
      * @brief 事件循环
      */

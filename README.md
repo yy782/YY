@@ -23,8 +23,7 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 ### 高性能设计
 - **零拷贝缓冲区**：`readv` + 栈上 64KB 临时缓冲，一次系统调用读取所有数据
 - **CRTP+SFINAE 编译期多态**：替代虚函数，零开销抽象
-- **无锁队列**：`RingBuffer` + 溢出队列，保证任务不丢失
-- **智能唤醒**：只在必要时唤醒事件循环，减少系统调用
+- **无锁队列**：`MCMP无锁缓冲区` + 溢出队列，保证性能的同时保证任务不丢失
 - **支持ET,LT模式**: 业务创建对象，选择对象创建方式，直接创建还是对象池
 
 ### 高并发能力
@@ -35,7 +34,6 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 - **C++17 标准**：`string_view`、`std::any`、`std::atomic`
 - **RAII 资源管理**：智能指针 + 自动关闭
 - **模板精度定时器**：编译期确定时间单位，零运行时开销
-- **类型安全回调**：强类型，编译期检查
 
 ### 完整协议支持
 - **HTTP/1.1**：完整的请求/响应解析，支持 Keep-Alive、100 Continue
@@ -51,8 +49,7 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 |------|------|------|
 | **操作系统** | Linux 3.9+ | 需要 `SO_REUSEPORT` 支持 |
 | **编译器** | GCC 7.0+ / Clang 6.0+ | 需要完整 C++17 支持 |
-| **Boost** | 1.83+ | 用于 `concurrent_flat_set` 等 |
-| **Python** | 3.6+ | 用于配置生成工具 |
+| **Boost** | 1.83+ | 用于 `concurrent_flat_set`  |
 
 
 ## 📁目录结构
@@ -70,11 +67,10 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 * `MemoryPool/` - 内存池实现
 
 ## 🎯快速开始
-# 克隆项目
+
+=======
 - git clone https://github.com/yourname/yy.git
 - cd yy
-
-# 构建
 - mkdir build && cd build
 - cmake -DCMAKE_BUILD_TYPE=Release ..
 - make -j4
@@ -91,9 +87,9 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 - RetryConnectTest        自动重连机制
 - CurcularQueueTest       无锁队列安全测试
 ## 📊性能测试
-使用 wrk 进行压力测试：
+- 使用 wrk 进行压力测试：
 
-./bin/HttpServer 4 4 0 1 &
+- ./bin/HttpServer 4 4 0 1 &
 
 ### 测试 /hello 端点
 wrk -c 10000 -t 8 -d 30s http://127.0.0.1:8080/hello

@@ -10,7 +10,7 @@ namespace net
 class AcceptorPool:noncopyable
 {
 public:
-    typedef Acceptor::ServicesConnectedCallBack ServicesConnectedCallBack ;
+    typedef Acceptor::ServicesConnectedCallBack ServicesConnectedCallBack;
      explicit AcceptorPool(const Address& addr,TcpServer* Ser,int num):
      addr_(addr),
      Ser_(Ser)
@@ -18,7 +18,7 @@ public:
         threads_.reserve(num);
         for(int i=0;i<num;++i)
         {
-            threads_.emplace_back(std::make_unique<EventLoopThread>(i+1+1000));
+            threads_.emplace_back(std::make_unique<EventLoopThread>(i+AcceptorinitialId));
         }
         acceptors_.reserve(num);       
      }
@@ -40,7 +40,7 @@ public:
         for(size_t i=0;i<threads_.size();++i)
         {
             auto loop=threads_[i]->run();
-            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,loop,Ser_,i));
+            acceptors_.emplace_back(std::make_unique<Acceptor>(addr_,loop,Ser_));
             acceptors_[i]->setNewConnectCallBack(SconnectCallBack_);
             acceptors_[i]->listen();
         }

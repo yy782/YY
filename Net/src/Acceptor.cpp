@@ -5,11 +5,10 @@ namespace yy
 {
 namespace net
 {
-Acceptor::Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser,int id)://主线程构造
+Acceptor::Acceptor(const Address& addr,EventLoop* loop,TcpServer* Ser)://主线程构造
 addr_(addr),
-id_(id),
 loop_(loop),
-handler_(sockets::createTcpSocketOrDie(addr.family()),loop_,std::string("AcceptorID:"+std::to_string(id)+" AddListen"),Event(LogicEvent::Read|LogicEvent::Edge)),
+handler_(sockets::createTcpSocketOrDie(addr.family()),loop_,std::string("AcceptorID:"+std::to_string(loop_->id()-AcceptorinitialId)+" AddListen"),Event(LogicEvent::Read|LogicEvent::Edge)),
 idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC)),
 Ser_(Ser)
 {
@@ -55,7 +54,7 @@ void Acceptor::NewConnection(int fd,const Address& addr)
         });
         assert(!connects_.contains(conn));
         connects_.insert(conn);         
-    },std::string("AcceptorID:"+std::to_string(id_)+" NewConnection"));
+    },std::string("AcceptorID:"+std::to_string(loop_->id()-AcceptorinitialId)+" NewConnection"));
     
 }
 void Acceptor::removeConnection(TcpConnectionPtr conn)
