@@ -53,6 +53,5 @@ threadpool_test_output/
 Net/protobuf/*.pb.h
 Net/protobuf/*.pb.cc
 
-# 脚本输出
-*.pyc
+
 

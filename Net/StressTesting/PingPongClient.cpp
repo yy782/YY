@@ -244,10 +244,10 @@ void Session<isET>::handleClose()
 int main(int argc, char* argv[])
 {
     Signal::signal(SIGPIPE,[](){});
-    SyncLog::getInstance("../CliLog.log").getFilter() 
-      .set_global_level(LOG_LEVEL_WARN)
+    // SyncLog::getInstance("../CliLog.log").getFilter() 
+    //   .set_global_level(LOG_LEVEL_WARN)
 
-      ; 
+    //   ; 
       
       
         // SyncLog::getInstance("../CliLog.log").getFilter() 

@@ -22,7 +22,7 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 ### 高性能设计
 - **零拷贝缓冲区**：`readv` + 栈上 64KB 临时缓冲，一次系统调用读取所有数据
 - **CRTP+SFINAE 编译期多态**：替代虚函数，零开销抽象
-- **无锁队列**：`MCMP无锁缓冲区` + 溢出队列，保证性能的同时保证任务不丢失
+- **MPMC无锁环形队列**：`MCMP无锁缓冲区` + 溢出队列，保证性能的同时保证任务不丢失
 - **支持ET,LT模式**: 业务创建对象，选择对象创建方式，直接创建还是对象池
 
 ### 高并发能力
@@ -163,5 +163,7 @@ MIT License
 本项目参考了以下优秀开源项目的设计思想：
 - [muduo](https://github.com/chenshuo/muduo)：基于 Reactor 模型的经典 C++ 网络库，架构与事件驱动设计深受其影响
 - [handy](https://github.com/yedf2/handy)：简洁高效的 C++ 网络库，接口设计与实践提供重要参考
-
-yy 网络库在 muduo 的 one loop per thread 模型、handy 的简洁易用性基础上进行优化与扩展，在此深表感谢！
+- [concurrentqueue](https://github.com/cameron314/concurrentqueue): 性能强悍的无锁队列，可集成到任务队列中
+yy 网络库在 muduo 的 one loop per thread 模型、handy 的简洁易用性基础上进行优化与扩展，
+用concurrentqueue组件集成开发,
+在此深表感谢！

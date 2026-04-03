@@ -21,7 +21,7 @@ namespace Http
  * 
  * HTTPServer用于处理HTTP请求并返回HTTP响应，支持GET、POST、PUT、DELETE等HTTP方法。
  */
-class HTTPServer 
+class HttpServer 
 {
 public:
     /**
@@ -39,7 +39,7 @@ public:
      * @param AcceptorNum 接收器数量
      * @param WorkThreadnum 工作线程数量
      */
-    HTTPServer(const Address& addr,int AcceptorNum,int WorkThreadnum): 
+    HttpServer(const Address& addr,int AcceptorNum,int WorkThreadnum): 
     server_(addr,AcceptorNum,WorkThreadnum)
         {
         
@@ -133,7 +133,7 @@ public:
     /**
      * @brief 析构函数
      */
-    ~HTTPServer() {
+    ~HttpServer() {
         LOG_SYSTEM_INFO("HTTP server stop!");
     }
 

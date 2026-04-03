@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         useConPool=(atoi(argv[4])==1?true:false);
     }
     Event event=(isET)?Event(LogicEvent::Read|LogicEvent::Edge):Event(LogicEvent::Read);
-    HTTPServer ser(serveraddr,AcceptorNum,numThreads);
+    HttpServer ser(serveraddr,AcceptorNum,numThreads);
     std::vector<std::unique_ptr<TcpConPool>> conPools;
     if(useConPool)
     {

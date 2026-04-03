@@ -15,7 +15,7 @@ using namespace yy::net::Http;
 int main() {
     EventLoop loop;
     Address serveraddr(8080,true);
-    HTTPServer server(serveraddr,1,2);
+    HttpServer server(serveraddr,1,2);
     server.setConCallback([](int Cfd,const Address& Caddr,EventLoop* Cloop){
         auto conn=TcpConnection::accept(Cfd,Caddr,Cloop,Event(LogicEvent::Read));
         LOG_SYSTEM_INFO("HTTP connection! " << Caddr.sockaddrToString());
