@@ -48,7 +48,7 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
 |------|------|------|
 | **操作系统** | Linux 3.9+ | 需要 `SO_REUSEPORT` 支持 |
 | **编译器** | GCC 7.0+ / Clang 6.0+ | 需要完整 C++17 支持 |
-| **Boost** | 1.83+ | 用于 `concurrent_flat_set`  |
+
 
 
 ## 📁目录结构
@@ -63,7 +63,6 @@ yy 是一个基于 epoll 的高性能 C++17 网络库，采用 **one loop per th
   * `src/` - 源文件目录
 * `Common/` - 公共工具（日志、配置等）
 * `ThreadPool/` - 线程池实现
-* `MemoryPool/` - 内存池实现
 
 ## 🎯快速开始
 
@@ -120,18 +119,6 @@ class Poller {
     void poll(int timeout, HandlerList& handlers) {
         static_assert(has_poll_v<PollerTag>, "派生类必须实现 poll()");
         return static_cast<PollerTag*>(this).poll(timeout, handlers);
-    }
-};
-```
-#### 双队列任务系统
-```cpp
-class EventLoop {
-    RingBuffer<Functor> pendingFunctors_;      // 无锁主队列
-    SafeVector<Functor> overflowQueue_;        // 溢出队列
-    
-    void doPendingFunctors() {
-        // 先处理主队列（最多 n 个）
-        // 再处理溢出队列
     }
 };
 ```

@@ -50,20 +50,21 @@ void Acceptor::NewConnection(int fd,const Address& addr)
         auto conn=SconnectCallBack_(fd,addr,loop);
         conn->setDestructorCallBack([this](TcpConnectionPtr con)
         {
-            removeConnection(con);
+            loop_->submit([this,con]()
+            {
+                removeConnection(con);
+            }, std::string("AcceptorID:"+std::to_string(loop_->id()-AcceptorinitialId)+" RemoveConnection"));
         });
-        assert(!connects_.contains(conn));
-        connects_.insert(conn);         
+        //assert(!connects_.contains(conn));
+        loop_->submit([this,conn]()
+        {
+            connects_.insert(conn);
+        }, std::string("AcceptorID:"+std::to_string(loop_->id()-AcceptorinitialId)+" NewConnection"));
     },std::string("AcceptorID:"+std::to_string(loop_->id()-AcceptorinitialId)+" NewConnection"));
-    
 }
 void Acceptor::removeConnection(TcpConnectionPtr conn)
 {
-    assert(conn->loop()->isInLoopThread()); 
-    // loop_->submit([this,conn](){//////////////////connects_是公共数据结构 会导致死锁，accept线程向IO池提交连接，IO池向accept线程移除连接
-    //     assert(connects_.find(conn)!=connects_.end());
-    //     connects_.erase(conn);
-    // });
+    assert(loop_->isInLoopThread());
     connects_.erase(conn);
 }
 Acceptor::~Acceptor() // 确保acceptor的生命周期比loop长

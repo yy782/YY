@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <functional>
 #include <memory>
-#include <boost/unordered/concurrent_flat_set.hpp>
+#include <unordered_set>
 namespace yy
 {
 namespace net
@@ -37,7 +37,8 @@ public:
      * @brief 新连接回调函数类型
      */
     typedef std::function<TcpConnectionPtr(int fd,const Address& addr,EventLoop* loop)> ServicesConnectedCallBack;
-    typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
+    //typedef  boost::concurrent_flat_set<std::shared_ptr<TcpConnection>> ConnectMap;
+    typedef std::unordered_set<TcpConnectionPtr> ConnectMap;
     /**
      * @brief 构造函数
      * 
