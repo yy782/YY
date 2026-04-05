@@ -13,6 +13,7 @@
 #include "noncopyable.h"
 #include <queue>
 #include <assert.h>
+#include "utils.hpp"
 namespace yy{
 class sem
 {
@@ -109,55 +110,170 @@ private:
     pthread_cond_t m_cond;
 };
 
-
-
-
-
-
-
-
-class Thread:noncopyable 
-{    
-public:
-    typedef std::thread::id Pid_t;
-    typedef std::function<void()> Functor;
-    Thread()=default;
-    //void setFunctor(Functor cb){functor_=std::move(cb);}
-    ~Thread()
-    { // @note 这是最后的保证，但是尽量在类的构析函数调用join()接口，而不是等他自然构析
-        assert(!joinable()); // 要求上层必须自己join,清理资源 
-    }
-    void run(Functor cb)
-    {
-        thread_=std::thread([func=std::move(cb)](){try{
-            func();
-        }
-        catch(const std::exception& e)
-        {
-            assert(e.what());
-        }});
-    }   
-    bool joinable()const noexcept
-    {
-        return thread_.joinable();
-    }
-    void join()
-    {
-        thread_.join();
+// class Thread:noncopyable 
+// {    
+// public:
+//     typedef std::thread::id Pid_t;
+//     typedef std::function<void()> Functor;
+//     Thread()=default;
+//     //void setFunctor(Functor cb){functor_=std::move(cb);}
+//     ~Thread()
+//     { // @note 这是最后的保证，但是尽量在类的构析函数调用join()接口，而不是等他自然构析
+//         assert(!joinable()); // 要求上层必须自己join,清理资源 
+//     }
+//     void run(Functor cb)
+//     {
+//         thread_=std::thread([func=std::move(cb)](){try{
+//             func();
+//         }
+//         catch(const std::exception& e)
+//         {
+//             assert(e.what());
+//         }});
+//     }   
+//     bool joinable()const noexcept
+//     {
+//         return thread_.joinable();
+//     }
+//     void join()
+//     {
+//         thread_.join();
        
+//     }
+//     void detach()
+//     {
+//         thread_.detach();
+//     }
+//     static bool isSelf(const Pid_t& pid) noexcept
+//     {
+//         return pid==std::this_thread::get_id();
+//     }
+//     Pid_t static getId() noexcept{return std::this_thread::get_id();}
+// private:
+//     std::thread thread_;
+// };
+
+class Thread;
+inline static thread_local Thread *cur_thread = nullptr;
+inline static thread_local std::string cur_thread_name = "UNKNOW";
+
+class Thread :noncopyable {
+public:
+    typedef std::shared_ptr<Thread> ptr;
+    typedef pid_t Pid_t;
+    typedef std::function<void()> Functor;
+
+    Thread(const std::string &name = "UNKNOW") : name_(name) {
+        CondPanic(name_.size() < 16);
     }
-    void detach()
-    {
-        thread_.detach();
+    Thread(Functor cb, const std::string &name = "UNKNOW") : cb_(cb), name_(name) {
+        CondPanic(name_.size() < 16);
+        int rt = pthread_create(&thread_, nullptr, &Thread::run, this);
+        if (rt) {
+            std::cout << "pthread_create error,name:" << name_ << std::endl;
+            throw std::logic_error("pthread_create");
+        }
     }
-    static bool isSelf(const Pid_t& pid) noexcept
-    {
-        return pid==std::this_thread::get_id();
+
+    ~Thread() {
+        if (thread_) {
+            pthread_detach(thread_);
+        }
     }
-    Pid_t static getId() noexcept{return std::this_thread::get_id();}
+
+    // 非静态函数全部留在类里面不动
+    void join() {
+        if (thread_) {
+            int rt = pthread_join(thread_, nullptr);
+            if (rt) {
+                std::cout << "pthread_join error,name:" << name_ << std::endl;
+                throw std::logic_error("pthread_join");
+            }
+            thread_ = 0;
+        }
+    }
+
+    void detach() {
+        if (thread_) {
+            int rt = pthread_detach(thread_);
+            if (rt) {
+                std::cout << "pthread_detach error,name:" << name_ << std::endl;
+                throw std::logic_error("pthread_detach");
+            }
+            thread_ = 0;
+        }
+    }
+
+    bool joinable() {
+        return thread_ != 0;
+    }
+
+    const std::string &Name() const {
+        return name_;
+    }
+
+    void run(Functor cb) {
+        cb_ = cb;
+        int rt = pthread_create(&thread_, nullptr, &Thread::run, this);
+        if (rt) {
+            std::cout << "pthread_create error,name:" << name_ << std::endl;
+            throw std::logic_error("pthread_create");
+        }
+    }
+  //static const std::string &GetName() { return cur_thread_name; }
+  // static void SetName(const std::string &name){
+  //   if (name.empty()) {
+  //     return;
+  //   }
+  //   if (cur_thread) {
+  //     cur_thread->name_ = name;
+  //   }
+  //   cur_thread_name = name;
+  // }
+    static Thread *GetThis();
+    static bool isSelf(const Pid_t &pid) noexcept;
+    static Pid_t getId() noexcept;
+    static void *run(void *args);
+
 private:
-    std::thread thread_;
+    Thread(const Thread &&) = delete;
+
+    Pid_t id_;
+    pthread_t thread_ = 0;
+    Functor cb_;
+    std::string name_;
 };
+
+inline Thread *Thread::GetThis() {
+    return cur_thread;
+}
+
+inline bool Thread::isSelf(const Pid_t &pid) noexcept {
+    return pid == gettid();
+}
+
+inline Thread::Pid_t Thread::getId() noexcept {
+    return gettid();
+}
+
+inline void *Thread::run(void *args) {
+    Thread *thread = static_cast<Thread *>(args);
+    cur_thread = thread;
+    cur_thread_name = thread->name_;
+    thread->id_ = Thread::getId();
+    pthread_setname_np(pthread_self(), thread->name_.substr(0, 15).c_str());
+    Functor cb;
+    cb.swap(thread->cb_);
+    cb();
+    return nullptr;
+}
+
+
+
+
+
+
+
 
 class FairMutex {
 public:
