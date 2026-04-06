@@ -13,7 +13,7 @@
 #include "noncopyable.h"
 #include <queue>
 #include <assert.h>
-#include "utils.hpp"
+#include "Debug.hpp"
 namespace yy{
 class sem
 {
@@ -208,10 +208,9 @@ public:
         return thread_ != 0;
     }
 
-    const std::string &Name() const {
+    const std::string &getName() const {
         return name_;
     }
-
     void run(Functor cb) {
         cb_ = cb;
         int rt = pthread_create(&thread_, nullptr, &Thread::run, this);
@@ -234,7 +233,8 @@ public:
     static bool isSelf(const Pid_t &pid) noexcept;
     static Pid_t getId() noexcept;
     static void *run(void *args);
-
+  static const std::string &GetName();
+  static void SetName(const std::string &name);
 private:
     Thread(const Thread &&) = delete;
 
@@ -269,7 +269,17 @@ inline void *Thread::run(void *args) {
 }
 
 
+inline const std::string &Thread::GetName() { return cur_thread_name; }
 
+inline void Thread::SetName(const std::string &name) {
+  if (name.empty()) {
+    return;
+  }
+  if (cur_thread) {
+    cur_thread->name_ = name;
+  }
+  cur_thread_name = name;
+}
 
 
 

@@ -1,5 +1,5 @@
-#ifndef __MONSOON_UTIL_H__
-#define __MONSOON_UTIL_H__
+#ifndef __YY_DEBUG_H__
+#define __YY_DEBUG_H__
 
 #include <assert.h>
 #include <cxxabi.h>
@@ -17,17 +17,13 @@
 
 namespace yy {
 
-u_int32_t GetFiberId() {
-  // TODO
-  return 0;
-}
 // 获取当前启动的毫秒数
 // 系统从启动到当前时刻的毫秒数
-static uint64_t GetElapsedMS() {
-  struct timespec ts = {0};
-  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-  return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
+// static uint64_t GetElapsedMS() {
+//   struct timespec ts = {0};
+//   clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+//   return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+// }
 
 // 将原始函数名解析为可读函数名
 static std::string demangle(const char *str) {

@@ -6,12 +6,12 @@
 #include "../Common/noncopyable.h"
 #include "../Common/TimeStamp.h"
 #include <atomic>
-#include "../Common/Types.h"
+
 namespace yy
 {
 namespace net
 {
-
+struct Base;
 /**
  * @file Timer.h
  * @brief 定时器类的定义
