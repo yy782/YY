@@ -27,7 +27,7 @@ namespace net
  * 
  * 用于接受新的TCP连接。
  */
-const int AcceptorinitialId=1000;
+const int AcceptorinitialId=100;
 class TcpServer;
 
 class Acceptor:noncopyable
