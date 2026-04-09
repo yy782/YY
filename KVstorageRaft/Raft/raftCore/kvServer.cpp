@@ -374,15 +374,14 @@ void KvServer::Get(google::protobuf::RpcController *controller, const ::raftKVRp
   done->Run();
 }
 
-KvServer::KvServer(int me, int maxraftstate, std::string nodeInforFileName, short port) : m_skipList(6) {
+KvServer::KvServer(int me, int maxraftstate, std::string nodeInforFileName, short port) : 
+m_skipList(6),
+m_me(me),  
+m_maxRaftState(maxraftstate),
+applyChan(std::make_shared<LockQueue<ApplyMsg> >()),
+m_raftNode(std::make_shared<Raft>()) 
+{
   std::shared_ptr<Persister> persister = std::make_shared<Persister>(me);
-
-  m_me = me;
-  m_maxRaftState = maxraftstate;
-
-  applyChan = std::make_shared<LockQueue<ApplyMsg> >();
-
-  m_raftNode = std::make_shared<Raft>();
   ////////////////clerk层面 kvserver开启rpc接受功能
   //    同时raft与raft节点之间也要开启rpc功能，因此有两个注册
   std::thread t([this, port]() -> void {

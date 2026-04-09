@@ -77,27 +77,27 @@ void Clerk::Append(std::string key, std::string value) { PutAppend(key, value, "
 //初始化客户端
 void Clerk::Init(std::string configFileName) {
   //获取所有raft节点ip、port ，并进行连接
-  MprpcConfig config;
-  config.LoadConfigFile(configFileName.c_str());
-  std::vector<std::pair<std::string, short>> ipPortVt;
-  for (int i = 0; i < INT_MAX - 1; ++i) {
-    std::string node = "node" + std::to_string(i);
+  // MprpcConfig config;//////////////////////////////////////////////////////////////////
+  // config.LoadConfigFile(configFileName.c_str());
+  // std::vector<std::pair<std::string, short>> ipPortVt;
+  // for (int i = 0; i < INT_MAX - 1; ++i) {
+  //   std::string node = "node" + std::to_string(i);
 
-    std::string nodeIp = config.Load(node + "ip");
-    std::string nodePortStr = config.Load(node + "port");
-    if (nodeIp.empty()) {
-      break;
-    }
-    ipPortVt.emplace_back(nodeIp, atoi(nodePortStr.c_str()));  //沒有atos方法，可以考慮自己实现
-  }
-  //进行连接
-  for (const auto& item : ipPortVt) {
-    std::string ip = item.first;
-    short port = item.second;
-    // 2024-01-04 todo：bug fix
-    auto* rpc = new raftServerRpcUtil(ip, port);
-    m_servers.push_back(std::shared_ptr<raftServerRpcUtil>(rpc));
-  }
+  //   std::string nodeIp = config.Load(node + "ip");
+  //   std::string nodePortStr = config.Load(node + "port");
+  //   if (nodeIp.empty()) {
+  //     break;
+  //   }
+  //   ipPortVt.emplace_back(nodeIp, atoi(nodePortStr.c_str()));  //沒有atos方法，可以考慮自己实现
+  // }
+  // //进行连接
+  // for (const auto& item : ipPortVt) {
+  //   std::string ip = item.first;
+  //   short port = item.second;
+  //   // 2024-01-04 todo：bug fix
+  //   auto* rpc = new raftServerRpcUtil(ip, port);
+  //   m_servers.push_back(std::shared_ptr<raftServerRpcUtil>(rpc));
+  // }
 }
 
 Clerk::Clerk() : m_clientId(Uuid()), m_requestId(0), m_recentLeaderId(0) {}

@@ -65,8 +65,8 @@
 /// - AppNormal：网络正常，节点间可以正常通信
 ///
 /// todo：可以在rpc中删除该字段，实际生产中是用不到的.
-constexpr int Disconnected =
-    0;  // 方便网络分区的时候debug，网络异常的时候为disconnected，只要网络正常就为AppNormal，防止matchIndex[]数组异常减小
+constexpr int Disconnected =0;  
+// 方便网络分区的时候debug，网络异常的时候为disconnected，只要网络正常就为AppNormal，防止matchIndex[]数组异常减小
 constexpr int AppNormal = 1;
 
 ///////////////投票状态
