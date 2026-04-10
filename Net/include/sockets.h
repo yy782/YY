@@ -198,6 +198,10 @@ bool setSocketBufferSize(int fd,size_t BufSize);
  */
 void reuseAddrOrDie(int fd,bool on=true);
 
+bool isReleasePort(unsigned short usPort);
+
+bool getReleasePort(short &port);
+
 /**
  * @brief 设置非阻塞
  * 

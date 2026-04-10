@@ -45,6 +45,8 @@
 #include "kvServerRPC.pb.h"
 #include "mprpcconfig.h"
 
+namespace yy 
+{
 /**
  * @class Clerk
  * @brief KV存储客户端
@@ -293,5 +295,5 @@ class Clerk {
    */
   Clerk();
 };
-
+}
 #endif  // SKIP_LIST_ON_RAFT_CLERK_H

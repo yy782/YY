@@ -40,6 +40,7 @@
 
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/serialization.hpp>
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -48,15 +49,19 @@
 #include <string>
 #include <thread>
 #include <vector>
+
 #include "ApplyMsg.h"
 #include "Persister.h"
 #include "boost/any.hpp"
-#include "boost/serialization/serialization.hpp"
-#include "config.h"
-#include "monsoon.h"
-#include "raftRpcUtil.h"
-#include "util.h"
 
+#include "raftRpcUtil.hpp"
+#include "Op.hpp"
+#include "LockQueue.hpp"
+
+namespace yy 
+{
+namespace raft 
+{
 /// @brief 网络状态表示
 /// @details
 ///
@@ -223,7 +228,7 @@ class Raft : public raftRpcProctoc::raftRpc {
   // m_ioManager：IO管理器，用于协程调度
   // 这个项目使用了协程来处理异步IO操作
   // IOManager负责协程的调度和执行
-  std::unique_ptr<yy::IOManager> m_ioManager = nullptr;
+  //std::unique_ptr<yy::IOManager> m_ioManager = nullptr;
 
  public:
   /**
@@ -695,7 +700,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 领导者将命令追加到日志，复制到跟随者
    * 当日志被提交时，上层应用可以应用到状态机
    */
-  void Start(Op command, int *newLogIndex, int *newLogTerm, bool *isLeader);
+  void Propose(Op command, int *newLogIndex, int *newLogTerm, bool *isLeader);
 
   /**
    * @brief 创建快照
@@ -827,5 +832,6 @@ class Raft : public raftRpcProctoc::raftRpc {
    public:
   };
 };
-
+}  // namespace yy
+}
 #endif  // RAFT_H

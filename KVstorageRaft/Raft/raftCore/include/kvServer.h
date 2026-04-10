@@ -51,7 +51,10 @@
 #include "kvServerRPC.pb.h"
 #include "raft.h"
 #include "skipList.h"
-
+namespace yy
+{
+namespace raft
+{
 /**
  * @class KvServer
  * @brief 基于Raft的分布式KV存储服务器
@@ -683,5 +686,6 @@ class KvServer : raftKVRpcProctoc::kvServerRpc {
 
   /////////////////serialiazation end ///////////////////////////////
 };
-
+}
+}  // namespace yy
 #endif  // SKIP_LIST_ON_RAFT_KVSERVER_H

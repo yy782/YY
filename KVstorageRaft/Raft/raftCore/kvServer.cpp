@@ -1,9 +1,13 @@
 #include "kvServer.h"
 
 #include <rpcprovider.h>
-
+#include "include/Op.hpp"
 #include "mprpcconfig.h"
-
+#include "../../../include/util.hpp"
+namespace yy
+{
+namespace  raft
+{
 void KvServer::DprintfKVDB() {
   if (!Debug) {
     return;
@@ -211,37 +215,38 @@ bool KvServer::ifRequestDuplicate(std::string ClientId, int RequestId) {
 // get函數收到raft消息之後在，因爲get無論是否重複都可以再執行
 void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcProctoc::PutAppendReply *reply) {
   Op op;
-  op.Operation = args->op();
-  op.Key = args->key();
-  op.Value = args->value();
-  op.ClientId = args->clientid();
-  op.RequestId = args->requestid();
+  op.Operation()= args->op();
+  op.Key() = args->key();
+  op.Value() = args->value();
+  op.ClientId() = args->clientid();
+  op.RequestId() = args->requestid();
+
   int raftIndex = -1;
   int _ = -1;
   bool isleader = false;
-
-  m_raftNode->Start(op, &raftIndex, &_, &isleader);
+  m_raftNode->Propose(op, &raftIndex, &_, &isleader);
 
   if (!isleader) {
     DPrintf(
         "[func -KvServer::PutAppend -kvserver{%d}]From Client %s (Request %d) To Server %d, key %s, raftIndex %d , but "
         "not leader",
-        m_me, &args->clientid(), args->requestid(), m_me, &op.Key, raftIndex);
+        m_me, &args->clientid(), args->requestid(), m_me, &op.Key(), raftIndex);
 
     reply->set_err(ErrWrongLeader);
     return;
   }
+
   DPrintf(
       "[func -KvServer::PutAppend -kvserver{%d}]From Client %s (Request %d) To Server %d, key %s, raftIndex %d , is "
       "leader ",
-      m_me, &args->clientid(), args->requestid(), m_me, &op.Key, raftIndex);
-  m_mtx.lock();
-  if (waitApplyCh.find(raftIndex) == waitApplyCh.end()) {
-    waitApplyCh.insert(std::make_pair(raftIndex, new LockQueue<Op>()));
-  }
-  auto chForRaftIndex = waitApplyCh[raftIndex];
+      m_me, &args->clientid(), args->requestid(), m_me, &op.Key(), raftIndex);
+  LockQueue<Op> *chForRaftIndex =  new LockQueue<Op>();  
 
-  m_mtx.unlock();  //直接解锁，等待任务执行完成，不能一直拿锁等待
+  {
+    std::lock_guard<std::mutex> lg(m_mtx);
+    myAssert(waitApplyCh.find(raftIndex) == waitApplyCh.end()); ///////////////////// chForRaftIndex内存泄漏
+    waitApplyCh.insert(std::make_pair(raftIndex, chForRaftIndex)); // 这里应该只有一条消息，不用队列
+  }
 
   // timeout
   Op raftCommitOp;
@@ -250,9 +255,9 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
     DPrintf(
         "[func -KvServer::PutAppend -kvserver{%d}]TIMEOUT PUTAPPEND !!!! Server %d , get Command <-- Index:%d , "
         "ClientId %s, RequestId %s, Opreation %s Key :%s, Value :%s",
-        m_me, m_me, raftIndex, &op.ClientId, op.RequestId, &op.Operation, &op.Key, &op.Value);
+        m_me, m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
 
-    if (ifRequestDuplicate(op.ClientId, op.RequestId)) {
+    if (ifRequestDuplicate(op.ClientId(), op.RequestId())) {
       reply->set_err(OK);  // 超时了,但因为是重复的请求，返回ok，实际上就算没有超时，在真正执行的时候也要判断是否重复
     } else {
       reply->set_err(ErrWrongLeader);  ///这里返回这个的目的让clerk重新尝试
@@ -261,8 +266,8 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
     DPrintf(
         "[func -KvServer::PutAppend -kvserver{%d}]WaitChanGetRaftApplyMessage<--Server %d , get Command <-- Index:%d , "
         "ClientId %s, RequestId %d, Opreation %s, Key :%s, Value :%s",
-        m_me, m_me, raftIndex, &op.ClientId, op.RequestId, &op.Operation, &op.Key, &op.Value);
-    if (raftCommitOp.ClientId == op.ClientId && raftCommitOp.RequestId == op.RequestId) {
+        m_me, m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
+    if (raftCommitOp.ClientId() == op.ClientId() && raftCommitOp.RequestId() == op.RequestId()) {
       //可能发生leader的变更导致日志被覆盖，因此必须检查
       reply->set_err(OK);
     } else {
@@ -446,4 +451,6 @@ m_raftNode(std::make_shared<Raft>())
   }
   std::thread t2(&KvServer::ReadRaftApplyCommandLoop, this);  //马上向其他节点宣告自己就是leader
   t2.join();  //由於ReadRaftApplyCommandLoop一直不會結束，达到一直卡在这的目的
+}
+}
 }

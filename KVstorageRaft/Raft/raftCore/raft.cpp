@@ -2,9 +2,12 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <memory>
-#include "config.h"
-#include "util.h"
 
+#include "../../../include/util.hpp"
+namespace yy
+{
+namespace raft 
+{
 void Raft::AppendEntries1(const raftRpcProctoc::AppendEntriesArgs* args, raftRpcProctoc::AppendEntriesReply* reply) {
   std::lock_guard<std::mutex> locker(m_mtx);
   reply->set_appstate(AppNormal);  // 能接收到代表网络是正常的
@@ -944,7 +947,7 @@ void Raft::RequestVote(google::protobuf::RpcController* controller, const ::raft
   done->Run();
 }
 
-void Raft::Start(Op command, int* newLogIndex, int* newLogTerm, bool* isLeader) {
+void Raft::Propose(Op command, int* newLogIndex, int* newLogTerm, bool* isLeader) {
   std::lock_guard<std::mutex> lg1(m_mtx);
   //    m_mtx.lock();
   //    Defer ec1([this]()->void {
@@ -1085,6 +1088,7 @@ void Raft::readPersist(std::string data) {
 }
 
 void Raft::Snapshot(int index, std::string snapshot) {
+
   std::lock_guard<std::mutex> lg(m_mtx);
 
   if (m_lastSnapshotIncludeIndex >= index || index > m_commitIndex) {
@@ -1119,4 +1123,6 @@ void Raft::Snapshot(int index, std::string snapshot) {
   myAssert(m_logs.size() + m_lastSnapshotIncludeIndex == lastLogIndex,
            format("len(rf.logs){%d} + rf.lastSnapshotIncludeIndex{%d} != lastLogjInde{%d}", m_logs.size(),
                   m_lastSnapshotIncludeIndex, lastLogIndex));
+}
+}
 }
