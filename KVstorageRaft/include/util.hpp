@@ -75,10 +75,7 @@ std::string format(const char* format_str, Args... args)
     return std::string(buf.data(), buf.data() + size - 1);  // remove '\0'
 }
 
-std::chrono::_V2::system_clock::time_point now()
-{
-   return std::chrono::high_resolution_clock::now(); 
-}
+
 
 
 

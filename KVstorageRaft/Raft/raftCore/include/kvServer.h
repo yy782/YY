@@ -337,7 +337,7 @@ class KvServer : raftKVRpcProctoc::kvServerRpc {
    * - 如果key存在，设置value和exist=true
    * - 如果key不存在，设置exist=false
    */
-  void ExecuteGetOpOnKVDB(Op op, std::string *value, bool *exist);
+  bool tryGetOpOnKVDB(Op op, std::string *value);
 
   /**
    * @brief 在KV数据库上执行PUT操作
@@ -520,7 +520,7 @@ class KvServer : raftKVRpcProctoc::kvServerRpc {
    * - m_lastRequestId
    * - m_lastSnapShotRaftLogIndex
    */
-  void IfNeedToSendSnapShotCommand(int raftIndex, int proportion);
+  void CheckAndSendSnapShotCommand(int raftIndex, int proportion);
 
   /**
    * @brief 处理从Raft收到的快照

@@ -41,7 +41,6 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/serialization.hpp>
-#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -57,7 +56,9 @@
 #include "raftRpcUtil.hpp"
 #include "Op.hpp"
 #include "LockQueue.hpp"
+#include "../../../Common/TimeStamp.h"
 
+#include "../../../Common/locker.h"
 namespace yy 
 {
 namespace raft 
@@ -88,55 +89,16 @@ constexpr int Killed = 0;
 constexpr int Voted = 1;   //本轮已经投过票了
 constexpr int Expire = 2;  //投票（消息、竞选者）过期
 constexpr int Normal = 3;
-
-/**
- * @class Raft
- * @brief Raft一致性算法的实现类
- * @details
- *
- * Raft类的主要功能：
- * 1. 实现Raft算法的核心逻辑：领导者选举、日志复制、安全性
- * 2. 管理Raft算法的状态：当前任期、投票状态、日志等
- * 3. 提供RPC接口：RequestVote、AppendEntries、InstallSnapshot
- * 4. 与上层应用（KVServer）交互：提交日志、应用命令
- *
- * Raft类的关键成员变量：
- * - m_currentTerm：当前任期号，每次选举都会递增
- * - m_votedFor：本轮投票给的节点ID
- * - m_logs：日志条目数组，包含状态机要执行的命令
- * - m_commitIndex：已提交的日志索引
- * - m_lastApplied：已应用到状态机的日志索引
- * - m_nextIndex：下一个要发送给每个节点的日志索引
- * - m_matchIndex：每个节点已匹配的日志索引
- * - m_status：节点状态（Follower、Candidate、Leader）
- *
- * Raft类的关键方法：
- * - RequestVote：处理投票请求
- * - AppendEntries：处理日志追加请求
- * - InstallSnapshot：处理快照安装请求
- * - doElection：发起选举
- * - doHeartBeat：发送心跳
- * - leaderUpdateCommitIndex：更新提交索引
- */
 class Raft : public raftRpcProctoc::raftRpc {
  private:
   std::mutex m_mtx;  // 互斥锁，保护共享数据的并发访问
-
   // m_peers：其他节点的RPC客户端列表
   // 每个节点都保存了其他节点的RPC客户端，用于发送RPC请求
   std::vector<std::shared_ptr<RaftRpcUtil>> m_peers;
-
   // m_persister：持久化对象，负责将关键数据落盘
   // Raft算法要求某些关键数据必须持久化，以确保节点重启后可以恢复
   std::shared_ptr<Persister> m_persister;
-
-  // m_me：当前节点的ID
-  // 每个节点都有一个唯一的ID，用于标识自己
-  int m_me;
-
-  // m_currentTerm：当前任期号
-  // 任期号是Raft算法的核心概念，用于区分不同的选举周期
-  // 每次选举都会递增任期号，任期号越大表示越新的选举
+  int id_;
   int m_currentTerm;
 
   // m_votedFor：本轮投票给的节点ID
@@ -145,92 +107,22 @@ class Raft : public raftRpcProctoc::raftRpc {
   // 如果m_votedFor == m_me，表示投票给自己
   // 如果m_votedFor == other，表示投票给其他节点
   int m_votedFor;
-
-  // m_logs：日志条目数组
-  // 日志条目包含状态机要执行的命令，以及收到命令时的任期号
-  // 日志是Raft算法的核心，所有节点必须以相同的顺序执行相同的日志
-  // 日志条目的结构：
-  // - Index：日志索引，从1开始递增
-  // - Term：任期号，表示该日志在哪个任期被添加
-  // - Command：命令，要执行的操作（如PUT、GET等）
   std::vector<raftRpcProctoc::LogEntry> m_logs;  //// 日志条目数组，包含了状态机要执行的指令集，以及收到领导时的任期号
-
-  // m_commitIndex：已提交的日志索引
-  // 日志提交表示该日志已经被大多数节点接收，可以应用到状态机
-  // 只有提交的日志才能应用到状态机，确保一致性
-  // 提交的日志不会被丢弃，即使领导者变更
   int m_commitIndex;
-
-  // m_lastApplied：已应用到状态机的日志索引
-  // 状态机是上层应用（如KVServer），负责执行日志中的命令
-  // m_lastApplied表示已经应用到状态机的最后一个日志索引
-  // m_lastApplied <= m_commitIndex，因为只有提交的日志才能应用
-  int m_lastApplied;  // 已经汇报给状态机（上层应用）的log 的index
-
-  // m_nextIndex：下一个要发送给每个节点的日志索引
-  // 这是领导者维护的状态，用于优化日志复制
-  // m_nextIndex[i]表示下一个要发送给节点i的日志索引
-  // 初始化为领导者最后一个日志索引+1
-  // 当节点i的日志落后时，m_nextIndex[i]会递减，找到匹配的日志
-  // 这两个状态是由服务器来维护，易失
-  std::vector<int>
-      m_nextIndex;  // 这两个状态的下标1开始，因为通常commitIndex和lastApplied从0开始，应该是一个无效的index，因此下标从1开始
-
-  // m_matchIndex：每个节点已匹配的日志索引
-  // 这是领导者维护的状态，用于优化日志复制
-  // m_matchIndex[i]表示节点i已匹配的日志索引
-  // 当节点i的日志与领导者匹配时，m_matchIndex[i]会更新
-  // 领导者根据m_matchIndex来计算m_commitIndex
+  int m_lastApplied;  
+  std::vector<int> m_nextIndex;  
   std::vector<int> m_matchIndex;
-
-  // Status：节点状态枚举
-  // - Follower：跟随者，被动接收领导者的日志和心跳
-  // - Candidate：候选者，参与领导者选举
-  // - Leader：领导者，处理所有客户端请求，复制日志到跟随者
-  enum Status { Follower, Candidate, Leader };
-
-  // m_status：当前节点的状态
-  // 节点状态会在Follower、Candidate、Leader之间转换
-  // - Follower -> Candidate：选举超时
-  // - Candidate -> Leader：获得大多数投票
-  // - Candidate -> Follower：发现更高任期的领导者或选举超时
-  // - Leader -> Follower：发现更高任期的领导者
-  Status m_status;
-
-  // applyChan：应用消息队列
-  // Raft节点通过这个队列与上层应用（KVServer）通信
-  // 当日志被提交时，Raft节点会将ApplyMsg放入这个队列
-  // 上层应用从队列中取出ApplyMsg，应用到状态机
-  std::shared_ptr<LockQueue<ApplyMsg>> applyChan;  // client从这里取日志（2B），client与raft通信的接口
-
-  // m_lastResetElectionTime：上次重置选举超时的时间点
-  // 选举超时用于触发领导者选举
-  // 如果在选举超时时间内没有收到领导者的心跳，节点会发起选举
-  // 选举超时是随机的，避免多个节点同时发起选举
-  std::chrono::_V2::system_clock::time_point m_lastResetElectionTime;
-
-  // m_lastResetHearBeatTime：上次重置心跳超时的时间点
-  // 心跳超时用于领导者发送心跳
-  // 领导者需要定期发送心跳，以维持其领导地位
-  // 心跳超时通常比选举超时短得多
-  std::chrono::_V2::system_clock::time_point m_lastResetHearBeatTime;
-
-  // m_lastSnapshotIncludeIndex：快照中包含的最后一个日志索引
-  // 快照用于压缩日志，减少日志大小
-  // 当日志过大时，可以创建快照，删除快照之前的日志
-  // m_lastSnapshotIncludeIndex表示快照中包含的最后一个日志索引
+  TimeStamp<LowPrecision> m_lastResetElectionTime;
+  TimeStamp<LowPrecision> m_lastResetHearBeatTime;
   int m_lastSnapshotIncludeIndex;
-
-  // m_lastSnapshotIncludeTerm：快照中包含的最后一个日志的任期号
-  // m_lastSnapshotIncludeTerm表示快照中包含的最后一个日志的任期号
   int m_lastSnapshotIncludeTerm;
+  std::shared_ptr<LockQueue<ApplyMsg>> applyChan;  // client从这里取日志（2B），client与raft通信的接口
+ private: // Leader
 
-  // m_ioManager：IO管理器，用于协程调度
-  // 这个项目使用了协程来处理异步IO操作
-  // IOManager负责协程的调度和执行
-  //std::unique_ptr<yy::IOManager> m_ioManager = nullptr;
+  void CheckAndHearBeat();
+  void asyncDoHeartBeat();
+private:  
 
- public:
   /**
    * @brief 处理追加日志请求（RPC）
    * @param args 追加日志的参数
@@ -273,69 +165,6 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 上层应用从队列中取出ApplyMsg，应用到状态机
    */
   void applierTicker();
-
-  /**
-   * @brief 条件安装快照
-   * @param lastIncludedTerm 快照中包含的最后一个日志的任期号
-   * @param lastIncludedIndex 快照中包含的最后一个日志索引
-   * @param snapshot 快照数据
-   * @return 是否成功安装快照
-   * @details
-   *
-   * 快照的作用：
-   * 1. 压缩日志：当日志过大时，创建快照，删除快照之前的日志
-   * 2. 快速恢复：新节点可以通过安装快照快速加入集群
-   * 3. 节省空间：快照比日志占用更少的空间
-   *
-   * 安装快照的条件：
-   * 1. 快照的任期号和索引必须与当前日志匹配
-   * 2. 快照的索引必须大于当前快照的索引
-   *
-   * 安装快照的步骤：
-   * 1. 检查快照的有效性
-   * 2. 删除快照之前的日志
-   * 3. 更新m_lastSnapshotIncludeIndex和m_lastSnapshotIncludeTerm
-   * 4. 持久化快照数据
-   */
-  bool CondInstallSnapshot(int lastIncludedTerm, int lastIncludedIndex, std::string snapshot);
-
-  /**
-   * @brief 发起选举
-   * @details
-   *
-   * 选举的触发条件：
-   * 1. 节点是Follower或Candidate
-   * 2. 在选举超时时间内没有收到领导者的心跳
-   *
-   * 选举的步骤：
-   * 1. 将m_status设置为Candidate
-   * 2. 递增m_currentTerm
-   * 3. 将m_votedFor设置为m_me（投票给自己）
-   * 4. 并行向所有其他节点发送RequestVote RPC
-   * 5. 等待回复
-   *
-   * 选举的结果：
-   * 1. 获得大多数投票：成为Leader
-   * 2. 收到更高任期的RequestVote或AppendEntries：转为Follower
-   * 3. 选举超时：重新发起选举
-   */
-  void doElection();
-
-  /**
-   * @brief 发起心跳，只有leader才需要发起心跳
-   * @details
-   *
-   * 心跳的作用：
-   * 1. 维持领导地位：领导者定期发送心跳，防止跟随者发起选举
-   * 2. 日志复制：心跳可以携带日志，实现日志复制
-   * 3. 一致性检查：跟随者通过心跳检查日志是否一致
-   *
-   * 心跳的发送：
-   * 1. 领导者定期向所有跟随者发送AppendEntries RPC
-   * 2. AppendEntries可以携带日志，也可以是空的心跳
-   * 3. 心跳的间隔通常比选举超时短得多
-   */
-  void doHeartBeat();
 
   /**
    * @brief 选举超时定时器
@@ -401,7 +230,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 上层应用需要知道当前节点是否是领导者
    * 如果是领导者，才能处理客户端请求
    */
-  void GetState(int *term, bool *isLeader);
+
 
   /**
    * @brief 安装快照（RPC）
@@ -441,7 +270,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 2. AppendEntries可以携带日志，也可以是空的心跳
    * 3. 心跳的间隔通常比选举超时短得多
    */
-  void leaderHearBeatTicker();
+
 
   /**
    * @brief 领导者发送快照
@@ -601,15 +430,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    */
   int getLogTermFromLogIndex(int logIndex);
 
-  /**
-   * @brief 获取Raft状态的大小
-   * @return Raft状态的大小
-   * @details
-   *
-   * 这个函数用于持久化时计算状态的大小
-   * 状态包括：m_currentTerm、m_votedFor、m_logs等
-   */
-  int GetRaftStateSize();
+
 
   /**
    * @brief 从日志索引获取切片索引
@@ -700,7 +521,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 领导者将命令追加到日志，复制到跟随者
    * 当日志被提交时，上层应用可以应用到状态机
    */
-  void Propose(Op command, int *newLogIndex, int *newLogTerm, bool *isLeader);
+
 
   /**
    * @brief 创建快照
@@ -724,7 +545,7 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 这个函数的目的是把安装到快照里的日志抛弃，并安装快照数据，同时更新快照下标，属于peers自身主动更新，与leader发送快照不冲突
    * 即服务层主动发起请求raft保存snapshot里面的数据，index是用来表示snapshot快照执行到了哪条命令
    */
-  void Snapshot(int index, std::string snapshot);
+  
 
  public:
   // 重写基类方法,因为rpc远程调用真正调用的是这个方法
@@ -793,12 +614,52 @@ class Raft : public raftRpcProctoc::raftRpc {
    * 6. 从持久化数据中恢复状态
    * 7. 启动定时器
    */
-  void init(std::vector<std::shared_ptr<RaftRpcUtil>> peers, int me, std::shared_ptr<Persister> persister,
+  void init(std::vector<std::shared_ptr<RaftRpcUtil>> peers, int id, std::shared_ptr<Persister> persister,
             std::shared_ptr<LockQueue<ApplyMsg>> applyCh);
-
+  void Propose(Op command, int *newLogIndex, int *newLogTerm, bool *isLeader);
+  void GetState(int *term, bool *isLeader);
+  int GetRaftStateSize();
+  void Snapshot(int index, std::string snapshot);
+  bool CondInstallSnapshot(int lastIncludedTerm, int lastIncludedIndex, std::string snapshot);
  private:
   // for persist
+  /**
+   * @brief 发起选举
+   * @details
+   *
+   * 选举的触发条件：
+   * 1. 节点是Follower或Candidate
+   * 2. 在选举超时时间内没有收到领导者的心跳
+   *
+   * 选举的步骤：
+   * 1. 将m_status设置为Candidate
+   * 2. 递增m_currentTerm
+   * 3. 将m_votedFor设置为m_me（投票给自己）
+   * 4. 并行向所有其他节点发送RequestVote RPC
+   * 5. 等待回复
+   *
+   * 选举的结果：
+   * 1. 获得大多数投票：成为Leader
+   * 2. 收到更高任期的RequestVote或AppendEntries：转为Follower
+   * 3. 选举超时：重新发起选举
+   */
+  void doElection();
 
+  /**
+   * @brief 发起心跳，只有leader才需要发起心跳
+   * @details
+   *
+   * 心跳的作用：
+   * 1. 维持领导地位：领导者定期发送心跳，防止跟随者发起选举
+   * 2. 日志复制：心跳可以携带日志，实现日志复制
+   * 3. 一致性检查：跟随者通过心跳检查日志是否一致
+   *
+   * 心跳的发送：
+   * 1. 领导者定期向所有跟随者发送AppendEntries RPC
+   * 2. AppendEntries可以携带日志，也可以是空的心跳
+   * 3. 心跳的间隔通常比选举超时短得多
+   */
+  void doHeartBeat();
   /**
    * @class BoostPersistRaftNode
    * @brief 用于持久化的Raft节点数据结构
@@ -829,8 +690,28 @@ class Raft : public raftRpcProctoc::raftRpc {
     std::vector<std::string> m_logs;
     std::unordered_map<std::string, int> umap;
 
-   public:
+   
   };
+  // Status：节点状态枚举
+  // - Follower：跟随者，被动接收领导者的日志和心跳
+  // - Candidate：候选者，参与领导者选举
+  // - Leader：领导者，处理所有客户端请求，复制日志到跟随者
+  enum Status { Follower, Candidate, Leader };
+
+  // m_status：当前节点的状态
+  // 节点状态会在Follower、Candidate、Leader之间转换
+  // - Follower -> Candidate：选举超时
+  // - Candidate -> Leader：获得大多数投票
+  // - Candidate -> Follower：发现更高任期的领导者或选举超时
+  // - Leader -> Follower：发现更高任期的领导者
+  Status status_;
+  void run();
+  Status checkStatus();
+  void doLeaderWork();
+  void doCandidateWork();
+  void doFollowerWork();
+  Thread thread_;
+  bool isRunning_;
 };
 }  // namespace yy
 }
