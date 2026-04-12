@@ -114,8 +114,7 @@ class Raft : public raftRpcProctoc::raftRpc {
   std::vector<int> m_matchIndex;
   TimeStamp<LowPrecision> m_lastResetElectionTime;
   TimeStamp<LowPrecision> m_lastResetHearBeatTime;
-  int m_lastSnapshotIncludeIndex;
-  int m_lastSnapshotIncludeTerm;
+
   std::shared_ptr<LockQueue<ApplyMsg>> applyChan;  // client从这里取日志（2B），client与raft通信的接口
  private: // Leader
 
@@ -232,29 +231,6 @@ private:
    */
 
 
-  /**
-   * @brief 安装快照（RPC）
-   * @param args 安装快照的参数
-   * @param reply 安装快照的回复
-   * @details
-   *
-   * InstallSnapshot RPC的作用：
-   * 1. 快速恢复：新节点可以通过安装快照快速加入集群
-   * 2. 日志压缩：当日志过大时，创建快照，删除快照之前的日志
-   * 3. 节省空间：快照比日志占用更少的空间
-   *
-   * InstallSnapshot的参数：
-   * - Term：领导者的任期号
-   * - LeaderId：领导者的ID
-   * - LastIncludedIndex：快照中包含的最后一个日志索引
-   * - LastIncludedTerm：快照中包含的最后一个日志的任期号
-   * - Data：快照数据
-   *
-   * InstallSnapshot的回复：
-   * - Term：跟随者的当前任期号
-   */
-  void InstallSnapshot(const raftRpcProctoc::InstallSnapshotRequest *args,
-                       raftRpcProctoc::InstallSnapshotResponse *reply);
 
   /**
    * @brief 领导者心跳定时器
@@ -272,21 +248,7 @@ private:
    */
 
 
-  /**
-   * @brief 领导者发送快照
-   * @param server 目标节点
-   * @details
-   *
-   * 领导者发送快照的条件：
-   * 1. 跟随者的日志落后太多，无法通过日志复制追赶
-   * 2. 领导者有快照，可以发送给跟随者
-   *
-   * 发送快照的步骤：
-   * 1. 领导者调用InstallSnapshot RPC
-   * 2. 将快照数据发送给跟随者
-   * 3. 跟随者安装快照，更新日志
-   */
-  void leaderSendSnapShot(int server);
+
 
   /**
    * @brief 领导者更新提交索引
@@ -386,7 +348,7 @@ private:
    * 2. 日志复制：领导者通过这个函数找到匹配的日志
    * 3. 安全性：确保只有拥有完整日志的节点才能成为领导者
    */
-  bool UpToDate(int index, int term);
+  bool checkDataToCandidate(int index, int term);
 
   /**
    * @brief 获取最后一个日志的索引
@@ -472,8 +434,9 @@ private:
    * 发送AppendEntries RPC，等待回复
    * 统计追加的日志数
    */
-  bool sendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntriesArgs> args,
-                         std::shared_ptr<raftRpcProctoc::AppendEntriesReply> reply, std::shared_ptr<int> appendNums);
+bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntriesArgs> args,
+                             std::shared_ptr<raftRpcProctoc::AppendEntriesReply> reply,
+                             std::shared_ptr<int> appendNums);
 
   /**
    * @brief 将消息推送到KVServer
@@ -565,21 +528,6 @@ private:
   void AppendEntries(google::protobuf::RpcController *controller, const ::raftRpcProctoc::AppendEntriesArgs *request,
                      ::raftRpcProctoc::AppendEntriesReply *response, ::google::protobuf::Closure *done) override;
 
-  /**
-   * @brief 处理安装快照请求（RPC）
-   * @param controller RPC控制器
-   * @param request 安装快照的参数
-   * @param response 安装快照的回复
-   * @param done RPC完成回调
-   * @details
-   *
-   * 这个函数是RPC框架调用的入口函数
-   * RPC框架负责序列化、反序列化、网络传输等
-   * 这个函数只需要调用本地方法InstallSnapshot处理请求
-   */
-  void InstallSnapshot(google::protobuf::RpcController *controller,
-                       const ::raftRpcProctoc::InstallSnapshotRequest *request,
-                       ::raftRpcProctoc::InstallSnapshotResponse *response, ::google::protobuf::Closure *done) override;
 
   /**
    * @brief 处理投票请求（RPC）
@@ -619,47 +567,12 @@ private:
   void Propose(Op command, int *newLogIndex, int *newLogTerm, bool *isLeader);
   void GetState(int *term, bool *isLeader);
   int GetRaftStateSize();
-  void Snapshot(int index, std::string snapshot);
-  bool CondInstallSnapshot(int lastIncludedTerm, int lastIncludedIndex, std::string snapshot);
  private:
-  // for persist
-  /**
-   * @brief 发起选举
-   * @details
-   *
-   * 选举的触发条件：
-   * 1. 节点是Follower或Candidate
-   * 2. 在选举超时时间内没有收到领导者的心跳
-   *
-   * 选举的步骤：
-   * 1. 将m_status设置为Candidate
-   * 2. 递增m_currentTerm
-   * 3. 将m_votedFor设置为m_me（投票给自己）
-   * 4. 并行向所有其他节点发送RequestVote RPC
-   * 5. 等待回复
-   *
-   * 选举的结果：
-   * 1. 获得大多数投票：成为Leader
-   * 2. 收到更高任期的RequestVote或AppendEntries：转为Follower
-   * 3. 选举超时：重新发起选举
-   */
   void doElection();
-
-  /**
-   * @brief 发起心跳，只有leader才需要发起心跳
-   * @details
-   *
-   * 心跳的作用：
-   * 1. 维持领导地位：领导者定期发送心跳，防止跟随者发起选举
-   * 2. 日志复制：心跳可以携带日志，实现日志复制
-   * 3. 一致性检查：跟随者通过心跳检查日志是否一致
-   *
-   * 心跳的发送：
-   * 1. 领导者定期向所有跟随者发送AppendEntries RPC
-   * 2. AppendEntries可以携带日志，也可以是空的心跳
-   * 3. 心跳的间隔通常比选举超时短得多
-   */
   void doHeartBeat();
+  void checkAndVerbCandidate();
+  bool AsyncSendRequestVote(int server, std::shared_ptr<raftRpcProctoc::RequestVoteArgs> requestVoteArgs,
+                         std::shared_ptr<raftRpcProctoc::RequestVoteReply> requestVoteReply);
   /**
    * @class BoostPersistRaftNode
    * @brief 用于持久化的Raft节点数据结构

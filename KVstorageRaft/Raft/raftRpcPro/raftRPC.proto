@@ -64,7 +64,6 @@ message InstallSnapshotResponse  {
 service raftRpc  
 {
     rpc AppendEntries(AppendEntriesArgs) returns(AppendEntriesReply);
-    rpc InstallSnapshot (InstallSnapshotRequest) returns (InstallSnapshotResponse);
     rpc RequestVote (RequestVoteArgs) returns (RequestVoteReply);
 }
 // message ResultCode
@@ -84,8 +83,3 @@ service raftRpc
 //     repeated bytes friends = 2;
 // }
 
-// // 好友模块
-// service FiendServiceRpc  //具体的服务模块和服务方法
-// {
-//     rpc GetFriendsList(GetFriendsListRequest) returns(GetFriendsListResponse);
-// }
