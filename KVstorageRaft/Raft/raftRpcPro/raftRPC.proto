@@ -72,14 +72,5 @@ service raftRpc
 //     bytes errmsg = 2;
 // }
 
-// message GetFriendsListRequest  //请求，响应
-// {
-//     uint32 userid = 1;
-// }
 
-// message GetFriendsListResponse  //请求，响应
-// {
-//     ResultCode result = 1;
-//     repeated bytes friends = 2;
-// }
 

@@ -2,7 +2,6 @@
 // Created by swx on 23-5-30.
 //
 #include "Persister.h"
-#include "util.h"
 
 // todo:会涉及反复打开文件的操作，没有考虑如果文件出现问题会怎么办？？
 void Persister::Save(const std::string raftstate) {

@@ -373,17 +373,17 @@ void KvServer::CheckAndSendSnapShotCommand(int raftIndex, int proportion) {
   if (m_raftNode->GetRaftStateSize() > m_maxRaftState / 10.0) {
     // Send SnapShot Command
     auto snapshot = MakeSnapShot();
-    m_raftNode->Snapshot(raftIndex, snapshot);
+    //m_raftNode->Snapshot(raftIndex, snapshot);
   }
 }
 
 void KvServer::GetSnapShotFromRaft(ApplyMsg message) {
   std::lock_guard<std::mutex> lg(m_mtx);
 
-  if (m_raftNode->CondInstallSnapshot(message.SnapshotTerm, message.SnapshotIndex, message.Snapshot)) {
-    ReadSnapShotToInstall(message.Snapshot);
-    m_lastSnapShotRaftLogIndex = message.SnapshotIndex;
-  }
+  // if (m_raftNode->CondInstallSnapshot(message.SnapshotTerm, message.SnapshotIndex, message.Snapshot)) {
+  //   ReadSnapShotToInstall(message.Snapshot);
+  //   m_lastSnapShotRaftLogIndex = message.SnapshotIndex;
+  // }
 }
 
 std::string KvServer::MakeSnapShot() {
@@ -462,10 +462,10 @@ m_raftNode(std::make_shared<Raft>())
   m_raftNode->init(servers, m_me, persister, applyChan);
   // kv的server直接与raft通信，但kv不直接与raft通信，所以需要把ApplyMsg的chan传递下去用于通信，两者的persist也是共用的
 
-  auto snapshot = persister->ReadSnapshot();
-  if (!snapshot.empty()) {
-    ReadSnapShotToInstall(snapshot);
-  }
+  // auto snapshot = persister->ReadSnapshot();
+  // if (!snapshot.empty()) {
+  //   ReadSnapShotToInstall(snapshot);
+  // }
   std::thread t2(&KvServer::ReadRaftApplyCommandLoop, this);  //马上向其他节点宣告自己就是leader
   t2.join();  //由於ReadRaftApplyCommandLoop一直不會結束，达到一直卡在这的目的
 }

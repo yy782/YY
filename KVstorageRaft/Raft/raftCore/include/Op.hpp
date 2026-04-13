@@ -74,9 +74,6 @@ std::chrono::milliseconds getRandomizedElectionTimeout(){
   std::uniform_int_distribution<int> dist(minRandomizedElectionTime, maxRandomizedElectionTime);
   return std::chrono::milliseconds(dist(rng));
 }
-void sleepNMilliseconds(int N){ 
-  std::this_thread::sleep_for(std::chrono::milliseconds(N)); 
-};
 
 const bool Debug = true;
 

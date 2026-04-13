@@ -63,20 +63,11 @@ namespace yy
 {
 namespace raft 
 {
-/// @brief 网络状态表示
-/// @details
-///
-/// 网络状态用于模拟网络分区等异常情况
-/// - Disconnected：网络断开，节点间无法通信
-/// - AppNormal：网络正常，节点间可以正常通信
-///
-/// todo：可以在rpc中删除该字段，实际生产中是用不到的.
+
 constexpr int Disconnected =0;  
-// 方便网络分区的时候debug，网络异常的时候为disconnected，只要网络正常就为AppNormal，防止matchIndex[]数组异常减小
 constexpr int AppNormal = 1;
 
 ///////////////投票状态
-
 /// @brief 投票状态枚举
 /// @details
 ///
@@ -89,32 +80,28 @@ constexpr int Killed = 0;
 constexpr int Voted = 1;   //本轮已经投过票了
 constexpr int Expire = 2;  //投票（消息、竞选者）过期
 constexpr int Normal = 3;
+constexpr int LogExpire = 4; //日志过期了，投票过期了
 class Raft : public raftRpcProctoc::raftRpc {
  private:
   std::mutex m_mtx;  // 互斥锁，保护共享数据的并发访问
   // m_peers：其他节点的RPC客户端列表
   // 每个节点都保存了其他节点的RPC客户端，用于发送RPC请求
   std::vector<std::shared_ptr<RaftRpcUtil>> m_peers;
-  // m_persister：持久化对象，负责将关键数据落盘
-  // Raft算法要求某些关键数据必须持久化，以确保节点重启后可以恢复
   std::shared_ptr<Persister> m_persister;
   int id_;
-  int m_currentTerm;
+  int votedFor_;
+  std::vector<raftRpcProctoc::LogEntry> logs_;  //// 日志条目数组，包含了状态机要执行的指令集，以及收到领导时的任期号
+  
+  int currentTerm_;
 
-  // m_votedFor：本轮投票给的节点ID
-  // 在每个任期中，每个节点只能投票一次
-  // 如果m_votedFor == -1，表示还没有投票
-  // 如果m_votedFor == m_me，表示投票给自己
-  // 如果m_votedFor == other，表示投票给其他节点
-  int m_votedFor;
-  std::vector<raftRpcProctoc::LogEntry> m_logs;  //// 日志条目数组，包含了状态机要执行的指令集，以及收到领导时的任期号
-  int m_commitIndex;
-  int m_lastApplied;  
-  std::vector<int> m_nextIndex;  
-  std::vector<int> m_matchIndex;
-  TimeStamp<LowPrecision> m_lastResetElectionTime;
-  TimeStamp<LowPrecision> m_lastResetHearBeatTime;
+  // int LastLogIndex_;
+  int commitedMaxIndex_;
+  int AppliedMaxIndex_;  
 
+  // Leader维护
+  std::vector<int> nextIndex_;  
+  std::vector<int> matchIndex_;
+  
   std::shared_ptr<LockQueue<ApplyMsg>> applyChan;  // client从这里取日志（2B），client与raft通信的接口
  private: // Leader
 
@@ -219,6 +206,7 @@ private:
    */
   void getPrevLogInfo(int server, int *preIndex, int *preTerm);
 
+  void sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry &newLogEntry);
   /**
    * @brief 获取Raft状态
    * @param term 当前任期号（输出参数）
@@ -340,8 +328,8 @@ private:
    * @details
    *
    * 日志更新的定义：
-   * 1. 任期号更大：term > m_currentTerm
-   * 2. 任期号相同，索引更大：term == m_currentTerm && index > getLastLogIndex()
+   * 1. 任期号更大：term > currentTerm_
+   * 2. 任期号相同，索引更大：term == currentTerm_ && index > getLastLogIndex()
    *
    * 日志更新的作用：
    * 1. 选举投票：候选者的日志必须至少一样新才能获得投票
@@ -350,25 +338,6 @@ private:
    */
   bool checkDataToCandidate(int index, int term);
 
-  /**
-   * @brief 获取最后一个日志的索引
-   * @return 最后一个日志的索引
-   * @details
-   *
-   * 如果没有日志，返回0
-   * 如果有日志，返回最后一个日志的索引
-   */
-  int getLastLogIndex();
-
-  /**
-   * @brief 获取最后一个日志的任期号
-   * @return 最后一个日志的任期号
-   * @details
-   *
-   * 如果没有日志，返回0
-   * 如果有日志，返回最后一个日志的任期号
-   */
-  int getLastLogTerm();
 
   /**
    * @brief 获取最后一个日志的索引和任期号
@@ -379,7 +348,7 @@ private:
    * 这个函数同时获取最后一个日志的索引和任期号
    * 用于选举投票时比较日志的新旧程度
    */
-  void getLastLogIndexAndTerm(int *lastLogIndex, int *lastLogTerm);
+  std::array<int, 2> getLastLogIndexAndTerm();
 
   /**
    * @brief 从日志索引获取日志任期号
@@ -435,8 +404,7 @@ private:
    * 统计追加的日志数
    */
 bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntriesArgs> args,
-                             std::shared_ptr<raftRpcProctoc::AppendEntriesReply> reply,
-                             std::shared_ptr<int> appendNums);
+                             std::shared_ptr<raftRpcProctoc::AppendEntriesReply> reply);
 
   /**
    * @brief 将消息推送到KVServer
@@ -590,18 +558,18 @@ bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntries
     // is a type of input archive, & operator is defined similar to >>.
     template <class Archive>
     void serialize(Archive &ar, const unsigned int version) {
-      ar &m_currentTerm;
-      ar &m_votedFor;
-      ar &m_lastSnapshotIncludeIndex;
-      ar &m_lastSnapshotIncludeTerm;
-      ar &m_logs;
+      ar &currentTerm_;
+      ar &votedFor_;
+      ar &lastSnapshotIncludeIndex_;
+      ar &lastSnapshotIncludeTerm_;
+      ar &logs_;
     }
-    int m_currentTerm;
-    int m_votedFor;
-    int m_lastSnapshotIncludeIndex;
-    int m_lastSnapshotIncludeTerm;
-    std::vector<std::string> m_logs;
-    std::unordered_map<std::string, int> umap;
+    int currentTerm_;
+    int votedFor_;
+    int lastSnapshotIncludeIndex_;
+    int lastSnapshotIncludeTerm_;
+    std::vector<std::string> logs_;
+    std::unordered_map<std::string, int> map_;
 
    
   };
@@ -628,4 +596,4 @@ bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntries
 };
 }  // namespace yy
 }
-#endif  // RAFT_H
+#endif  
