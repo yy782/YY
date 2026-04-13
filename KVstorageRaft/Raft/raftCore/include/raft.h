@@ -513,6 +513,7 @@ bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntries
                    ::raftRpcProctoc::RequestVoteReply *response, ::google::protobuf::Closure *done) override;
 
  public:
+  Raft();
   /**
    * @brief 初始化Raft节点
    * @param peers 其他节点的RPC客户端列表

@@ -272,28 +272,35 @@ void Raft::sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry& newLogEntry)
   std::vector<std::shared_ptr<raftRpcProctoc::AppendEntriesReply>> appendEntriesReplies(m_peers.size(),
     std::make_shared<raftRpcProctoc::AppendEntriesReply>()
   );
+  // std::vector<int> ReplyEntriesSize(m_peers.size(), 0);
+  // std::vector<int> ReplyprevLogIndex(m_peers.size(), 0);
+  std::vector<std::shared_ptr<raftRpcProctoc::AppendEntriesArgs>> appendEntriesArgsList(m_peers.size(),
+    std::make_shared<raftRpcProctoc::AppendEntriesArgs>()
+  );  
   for(int i = 0; i < m_peers.size(); i++) {
     if (i == id_) {continue;}
-    std::shared_ptr<raftRpcProctoc::AppendEntriesArgs> appendEntriesArgs =
-        std::make_shared<raftRpcProctoc::AppendEntriesArgs>();
+    auto appendEntriesArgs = appendEntriesArgsList[i];
+        
     appendEntriesArgs->set_term(currentTerm_);
     appendEntriesArgs->set_leaderid(id_);
-    int preLogIndex = -1;
     int PrevLogTerm = -1;
-    getPrevLogInfo(i, &preLogIndex, &PrevLogTerm);
-    appendEntriesArgs->set_prevlogindex(preLogIndex);
+    int PrevLogIndex = -1;
+    getPrevLogInfo(i, &PrevLogIndex, &PrevLogTerm);
+    appendEntriesArgs->set_prevlogindex(PrevLogIndex);
     appendEntriesArgs->set_prevlogterm(PrevLogTerm);
     *appendEntriesArgs->add_entries() = newLogEntry;
     appendEntriesArgs->set_leadercommit(commitedMaxIndex_);
-
-
-
+    appendEntriesArgs->entries_size();
     SendAppendEntries(i, appendEntriesArgs, appendEntriesReplies[i]);
   }
   // 挂起 等待所有AE RPC的回复
+
+  int appendNums = 0;
   for (int server = 0; server < m_peers.size(); server++) {
     if (server == id_) {continue;}
     auto reply = appendEntriesReplies[server];
+    // reply可能是空，没有回应
+
     std::lock_guard<std::mutex> lg1(m_mtx);
 
   if (reply->term() > currentTerm_) {
@@ -305,11 +312,8 @@ void Raft::sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry& newLogEntry)
   else if (!reply->success()&&reply->updatenextindex() != invalidLog) {
       nextIndex_[server] = reply->updatenextindex();
   } else {
-    *appendNums = *appendNums + 1;
-    DPrintf("---------------------------tmp------------------------- 節點{%d}返回true,當前*appendNums{%d}", server,
-            *appendNums);
-    // rf.matchIndex[server] = len(args.Entries) //只要返回一个响应就对其matchIndex应该对其做出反应，
-    //但是这么修改是有问题的，如果对某个消息发送了多遍（心跳时就会再发送），那么一条消息会导致n次上涨
+    auto args = appendEntriesArgsList[server];
+    appendNums += 1;
     matchIndex_[server] = std::max(matchIndex_[server], args->prevlogindex() + args->entries_size());
     nextIndex_[server] = matchIndex_[server] + 1;
     int lastLogIndex = getLastLogIndexAndTerm()[0];
@@ -317,39 +321,24 @@ void Raft::sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry& newLogEntry)
     myAssert(nextIndex_[server] <= lastLogIndex + 1,
              format("error msg:rf.nextIndex[%d] > lastLogIndex+1, len(rf.logs) = %d   lastLogIndex{%d} = %d", server,
                     logs_.size(), server, lastLogIndex));
-    if (*appendNums >= 1 + m_peers.size() / 2) {
-      //可以commit了
-      //两种方法保证幂等性，1.赋值为0 	2.上面≥改为==
-
-      *appendNums = 0;
-      // todo https://578223592-laughing-halibut-wxvpggvw69qh99q4.github.dev/ 不断遍历来统计rf.commitIndex
-      //改了好久！！！！！
-      // leader只有在当前term有日志提交的时候才更新commitIndex，因为raft无法保证之前term的Index是否提交
-      //只有当前term有日志提交，之前term的log才可以被提交，只有这样才能保证“领导人完备性{当选领导人的节点拥有之前被提交的所有log，当然也可能有一些没有被提交的}”
-      // rf.leaderUpdateCommitIndex()
-      if (args->entries_size() > 0) {
-        DPrintf("args->entries(args->entries_size()-1).logterm(){%d}   currentTerm_{%d}",
-                args->entries(args->entries_size() - 1).logterm(), currentTerm_);
-      }
-      if (args->entries_size() > 0 && args->entries(args->entries_size() - 1).logterm() == currentTerm_) {
-        DPrintf(
-            "---------------------------tmp------------------------- 當前term有log成功提交，更新leader的m_commitIndex "
-            "from{%d} to{%d}",
-            commitedMaxIndex_, args->prevlogindex() + args->entries_size());
-
+    if (appendNums >= 1 + m_peers.size() / 2) {
+      if (args->entries(args->entries_size() - 1).logterm() == currentTerm_) { // 防御性检查
         commitedMaxIndex_ = std::max(commitedMaxIndex_, args->prevlogindex() + args->entries_size());
       }
-      myAssert(commitedMaxIndex_ <= lastLogIndex,
-               format("[func-sendAppendEntries,rf{%d}] lastLogIndex:%d  rf.commitIndex:%d\n", id_, lastLogIndex,
-                      commitedMaxIndex_));
-      // fmt.Printf("[func-sendAppendEntries,rf{%v}] len(rf.logs):%v  rf.commitIndex:%v\n", rf.me, len(rf.logs),
-      // rf.commitIndex)
+      break;                
     }
   }
   }
 }
 
-
+Raft::Raft():
+currentTerm_(0),
+votedFor_(-1),
+status_(Follower),
+commitedMaxIndex_(0),
+AppliedMaxIndex_(0) 
+{
+}
 
 void Raft::init(std::vector<std::shared_ptr<RaftRpcUtil>> peers, int id, std::shared_ptr<Persister> persister,
                 std::shared_ptr<LockQueue<ApplyMsg>> applyCh) {
@@ -359,17 +348,11 @@ void Raft::init(std::vector<std::shared_ptr<RaftRpcUtil>> peers, int id, std::sh
   // Your initialization code here (2A, 2B, 2C).
   m_mtx.lock();
   applyChan = applyCh;
-  
-  currentTerm_ = 0;
-  status_ = Follower;
-  commitedMaxIndex_ = 0;
-  AppliedMaxIndex_ = 0;
   logs_.clear();
   for (int i = 0; i < m_peers.size(); i++) {
     matchIndex_.push_back(0);
     nextIndex_.push_back(0);
   }
-  votedFor_ = -1;
 
   readPersist(m_persister->ReadRaftState());
 
