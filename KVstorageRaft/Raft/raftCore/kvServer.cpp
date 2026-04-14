@@ -270,21 +270,11 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
   m_raftNode->Propose(op, &raftIndex, &_, &isleader);
 
   if (!isleader) {
-    DPrintf(
-        "[func -KvServer::PutAppend -kvserver{%d}]From Client %s (Request %d) To Server %d, key %s, raftIndex %d , but "
-        "not leader",
-        m_me, &args->clientid(), args->requestid(), m_me, &op.Key(), raftIndex);
-
     reply->set_err(ErrWrongLeader);
     return;
   }
 
-  DPrintf(
-      "[func -KvServer::PutAppend -kvserver{%d}]From Client %s (Request %d) To Server %d, key %s, raftIndex %d , is "
-      "leader ",
-      m_me, &args->clientid(), args->requestid(), m_me, &op.Key(), raftIndex);
   LockQueue<Op> *chForRaftIndex =  new LockQueue<Op>();  
-
   {
     std::lock_guard<std::mutex> lg(m_mtx);
     myAssert(waitApplyCh.find(raftIndex) == waitApplyCh.end()); ///////////////////// chForRaftIndex内存泄漏
@@ -295,21 +285,12 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
   Op raftCommitOp;
 
   if (!chForRaftIndex->timeOutPop(CONSENSUS_TIMEOUT, &raftCommitOp)) {
-    DPrintf(
-        "[func -KvServer::PutAppend -kvserver{%d}]TIMEOUT PUTAPPEND !!!! Server %d , get Command <-- Index:%d , "
-        "ClientId %s, RequestId %s, Opreation %s Key :%s, Value :%s",
-        m_me, m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
-
     if (ifRequestDuplicate(op.ClientId(), op.RequestId())) {
       reply->set_err(OK);  // 超时了,但因为是重复的请求，返回ok，实际上就算没有超时，在真正执行的时候也要判断是否重复
     } else {
       reply->set_err(ErrWrongLeader);  ///这里返回这个的目的让clerk重新尝试
     }
   } else {
-    DPrintf(
-        "[func -KvServer::PutAppend -kvserver{%d}]WaitChanGetRaftApplyMessage<--Server %d , get Command <-- Index:%d , "
-        "ClientId %s, RequestId %d, Opreation %s, Key :%s, Value :%s",
-        m_me, m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
     if (raftCommitOp.ClientId() == op.ClientId() && raftCommitOp.RequestId() == op.RequestId()) {
       //可能发生leader的变更导致日志被覆盖，因此必须检查
       reply->set_err(OK);

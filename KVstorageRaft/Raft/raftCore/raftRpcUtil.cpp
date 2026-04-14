@@ -1,7 +1,3 @@
-//
-// Created by swx on 23-12-28.
-//
-
 #include "raftRpcUtil.h"
 
 #include <mprpcchannel.h>
@@ -26,11 +22,9 @@ bool RaftRpcUtil::RequestVote(raftRpcProctoc::RequestVoteArgs *args, raftRpcProc
   return !controller.Failed();
 }
 
-//先开启服务器，再尝试连接其他的节点，中间给一个间隔时间，等待其他的rpc服务器节点启动
+
 
 RaftRpcUtil::RaftRpcUtil(std::string ip, short port) {
-  //*********************************************  */
-  //发送rpc设置
   stub_ = new raftRpcProctoc::raftRpc_Stub(new MprpcChannel(ip, port, true));
 }
 

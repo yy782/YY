@@ -72,18 +72,12 @@ std::vector<ApplyMsg> Raft::getApplyLogs() {
 
   while (AppliedMaxIndex_ < commitedMaxIndex_) {
     AppliedMaxIndex_++;
-    myAssert(logs_[getSlicesIndexFromLogIndex(AppliedMaxIndex_)].logindex() == AppliedMaxIndex_,
-             format("rf.logs[rf.getSlicesIndexFromLogIndex(rf.lastApplied)].LogIndex{%d} != rf.lastApplied{%d} ",
-                    logs_[getSlicesIndexFromLogIndex(AppliedMaxIndex_)].logindex(), AppliedMaxIndex_));
     ApplyMsg applyMsg;
     applyMsg.CommandValid = true;
     applyMsg.SnapshotValid = false;
     applyMsg.Command = logs_[getSlicesIndexFromLogIndex(AppliedMaxIndex_)].command();
     applyMsg.CommandIndex = AppliedMaxIndex_;
     applyMsgs.emplace_back(applyMsg);
-    //        DPrintf("[	applyLog func-rf{%v}	] apply Log,logIndex:%v  ，logTerm：{%v},command：{%v}\n",
-    //        rf.me, rf.lastApplied, rf.logs[rf.getSlicesIndexFromLogIndex(rf.lastApplied)].LogTerm,
-    //        rf.logs[rf.getSlicesIndexFromLogIndex(rf.lastApplied)].Command)
   }
   return applyMsgs;
 }
@@ -213,10 +207,6 @@ bool Raft::AsyncSendRequestVote(int server, std::shared_ptr<raftRpcProctoc::Requ
   bool ok = m_peers[server]->RequestVote(args.get(), reply.get());
   return true;
 }
-
-
-
-
 bool Raft::SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntriesArgs> args,
                              std::shared_ptr<raftRpcProctoc::AppendEntriesReply> reply) {
   bool ok = m_peers[server]->AppendEntries(args.get(), reply.get());
@@ -272,8 +262,6 @@ void Raft::sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry& newLogEntry)
   std::vector<std::shared_ptr<raftRpcProctoc::AppendEntriesReply>> appendEntriesReplies(m_peers.size(),
     std::make_shared<raftRpcProctoc::AppendEntriesReply>()
   );
-  // std::vector<int> ReplyEntriesSize(m_peers.size(), 0);
-  // std::vector<int> ReplyprevLogIndex(m_peers.size(), 0);
   std::vector<std::shared_ptr<raftRpcProctoc::AppendEntriesArgs>> appendEntriesArgsList(m_peers.size(),
     std::make_shared<raftRpcProctoc::AppendEntriesArgs>()
   );  
@@ -483,7 +471,7 @@ void Raft::doElection() {
       auto requestVoteReply = requestVoteReplies[i]; 
       AsyncSendRequestVote(i, requestVoteArgs, requestVoteReply);
   }
-
+  // 挂起阻塞
 
   int voteCount = 0;
   for(int i = 0; i < m_peers.size(); i++) {
@@ -513,9 +501,6 @@ void Raft::applierTicker() {
     m_mtx.lock();
     auto applyMsgs = getApplyLogs();
     m_mtx.unlock();
-    if (!applyMsgs.empty()) {
-      DPrintf("[func- Raft::applierTicker()-raft{%d}] 向kvserver報告的applyMsgs長度爲：{%d}", id_, applyMsgs.size());
-    }
     for (auto& message : applyMsgs) {
       applyChan->Push(message);
     }
