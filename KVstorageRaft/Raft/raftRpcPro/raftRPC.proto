@@ -64,6 +64,7 @@ message InstallSnapshotResponse  {
 service raftRpc  
 {
     rpc AppendEntries(AppendEntriesArgs) returns(AppendEntriesReply);
+	rpc InstallSnapshot (InstallSnapshotRequest) returns (InstallSnapshotResponse);
     rpc RequestVote (RequestVoteArgs) returns (RequestVoteReply);
 }
 // message ResultCode

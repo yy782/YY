@@ -1,40 +1,3 @@
-/**
- * @file raft.h
- * @brief Raft一致性算法的核心实现
- * @details
- *
- * 分布式KV存储基础知识：
- * - 分布式KV存储：将数据分散存储在多个节点上，通过网络协调保持一致性
- * - 一致性：所有节点看到的数据视图相同
- * - 可用性：即使部分节点故障，系统仍能提供服务
- * - 分区容错：网络分区恢复后，系统能自动合并数据
- *
- * Raft算法基础知识：
- * - Raft是一种分布式一致性算法，用于管理日志复制
- * - 它将一致性问题分解为三个子问题：领导者选举、日志复制、安全性
- * - Raft算法易于理解，是实现分布式系统的常用算法
- *
- * Raft算法的三个核心问题：
- * 1. 领导者选举：从候选节点中选出一个领导者
- * 2. 日志复制：领导者将日志复制到跟随者节点
- * 3. 安全性：确保只有拥有完整日志的节点才能成为领导者
- *
- * Raft算法的状态：
- * - Follower（跟随者）：被动接收领导者的日志和心跳
- * - Candidate（候选者）：参与领导者选举
- * - Leader（领导者）：处理所有客户端请求，复制日志到跟随者
- *
- * Raft算法的RPC：
- * - RequestVote：请求投票，用于领导者选举
- * - AppendEntries：追加日志，用于日志复制和心跳
- * - InstallSnapshot：安装快照，用于日志压缩
- *
- * 项目架构：
- * - Raft层：实现Raft算法，处理节点间的协调
- * - KVServer层：实现KV存储，作为状态机
- * - RPC层：提供节点间的通信能力
- * - 持久层：持久化关键数据，确保节点重启后可以恢复
- */
 #ifndef RAFT_H
 #define RAFT_H
 
@@ -61,6 +24,8 @@
 #include "../../../Common/locker.h"
 namespace yy 
 {
+namespace net 
+{
 namespace raft 
 {
 
@@ -86,8 +51,8 @@ class Raft : public raftRpcProctoc::raftRpc {
   std::mutex m_mtx;  // 互斥锁，保护共享数据的并发访问
   // m_peers：其他节点的RPC客户端列表
   // 每个节点都保存了其他节点的RPC客户端，用于发送RPC请求
-  std::vector<std::shared_ptr<RaftRpcUtil>> m_peers;
-  std::shared_ptr<Persister> m_persister;
+  RaftRpcUtils peers_;
+  std::shared_ptr<Persister> persister_;
   int id_;
   int votedFor_;
   std::vector<raftRpcProctoc::LogEntry> logs_;  //// 日志条目数组，包含了状态机要执行的指令集，以及收到领导时的任期号
@@ -102,7 +67,7 @@ class Raft : public raftRpcProctoc::raftRpc {
   std::vector<int> nextIndex_;  
   std::vector<int> matchIndex_;
   
-  std::shared_ptr<LockQueue<ApplyMsg>> applyChan;  // client从这里取日志（2B），client与raft通信的接口
+  std::shared_ptr<LockQueue<ApplyMsg>> applyChan_;  // client从这里取日志（2B），client与raft通信的接口
  private: // Leader
 
   void CheckAndHearBeat();
@@ -207,36 +172,6 @@ private:
   void getPrevLogInfo(int server, int *preIndex, int *preTerm);
 
   void sendAndSyncAppendEntries(const raftRpcProctoc::LogEntry &newLogEntry);
-  /**
-   * @brief 获取Raft状态
-   * @param term 当前任期号（输出参数）
-   * @param isLeader 是否是领导者（输出参数）
-   * @details
-   *
-   * 这个函数用于上层应用查询当前节点的状态
-   * 上层应用需要知道当前节点是否是领导者
-   * 如果是领导者，才能处理客户端请求
-   */
-
-
-
-  /**
-   * @brief 领导者心跳定时器
-   * @details
-   *
-   * 领导者心跳定时器的作用：
-   * 1. 定期发送心跳：领导者定期向所有跟随者发送心跳
-   * 2. 维持领导地位：防止跟随者发起选举
-   * 3. 日志复制：心跳可以携带日志，实现日志复制
-   *
-   * 心跳的发送：
-   * 1. 领导者定期向所有跟随者发送AppendEntries RPC
-   * 2. AppendEntries可以携带日志，也可以是空的心跳
-   * 3. 心跳的间隔通常比选举超时短得多
-   */
-
-
-
 
   /**
    * @brief 领导者更新提交索引
@@ -596,5 +531,6 @@ bool SendAppendEntries(int server, std::shared_ptr<raftRpcProctoc::AppendEntries
   bool isRunning_;
 };
 }  // namespace yy
+}
 }
 #endif  

@@ -1,22 +1,22 @@
 #include "mprpccontroller.h"
 
 MprpcController::MprpcController() {
-  m_failed = false;
-  m_errText = "";
+  failed_ = false;
+  errText_ = "";
 }
 
 void MprpcController::Reset() {
-  m_failed = false;
-  m_errText = "";
+  failed_ = false;
+  errText_ = "";
 }
 
-bool MprpcController::Failed() const { return m_failed; }
+bool MprpcController::Failed() const { return failed_; }
 
-std::string MprpcController::ErrorText() const { return m_errText; }
+std::string MprpcController::ErrorText() const { return errText_; }
 
 void MprpcController::SetFailed(const std::string& reason) {
-  m_failed = true;
-  m_errText = reason;
+  failed_ = true;
+  errText_ = reason;
 }
 
 // 目前未实现具体的功能

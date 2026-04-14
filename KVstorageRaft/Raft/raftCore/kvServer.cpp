@@ -24,8 +24,8 @@ namespace  raft
 // │              ▼                                                          │
 // │   2. 制作业务快照                                                        │
 // │      MakeSnapShot()                                                     │
-// │      - 序列化 m_skipList                                                │
-// │      - 序列化 m_lastRequestId                                           │
+// │      - 序列化 skipList_                                                │
+// │      - 序列化 lastRequestId_                                           │
 // │      - 返回 snapshot 字符串                                              │
 // │              │                                                          │
 // │              │ 调用 Snapshot(index, snapshot)                           │
@@ -60,8 +60,8 @@ namespace  raft
 // │              ▼                                                          │
 // │   2. 恢复业务数据                                                        │
 // │      ReadSnapShotToInstall(snapshot)                                    │
-// │      - 恢复 m_skipList                                                  │
-// │      - 恢复 m_lastRequestId                                             │
+// │      - 恢复 skipList_                                                  │
+// │      - 恢复 lastRequestId_                                             │
 // │                                                                         │
 // │                                     3. 读取 Raft 状态文件                 │
 // │                                        data = persister->ReadRaftState()│
@@ -103,7 +103,7 @@ namespace  raft
 // │                                              │                          │
 // │                                              ▼                          │
 // │                                      5. 通知 KVServer                    │
-// │                                         applyChan->Push(ApplyMsg{       │
+// │                                         applyChan_->Push(ApplyMsg{       │
 // │                                             SnapshotValid = true,       │
 // │                                             Snapshot = data             │
 // │                                         })                              │
@@ -123,15 +123,15 @@ void KvServer::DprintfKVDB() {
   }
   std::lock_guard<std::mutex> lg(m_mtx);
   DEFER {
-    m_skipList.display_list();
+    skipList_.display_list();
   };
 }
 
 void KvServer::ExecuteAppendOpOnKVDB(Op op) {
 
   m_mtx.lock();
-  m_skipList.insert_set_element(op.Key(), op.Value());
-  m_lastRequestId[op.ClientId()] = op.RequestId();
+  skipList_.insert_set_element(op.Key(), op.Value());
+  lastRequestId_[op.ClientId()] = op.RequestId();
   m_mtx.unlock();
   DprintfKVDB();
 }
@@ -140,10 +140,10 @@ bool KvServer::tryGetOpOnKVDB(Op op, std::string *value) {
   m_mtx.lock();
   *value = "";
   bool exist = false;
-  if (m_skipList.search_element(op.Key(), *value)) {
+  if (skipList_.search_element(op.Key(), *value)) {
     exist = true;
   }
-  m_lastRequestId[op.ClientId()] = op.RequestId();
+  lastRequestId_[op.ClientId()] = op.RequestId();
   m_mtx.unlock();
   DprintfKVDB();
   return exist;
@@ -151,8 +151,8 @@ bool KvServer::tryGetOpOnKVDB(Op op, std::string *value) {
 
 void KvServer::ExecutePutOpOnKVDB(Op op) {
   m_mtx.lock();
-  m_skipList.insert_set_element(op.Key(), op.Value());
-  m_lastRequestId[op.ClientId()] = op.RequestId();
+  skipList_.insert_set_element(op.Key(), op.Value());
+  lastRequestId_[op.ClientId()] = op.RequestId();
   m_mtx.unlock();
   DprintfKVDB();
 }
@@ -169,7 +169,7 @@ void KvServer::Get(const raftKVRpcProctoc::GetArgs *args, raftKVRpcProctoc::GetR
   int raftIndex = -1;
   int _ = -1;
   bool isLeader = false;
-  m_raftNode->Propose(op, &raftIndex, &_,
+  raftNode_->Propose(op, &raftIndex, &_,
                     &isLeader);  // raftIndex：raft预计的logIndex
                                  // ，虽然是预计，但是正确情况下是准确的，op的具体内容对raft来说 是隔离的
 
@@ -192,7 +192,7 @@ void KvServer::Get(const raftKVRpcProctoc::GetArgs *args, raftKVRpcProctoc::GetR
   if (!chForRaftIndex->timeOutPop(CONSENSUS_TIMEOUT, &raftCommitOp)) {
     int _ = -1;
     bool isLeader = false;
-    m_raftNode->GetState(&_, &isLeader);
+    raftNode_->GetState(&_, &isLeader);
 
     if (
       (ifRequestDuplicate(op.ClientId(), op.RequestId()) && isLeader) ||
@@ -226,7 +226,7 @@ void KvServer::GetCommandFromRaft(ApplyMsg message) {
   DPrintf(
       "[KvServer::GetCommandFromRaft-kvserver{%d}] , Got Command --> Index:{%d} , ClientId {%s}, RequestId {%d}, "
       "Opreation {%s}, Key :{%s}, Value :{%s}",
-      m_me, message.CommandIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
+      id_, message.CommandIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
   if (message.CommandIndex <= m_lastSnapShotRaftLogIndex) {
     return;
   }
@@ -246,11 +246,11 @@ void KvServer::GetCommandFromRaft(ApplyMsg message) {
 
 bool KvServer::ifRequestDuplicate(std::string ClientId, int RequestId) {
   std::lock_guard<std::mutex> lg(m_mtx);
-  if (m_lastRequestId.find(ClientId) == m_lastRequestId.end()) {
+  if (lastRequestId_.find(ClientId) == lastRequestId_.end()) {
     return false;
     // todo :不存在这个client就创建
   }
-  return RequestId <= m_lastRequestId[ClientId];
+  return RequestId <= lastRequestId_[ClientId];
 }
 
 // get和put//append執行的具體細節是不一樣的
@@ -267,7 +267,7 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
   int raftIndex = -1;
   int _ = -1;
   bool isleader = false;
-  m_raftNode->Propose(op, &raftIndex, &_, &isleader);
+  raftNode_->Propose(op, &raftIndex, &_, &isleader);
 
   if (!isleader) {
     reply->set_err(ErrWrongLeader);
@@ -306,10 +306,10 @@ void KvServer::PutAppend(const raftKVRpcProctoc::PutAppendArgs *args, raftKVRpcP
 
 void KvServer::ReadRaftApplyCommandLoop() {
   while (true) {
-    auto message = applyChan->Pop();
+    auto message = applyChan_->Pop();
     DPrintf(
         "---------------tmp-------------[func-KvServer::ReadRaftApplyCommandLoop()-kvserver{%d}] 收到了下raft的消息",
-        m_me);
+        id_);
     // listen to every command applied by its raft ,delivery to relative RPC Handler
 
     if (message.CommandValid) {
@@ -334,34 +334,25 @@ void KvServer::ReadSnapShotToInstall(std::string snapshot) {
 
 bool KvServer::SendMessageToWaitChan(const Op &op, int raftIndex) {
   std::lock_guard<std::mutex> lg(m_mtx);
-  DPrintf(
-      "[RaftApplyMessageSendToWaitChan--> raftserver{%d}] , Send Command --> Index:{%d} , ClientId {%d}, RequestId "
-      "{%d}, Opreation {%v}, Key :{%v}, Value :{%v}",
-      m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
-
   if (waitApplyCh.find(raftIndex) == waitApplyCh.end()) {
     return false;
   }
   waitApplyCh[raftIndex]->Push(op);
-  DPrintf(
-      "[RaftApplyMessageSendToWaitChan--> raftserver{%d}] , Send Command --> Index:{%d} , ClientId {%d}, RequestId "
-      "{%d}, Opreation {%v}, Key :{%v}, Value :{%v}",
-      m_me, raftIndex, &op.ClientId(), op.RequestId(), &op.Operation(), &op.Key(), &op.Value());
   return true;
 }
 
 void KvServer::CheckAndSendSnapShotCommand(int raftIndex, int proportion) {
-  if (m_raftNode->GetRaftStateSize() > m_maxRaftState / 10.0) {
+  if (raftNode_->GetRaftStateSize() > maxRaftState_ / 10.0) {
     // Send SnapShot Command
     auto snapshot = MakeSnapShot();
-    //m_raftNode->Snapshot(raftIndex, snapshot);
+    //raftNode_->Snapshot(raftIndex, snapshot);
   }
 }
 
 void KvServer::GetSnapShotFromRaft(ApplyMsg message) {
   std::lock_guard<std::mutex> lg(m_mtx);
 
-  // if (m_raftNode->CondInstallSnapshot(message.SnapshotTerm, message.SnapshotIndex, message.Snapshot)) {
+  // if (raftNode_->CondInstallSnapshot(message.SnapshotTerm, message.SnapshotIndex, message.Snapshot)) {
   //   ReadSnapShotToInstall(message.Snapshot);
   //   m_lastSnapShotRaftLogIndex = message.SnapshotIndex;
   // }
@@ -386,31 +377,28 @@ void KvServer::Get(google::protobuf::RpcController *controller, const ::raftKVRp
 }
 
 KvServer::KvServer(int me, int maxraftstate, std::string nodeInforFileName, short port) : 
-m_skipList(6),
-m_me(me),  
-m_maxRaftState(maxraftstate),
-applyChan(std::make_shared<LockQueue<ApplyMsg> >()),
-m_raftNode(std::make_shared<Raft>()) 
+skipList_(6),
+id_(me),  
+maxRaftState_(maxraftstate),
+applyChan_(std::make_shared<LockQueue<ApplyMsg> >()),
+raftNode_(std::make_shared<Raft>()) 
 {
   std::shared_ptr<Persister> persister = std::make_shared<Persister>(me);
-  ////////////////clerk层面 kvserver开启rpc接受功能
-  //    同时raft与raft节点之间也要开启rpc功能，因此有两个注册
   std::thread t([this, port]() -> void {
-    // provider是一个rpc网络服务对象。把UserService对象发布到rpc节点上
+
     RpcProvider provider;
     provider.NotifyService(this);
     provider.NotifyService(
-        this->m_raftNode.get());  // todo：这里获取了原始指针，后面检查一下有没有泄露的问题 或者 shareptr释放的问题
-    // 启动一个rpc服务发布节点   Run以后，进程进入阻塞状态，等待远程的rpc调用请求
-    provider.Run(m_me, port);
+        this->raftNode_.get()); 
+    provider.Run(id_, port);
   });
   t.detach();
 
   ////开启rpc远程调用能力，需要注意必须要保证所有节点都开启rpc接受功能之后才能开启rpc远程调用能力
   ////这里使用睡眠来保证
-  std::cout << "raftServer node:" << m_me << " start to sleep to wait all ohter raftnode start!!!!" << std::endl;
+  std::cout << "raftServer node:" << id_ << " start to sleep to wait all ohter raftnode start!!!!" << std::endl;
   sleep(6);
-  std::cout << "raftServer node:" << m_me << " wake up!!!! start to connect other raftnode" << std::endl;
+  std::cout << "raftServer node:" << id_ << " wake up!!!! start to connect other raftnode" << std::endl;
   //获取所有raft节点ip、port ，并进行连接  ,要排除自己
   Conf config;
   config.parse(nodeInforFileName.c_str());
@@ -428,7 +416,7 @@ m_raftNode(std::make_shared<Raft>())
   std::vector<std::shared_ptr<RaftRpcUtil> > servers;
   //进行连接
   for (int i = 0; i < ipPortVt.size(); ++i) {
-    if (i == m_me) {
+    if (i == id_) {
       servers.push_back(nullptr);
       continue;
     }
@@ -437,18 +425,12 @@ m_raftNode(std::make_shared<Raft>())
     auto *rpc = new RaftRpcUtil(otherNodeIp, otherNodePort);
     servers.push_back(std::shared_ptr<RaftRpcUtil>(rpc));
 
-    std::cout << "node" << m_me << " 连接node" << i << "success!" << std::endl;
+    std::cout << "node" << id_ << " 连接node" << i << "success!" << std::endl;
   }
   sleep(ipPortVt.size() - me);  //等待所有节点相互连接成功，再启动raft
-  m_raftNode->init(servers, m_me, persister, applyChan);
-  // kv的server直接与raft通信，但kv不直接与raft通信，所以需要把ApplyMsg的chan传递下去用于通信，两者的persist也是共用的
-
-  // auto snapshot = persister->ReadSnapshot();
-  // if (!snapshot.empty()) {
-  //   ReadSnapShotToInstall(snapshot);
-  // }
+  raftNode_->init(servers, id_, persister, applyChan_);
   std::thread t2(&KvServer::ReadRaftApplyCommandLoop, this);  //马上向其他节点宣告自己就是leader
-  t2.join();  //由於ReadRaftApplyCommandLoop一直不會結束，达到一直卡在这的目的
+  t2.join();  
 }
 }
 }

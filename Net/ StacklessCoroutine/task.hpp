@@ -12,7 +12,7 @@
 #include <coroutine>
 namespace yy
 {
-namespace net 
+namespace cppcoro
 {
 template<typename T> class task;
 
@@ -276,8 +276,6 @@ private:
 /// simply captures any passed parameters and returns exeuction to the
 /// caller. Execution of the coroutine body does not start until the
 /// coroutine is first co_await'ed.
-namespace cppcoro
-{
 template<typename T = void>
 class [[nodiscard]] task
 {
@@ -449,36 +447,34 @@ private:
 
 };
 
-namespace detail
+namespace detail  
 {
 template<typename T>
-cppcoro::task<T> task_promise<T>::get_return_object() noexcept
+task<T> task_promise<T>::get_return_object() noexcept
 {
-  return cppcoro::task<T>{ std::coroutine_handle<task_promise>::from_promise(*this) };
+  return task<T>{ std::coroutine_handle<task_promise>::from_promise(*this) };
 }
 
-inline cppcoro::task<void> task_promise<void>::get_return_object() noexcept
+inline task<void> task_promise<void>::get_return_object() noexcept
 {
-  return cppcoro::task<void>{ std::coroutine_handle<task_promise>::from_promise(*this) };
+  return task<void>{ std::coroutine_handle<task_promise>::from_promise(*this) };
 }
 
 template<typename T>
 cppcoro::task<T&> task_promise<T&>::get_return_object() noexcept
 {
-  return cppcoro::task<T&>{ std::coroutine_handle<task_promise>::from_promise(*this) };
+  return task<T&>{ std::coroutine_handle<task_promise>::from_promise(*this) };
 }
 
 template<typename AWAITABLE>
 auto make_task(AWAITABLE awaitable)
--> cppcoro::task<detail::remove_rvalue_reference_t<typename awaitable_traits<AWAITABLE>::await_result_t>>
+-> task<remove_rvalue_reference_t<typename awaitable_traits<AWAITABLE>::await_result_t>>
 {
   co_return co_await static_cast<AWAITABLE&&>(awaitable);
 }
 }
+}
+}
 
-
-}
-}
-}
 #endif //XYNET_COROUTINE_TASK_HPP
 

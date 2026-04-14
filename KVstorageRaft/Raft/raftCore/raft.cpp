@@ -20,8 +20,6 @@ void Raft::AppendEntries1(const raftRpcProctoc::AppendEntriesArgs* args, raftRpc
     reply->set_success(false);
     reply->set_term(currentTerm_);
     reply->set_updatenextindex(invalidLog); 
-    DPrintf("[func-AppendEntries-rf{%d}] 拒绝了 因为Leader{%d}的term{%v}< rf{%d}.term{%d}\n", id_, args->leaderid(),
-            args->term(), id_, currentTerm_);
     return;  
   }
   else if (args->term() > currentTerm_) {
@@ -201,6 +199,9 @@ void Raft::RequestVote(const raftRpcProctoc::RequestVoteArgs* args, raftRpcProct
   }
 
 }
+
+
+
 
 bool Raft::AsyncSendRequestVote(int server, std::shared_ptr<raftRpcProctoc::RequestVoteArgs> args,
                            std::shared_ptr<raftRpcProctoc::RequestVoteReply> reply) {
