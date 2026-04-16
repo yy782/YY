@@ -7,12 +7,12 @@ namespace yy
 {
 
 
-AsyncLog::AsyncLog(const char* fileName,LTimeInterval flush_interval,size_t BufferSize):
+AsyncLog::AsyncLog(const char* fileName,size_t BufferSize):
 BufferSize_(BufferSize),
 Receptionbuffer_(std::make_unique<Buffer>(BufferSize)),
 SpareBuffer_(std::make_unique<Buffer>(BufferSize)),
 BackstageBuffers_(),
-appender_(fileName,flush_interval),
+appender_(fileName),
 filter_()
 {
     g_log_filter=&filter_;

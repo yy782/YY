@@ -2,9 +2,6 @@
 #include "sockets.h"
 #include <vector>
 
-
-#include <atomic>
-
 namespace yy
 {
 namespace net
@@ -52,14 +49,10 @@ isET(events.has(LogicEvent::Edge)?true:false)
     {
         handleError();
     });
-    // loop_->DelayedExecution<false>([this](){
-    //     handler_.tie(shared_from_this()); //对象没创建不能shared_from_this()/////////////////////////////////////////
-    // });
 }
 
 TcpConnection::~TcpConnection()
 {
-    assert(loop_->isInLoopThread());
     if(RecvBuffer_.readable_size()!=0)
     {
         LOG_TCP_WARN("had data not read!");

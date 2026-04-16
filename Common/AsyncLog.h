@@ -26,7 +26,7 @@ public:
     typedef std::vector<BufferPtr> BufferContainer;
     static AsyncLog& getInstance(const char* fileName,size_t BufferSize=20)
     {
-        static AsyncLog log(fileName,flush_interval,BufferSize);
+        static AsyncLog log(fileName,BufferSize);
         return log;
     }
     ~AsyncLog();

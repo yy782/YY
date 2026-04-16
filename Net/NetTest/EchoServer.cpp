@@ -137,13 +137,13 @@ int main()
     if(isAsync)
     {
         size_t async_buffer_size=static_cast<size_t>(config.getInteger("AsyncLog","BufferSize"));        
-        auto& instance=AsyncLog::getInstance(logPath.c_str(),{async_flush_interval},async_buffer_size);
+        auto& instance=AsyncLog::getInstance(logPath.c_str(),async_buffer_size);
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }
     else
     {
-        auto& instance=SyncLog::getInstance(logPath.c_str(),sync_flush_interval);
+        auto& instance=SyncLog::getInstance(logPath.c_str());
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }

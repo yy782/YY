@@ -14,7 +14,7 @@ public:
     LogAppender& getAppender(){return appender_;}
     static SyncLog& getInstance(const char* filename)
     {
-        static SyncLog instance(filename,flush_interval);
+        static SyncLog instance(filename);
         return instance;
     }
     ~SyncLog();
