@@ -7,7 +7,7 @@
 #include <memory>
 namespace yy
 {
-namespace net
+namespace net 
 {
 static std::string makeKey(const std::string& section, const std::string& name) {
     std::string key = section + "." + name;
@@ -182,3 +182,4 @@ int Conf::parse(const std::string& filename)
 }     
 }    
 }
+

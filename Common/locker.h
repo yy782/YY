@@ -13,7 +13,6 @@
 #include "noncopyable.h"
 #include <queue>
 #include <assert.h>
-#include "Debug.hpp"
 namespace yy{
 class sem
 {
@@ -163,14 +162,10 @@ public:
     typedef pid_t Pid_t;
     typedef std::function<void()> Functor;
 
-    Thread(const std::string &name = "UNKNOW") : name_(name) {
-        CondPanic(name_.size() < 16);
-    }
     Thread(Functor cb, const std::string &name = "UNKNOW") : cb_(cb), name_(name) {
-        CondPanic(name_.size() < 16);
+        assert(name_.size() < 16);
         int rt = pthread_create(&thread_, nullptr, &Thread::run, this);
         if (rt) {
-            std::cout << "pthread_create error,name:" << name_ << std::endl;
             throw std::logic_error("pthread_create");
         }
     }
@@ -186,7 +181,6 @@ public:
         if (thread_) {
             int rt = pthread_join(thread_, nullptr);
             if (rt) {
-                std::cout << "pthread_join error,name:" << name_ << std::endl;
                 throw std::logic_error("pthread_join");
             }
             thread_ = 0;
@@ -197,7 +191,6 @@ public:
         if (thread_) {
             int rt = pthread_detach(thread_);
             if (rt) {
-                std::cout << "pthread_detach error,name:" << name_ << std::endl;
                 throw std::logic_error("pthread_detach");
             }
             thread_ = 0;
@@ -215,26 +208,16 @@ public:
         cb_ = cb;
         int rt = pthread_create(&thread_, nullptr, &Thread::run, this);
         if (rt) {
-            std::cout << "pthread_create error,name:" << name_ << std::endl;
+
             throw std::logic_error("pthread_create");
         }
     }
-  //static const std::string &GetName() { return cur_thread_name; }
-  // static void SetName(const std::string &name){
-  //   if (name.empty()) {
-  //     return;
-  //   }
-  //   if (cur_thread) {
-  //     cur_thread->name_ = name;
-  //   }
-  //   cur_thread_name = name;
-  // }
-    static Thread *GetThis();
+
     static bool isSelf(const Pid_t &pid) noexcept;
     static Pid_t getId() noexcept;
     static void *run(void *args);
-  static const std::string &GetName();
-  static void SetName(const std::string &name);
+    static const std::string &GetName();
+    static void SetName(const std::string &name);
 private:
     Thread(const Thread &&) = delete;
 
@@ -244,9 +227,6 @@ private:
     std::string name_;
 };
 
-inline Thread *Thread::GetThis() {
-    return cur_thread;
-}
 
 inline bool Thread::isSelf(const Pid_t &pid) noexcept {
     return pid == gettid();

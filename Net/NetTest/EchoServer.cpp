@@ -136,15 +136,13 @@ int main()
     bool isDaemonize=config.getBoolean("server","isDaemonize");
     if(isAsync)
     {
-        auto async_flush_interval=config.getDuration("AsyncLog","flush_interval");
         size_t async_buffer_size=static_cast<size_t>(config.getInteger("AsyncLog","BufferSize"));        
-        auto& instance=AsyncLog::getInstance(logPath.c_str(),async_flush_interval,async_buffer_size);
+        auto& instance=AsyncLog::getInstance(logPath.c_str(),{async_flush_interval},async_buffer_size);
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);
     }
     else
     {
-        auto sync_flush_interval=config.getDuration("SyncLog","flush_interval");
         auto& instance=SyncLog::getInstance(logPath.c_str(),sync_flush_interval);
         instance.getFilter().set_global_level(logLevel)
                                 .set_module_enabled(modules);

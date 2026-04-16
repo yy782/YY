@@ -67,7 +67,7 @@ void BaseLogAppender::flush()
 {
     ::fflush(fp_);
 }
-LogAppender::LogAppender(const char* filename,LTimeInterval flush_interval):
+LogAppender::LogAppender(const char* filename):
 baseLogFile_(std::make_unique<BaseLogAppender>(filename)),
 logFileName_(getFileName(filename)),
 flushInterval_(flush_interval)

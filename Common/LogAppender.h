@@ -39,7 +39,7 @@ class LogAppender:noncopyable
 {//添加回滚操作
 public:
     typedef LTimeInterval FlushInterval;
-    LogAppender(const char* filename,LTimeInterval flush_interval=10s);
+    LogAppender(const char* filename);
     ~LogAppender();
     typedef std::unique_ptr<BaseLogAppender> BaseLogFilePtr;
     void append(const char* logline, size_t len);
@@ -55,7 +55,7 @@ private:
     const off_t rollSize_={2*1024}; // @param 回滚大小
 
     LTimeStamp lastFlushTime_;
-    const FlushInterval flushInterval_;
+    const FlushInterval flushInterval_=20s;
 
     FairMutex mutex_;
 };
